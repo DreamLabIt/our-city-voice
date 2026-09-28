@@ -42,57 +42,84 @@ const categories: CategoryItem[] = [
 
 export default function CategoryFilter() {
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
+    const otherCategory = categories.find((c) => c.isOther);
+    const mainCategories = categories.filter((c) => !c.isOther);
 
     return (
         <section className="w-full bg-white py-4">
-            <div className="max-w-[1940px] mx-auto px-8 md:px-10">
+            <div className="max-w-[1940px] mx-auto px-4 sm:px-8 md:px-10">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:flex lg:flex-wrap items-center gap-3 sm:gap-4 md:gap-6 justify-center sm:justify-start">
 
-                <div className="w-full overflow-x-auto  pt-1 no-scrollbar scroll-smooth">
-                    <div className="flex items-center gap-4 sm:gap-6 w-max pr-4 sm:pr-6">
-                        {categories.map((cat: CategoryItem) => {
-                            const isSelected: boolean = selectedCategory === cat.id;
-                            const Icon: LucideIcon = cat.icon;
+                    {mainCategories.map((cat: CategoryItem, index: number) => {
+                        const isSelected: boolean = selectedCategory === cat.id;
+                        const Icon: LucideIcon = cat.icon;
+                        const isHiddenOnMobile = index >= 5;
 
-                            return (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => setSelectedCategory(cat.id)}
-                                    type="button"
-                                    className={`group relative flex flex-col items-center justify-between w-27.5 h-25 sm:w-30 sm:h-27.5 p-3 rounded-2xl transition-all duration-200 select-none cursor-pointer border ${isSelected
+                        return (
+                            <button
+                                key={cat.id}
+                                onClick={() => setSelectedCategory(cat.id)}
+                                type="button"
+                                className={`${isHiddenOnMobile ? "hidden sm:flex" : "flex"
+                                    } group relative flex-col items-center justify-between w-full sm:w-27.5 h-24 sm:h-25 md:w-30 md:h-27.5 p-2.5 sm:p-3 rounded-2xl transition-all duration-200 select-none cursor-pointer border ${isSelected
                                         ? "bg-[#edf4ff] border-2 border-[#22a56c] shadow-sm"
                                         : "bg-[#f8fafc] border-slate-200/70 hover:bg-slate-100/80 hover:border-[#22a56c]"
+                                    }`}
+                            >
+                                <div className="flex-1 flex items-center justify-center">
+                                    <Icon
+                                        className={`w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 transition-colors stroke-2 ${isSelected
+                                            ? "text-[#1d63ed]"
+                                            : cat.iconColor || "text-slate-700"
+                                            }`}
+                                    />
+                                </div>
+
+                                <span
+                                    className={`text-[10px] sm:text-[11px] md:text-[12px] font-semibold text-center leading-tight transition-colors line-clamp-2 px-0.5 ${isSelected ? "text-[#1d63ed]" : "text-slate-700"
                                         }`}
                                 >
-                                    <div className="flex-1 flex items-center justify-center">
-                                        {cat.isOther ? (
-                                            <div
-                                                className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isSelected
-                                                    ? "bg-[#1d63ed] text-white"
-                                                    : "bg-slate-200/80 text-slate-700 group-hover:bg-slate-300/80"
-                                                    }`}
-                                            >
-                                                <Icon className="w-5 h-5 stroke-[2.5]" />
-                                            </div>
-                                        ) : (
-                                            <Icon
-                                                className={`w-7 h-7 sm:w-8 sm:h-8 transition-colors stroke-2 ${isSelected
-                                                    ? "text-[#1d63ed]"
-                                                    : cat.iconColor || "text-slate-700"
-                                                    }`}
-                                            />
-                                        )}
-                                    </div>
+                                    {cat.label}
+                                </span>
+                            </button>
+                        );
+                    })}
 
-                                    <span
-                                        className={`text-[11px] sm:text-[12px] font-semibold text-center leading-tight transition-colors line-clamp-2 px-0.5 ${isSelected ? "text-[#1d63ed]" : "text-slate-700"
+                    {otherCategory && (() => {
+                        const isSelected: boolean = selectedCategory === otherCategory.id;
+                        const Icon: LucideIcon = otherCategory.icon;
+
+                        return (
+                            <button
+                                key={otherCategory.id}
+                                onClick={() => setSelectedCategory(otherCategory.id)}
+                                type="button"
+                                className={`flex group relative flex-col items-center justify-between w-full sm:w-27.5 h-24 sm:h-25 md:w-30 md:h-27.5 p-2.5 sm:p-3 rounded-2xl transition-all duration-200 select-none cursor-pointer border ${isSelected
+                                    ? "bg-[#edf4ff] border-2 border-[#22a56c] shadow-sm"
+                                    : "bg-[#f8fafc] border-slate-200/70 hover:bg-slate-100/80 hover:border-[#22a56c]"
+                                    }`}
+                            >
+                                <div className="flex-1 flex items-center justify-center">
+                                    <div
+                                        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-colors ${isSelected
+                                            ? "bg-[#1d63ed] text-white"
+                                            : "bg-slate-200/80 text-slate-700 group-hover:bg-slate-300/80"
                                             }`}
                                     >
-                                        {cat.label}
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
+                                        <Icon className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+                                    </div>
+                                </div>
+
+                                <span
+                                    className={`text-[10px] sm:text-[11px] md:text-[12px] font-semibold text-center leading-tight transition-colors line-clamp-2 px-0.5 ${isSelected ? "text-[#1d63ed]" : "text-slate-700"
+                                        }`}
+                                >
+                                    {otherCategory.label}
+                                </span>
+                            </button>
+                        );
+                    })()}
+
                 </div>
 
             </div>
