@@ -27,7 +27,7 @@ export default function HeroSection() {
                 <div className="absolute inset-0 bg-linear-to-r from-slate-900/40 via-slate-900/30 to-slate-900/20" />
             </div>
 
-            <div className="relative z-10 max-w-[1940px] w-full mx-auto px-8 md:px-10 py-12 lg:py-16">
+            <div className="relative z-10 max-w-[1940px] w-full mx-auto px-4 sm:px-8 md:px-10 py-12 lg:py-16">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
 
                     <div className="lg:col-span-6 space-y-5 text-white">
