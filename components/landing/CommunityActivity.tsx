@@ -27,9 +27,9 @@ export default function CommunityActivity(): React.JSX.Element {
             sub: "This Year",
             value: "1,248",
             icon: MessageSquare,
-            cardBg: "bg-[#f4f8ff]",
-            circleBg: "bg-[#dbeafe]",
-            iconColor: "text-[#1d63ed]",
+            cardBg: "bg-tag-blue-bg/40",
+            circleBg: "bg-tag-blue-bg",
+            iconColor: "text-primary",
             valueColor: "text-[#1e3a8a]",
         },
         {
@@ -37,9 +37,9 @@ export default function CommunityActivity(): React.JSX.Element {
             sub: "This Year",
             value: "3,892",
             icon: MessageCircle,
-            cardBg: "bg-[#f0fdf4]",
-            circleBg: "bg-[#dcfce7]",
-            iconColor: "text-[#16a34a]",
+            cardBg: "bg-tag-green-bg/40",
+            circleBg: "bg-tag-green-bg",
+            iconColor: "text-tag-green-text",
             valueColor: "text-[#064e3b]",
         },
         {
@@ -47,10 +47,10 @@ export default function CommunityActivity(): React.JSX.Element {
             sub: "This Year",
             value: "410",
             icon: Users,
-            cardBg: "bg-[#fffbeb]",
-            circleBg: "bg-[#fef3c7]",
-            iconColor: "text-[#d97706]",
-            valueColor: "text-[#d97706]",
+            cardBg: "bg-tag-amber-bg/40",
+            circleBg: "bg-tag-amber-bg",
+            iconColor: "text-tag-amber-text",
+            valueColor: "text-tag-amber-text",
         },
         {
             title: "Posts This Month",
@@ -58,10 +58,10 @@ export default function CommunityActivity(): React.JSX.Element {
             badge: "↑ 12%",
             value: "105",
             icon: Calendar,
-            cardBg: "bg-[#faf5ff]",
-            circleBg: "bg-[#f3e8ff]",
-            iconColor: "text-[#9333ea]",
-            valueColor: "text-[#581c87]",
+            cardBg: "bg-purple-50/60",
+            circleBg: "bg-purple-100",
+            iconColor: "text-purple-600",
+            valueColor: "text-purple-900",
         },
     ];
 
@@ -83,11 +83,11 @@ export default function CommunityActivity(): React.JSX.Element {
     const yTicks: number[] = [200, 150, 100, 50, 0];
 
     return (
-        <div className="w-full bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
+        <div className="w-full bg-card rounded-2xl border border-border-custom p-5 shadow-xs">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
                 <div className="lg:col-span-7 space-y-3">
-                    <h2 className="text-base font-bold text-[#0f172a]">Community Activity</h2>
+                    <h2 className="text-base font-bold text-foreground">Community Activity</h2>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
                         {stats.map((item: StatItem, idx: number) => {
@@ -95,7 +95,7 @@ export default function CommunityActivity(): React.JSX.Element {
                             return (
                                 <div
                                     key={idx}
-                                    className={`${item.cardBg} rounded-2xl p-3.5 border border-slate-100 flex items-start gap-3.5 h-30 relative pt-4`}
+                                    className={`${item.cardBg} rounded-2xl p-3.5 border border-border-custom/50 flex items-start gap-3.5 h-30 relative pt-4`}
                                 >
                                     <div className={`w-12 h-12 rounded-full ${item.circleBg} flex items-center justify-center shrink-0`}>
                                         <Icon className={`w-6 h-6 ${item.iconColor} fill-current`} />
@@ -105,19 +105,19 @@ export default function CommunityActivity(): React.JSX.Element {
                                         <span className={`text-xl font-extrabold ${item.valueColor} leading-none block`}>
                                             {item.value}
                                         </span>
-                                        <p className="text-[10px] font-semibold text-slate-700 mt-1 leading-tight truncate">
+                                        <p className="text-[10px] font-semibold text-foreground/80 mt-1 leading-tight truncate">
                                             {item.title}
                                         </p>
 
                                         {item.badge ? (
                                             <div className="mt-1">
-                                                <span className="text-[11px] font-bold text-emerald-600 block leading-tight">
+                                                <span className="text-[11px] font-bold text-tag-green-text block leading-tight">
                                                     {item.badge}
                                                 </span>
-                                                <p className="text-[9px] text-slate-400 leading-tight">{item.sub}</p>
+                                                <p className="text-[9px] text-muted leading-tight">{item.sub}</p>
                                             </div>
                                         ) : (
-                                            <p className="text-[12px] text-slate-400 mt-0.5">{item.sub}</p>
+                                            <p className="text-[12px] text-muted mt-0.5">{item.sub}</p>
                                         )}
                                     </div>
                                 </div>
@@ -126,15 +126,15 @@ export default function CommunityActivity(): React.JSX.Element {
                     </div>
                 </div>
 
-                <div className="lg:col-span-5 border-t lg:border-t-0 lg:border-l border-slate-100 pt-4 lg:pt-0 lg:pl-6 space-y-2">
-                    <h2 className="text-base font-bold text-[#0f172a]">
-                        Posts per Month <span className="text-xs font-normal text-slate-500">(This Year)</span>
+                <div className="lg:col-span-5 border-t lg:border-t-0 lg:border-l border-border-custom pt-4 lg:pt-0 lg:pl-6 space-y-2">
+                    <h2 className="text-base font-bold text-foreground">
+                        Posts per Month <span className="text-xs font-normal text-muted">(This Year)</span>
                     </h2>
 
                     <div className="relative pt-2">
                         <div className="h-32 flex items-stretch">
 
-                            <div className="flex flex-col justify-between text-[10px] text-slate-400 font-medium pr-2 text-right shrink-0">
+                            <div className="flex flex-col justify-between text-[10px] text-muted font-medium pr-2 text-right shrink-0">
                                 {yTicks.map((tick: number) => (
                                     <span key={tick} className="leading-none">{tick}</span>
                                 ))}
@@ -144,7 +144,7 @@ export default function CommunityActivity(): React.JSX.Element {
 
                                 <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
                                     {yTicks.map((_: number, i: number) => (
-                                        <div key={i} className="w-full border-b border-slate-100" />
+                                        <div key={i} className="w-full border-b border-border-custom/60" />
                                     ))}
                                 </div>
 
@@ -152,7 +152,7 @@ export default function CommunityActivity(): React.JSX.Element {
                                     {chartMonths.map((m: ChartMonth, i: number) => (
                                         <div key={i} className="flex-1 flex flex-col items-center h-full justify-end group z-10">
                                             <div
-                                                className="w-full max-w-4.5 bg-[#4299e1] hover:bg-[#3182ce] rounded-t-sm transition-all"
+                                                className="w-full max-w-4.5 bg-secondary hover:bg-primary rounded-t-sm transition-all"
                                                 style={{ height: `${(m.val / 200) * 100}%` }}
                                             />
                                         </div>
@@ -164,7 +164,7 @@ export default function CommunityActivity(): React.JSX.Element {
 
                         <div className="flex justify-between pl-6 mt-1.5">
                             {chartMonths.map((m: ChartMonth, i: number) => (
-                                <span key={i} className="flex-1 text-center text-[10px] text-slate-500 font-medium">
+                                <span key={i} className="flex-1 text-center text-[10px] text-muted font-medium">
                                     {m.month}
                                 </span>
                             ))}
