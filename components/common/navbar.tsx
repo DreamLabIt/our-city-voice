@@ -11,7 +11,7 @@ interface NavItem {
     href: string;
 }
 
-export default function Navbar() {
+export default function Navbar(): React.JSX.Element {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
     const pathname = usePathname();
 
@@ -25,8 +25,8 @@ export default function Navbar() {
     ];
 
     return (
-        <header className="w-full bg-white relative">
-            <div className="max-w-[1940px] mx-auto w-full flex h-20 items-center justify-between px-4 sm:px-8 md:px-10 border-b border-gray-100">
+        <header className="w-full bg-card relative">
+            <div className="max-w-[1940px] mx-auto w-full flex h-20 items-center justify-between px-4 sm:px-8 md:px-10 border-b border-border-custom">
 
                 <Link
                     href="/"
@@ -46,10 +46,10 @@ export default function Navbar() {
 
                     <div className="flex flex-col justify-center">
                         <div className="text-xl sm:text-3xl font-extrabold tracking-tight leading-none flex items-center">
-                            <span className="text-[#102a56]">OurCity</span>
-                            <span className="text-[#1d63ed]">Voice</span>
+                            <span className="text-foreground">OurCity</span>
+                            <span className="text-primary">Voice</span>
                         </div>
-                        <p className="text-[11px] sm:text-[14px] font-semibold text-gray-400 tracking-wide mt-1">
+                        <p className="text-[11px] sm:text-[14px] font-semibold text-muted tracking-wide mt-1">
                             Report &nbsp;&nbsp;·&nbsp;&nbsp;Share&nbsp;&nbsp;·&nbsp;&nbsp;Improve&nbsp;&nbsp;·&nbsp;&nbsp;Together
                         </p>
                     </div>
@@ -63,8 +63,8 @@ export default function Navbar() {
                                 key={item.name}
                                 href={item.href}
                                 className={`px-5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${isActive
-                                    ? "bg-[#2563eb] text-white shadow-md shadow-blue-500/20"
-                                    : "text-gray-600 hover:text-white hover:bg-[#2563eb]"
+                                    ? "bg-primary text-white shadow-md shadow-primary/20"
+                                    : "text-foreground/70 hover:text-white hover:bg-primary"
                                     }`}
                             >
                                 {item.name}
@@ -76,14 +76,14 @@ export default function Navbar() {
                 <div className="flex items-center gap-2 sm:gap-4">
                     <button
                         aria-label="Search"
-                        className="p-2 text-gray-700 hover:text-[#2563eb] hover:bg-gray-100 rounded-full transition"
+                        className="p-2 text-foreground/80 hover:text-primary hover:bg-section rounded-full transition"
                     >
                         <Search className="w-6 h-6 stroke-[2.2]" />
                     </button>
 
                     <Link
                         href="/login"
-                        className="hidden sm:flex items-center gap-2 bg-[#2563eb] hover:bg-blue-700 text-white font-medium px-4 md:px-5 py-2.5 rounded-xl text-sm transition-all shadow-sm hover:shadow-md"
+                        className="hidden sm:flex items-center gap-2 bg-primary hover:bg-primary-hover text-white font-medium px-4 md:px-5 py-2.5 rounded-xl text-sm transition-all shadow-sm hover:shadow-md"
                     >
                         <User className="w-4 h-4 stroke-[2.5]" />
                         <span>Login</span>
@@ -92,7 +92,7 @@ export default function Navbar() {
                     <button
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                         aria-label="Toggle Navigation Menu"
-                        className="lg:hidden p-2 text-gray-700 hover:text-[#2563eb] hover:bg-gray-100 rounded-xl transition focus:outline-none"
+                        className="lg:hidden p-2 text-foreground/80 hover:text-primary hover:bg-section rounded-xl transition focus:outline-none"
                     >
                         {isMobileMenuOpen ? (
                             <X className="w-8 h-8 stroke-[2.5]" />
@@ -105,7 +105,7 @@ export default function Navbar() {
             </div>
 
             {isMobileMenuOpen && (
-                <div className="lg:hidden absolute top-20 right-2 md:right-10 max-w-xs md:max-w-sm w-full bg-white border border-gray-100 p-4 space-y-3 shadow-2xl rounded-b-2xl z-50 transition-all duration-200 animate-in fade-in slide-in-from-top-2">
+                <div className="lg:hidden absolute top-20 right-2 md:right-10 max-w-xs md:max-w-sm w-full bg-card border border-border-custom p-4 space-y-3 shadow-2xl rounded-b-2xl z-50 transition-all duration-200 animate-in fade-in slide-in-from-top-2">
                     <nav className="flex flex-col space-y-1.5">
                         {navItems.map((item: NavItem) => {
                             const isActive: boolean = pathname === item.href;
@@ -115,8 +115,8 @@ export default function Navbar() {
                                     href={item.href}
                                     onClick={() => setIsMobileMenuOpen(false)}
                                     className={`px-4 py-2.5 rounded-xl text-base font-semibold transition-all duration-200 ${isActive
-                                        ? "bg-[#2563eb] text-white shadow-md shadow-blue-500/20"
-                                        : "text-gray-700 hover:bg-blue-50 hover:text-[#2563eb]"
+                                        ? "bg-primary text-white shadow-md shadow-primary/20"
+                                        : "text-foreground/80 hover:bg-tag-blue-bg hover:text-primary"
                                         }`}
                                 >
                                     {item.name}
@@ -125,11 +125,11 @@ export default function Navbar() {
                         })}
                     </nav>
 
-                    <div className="pt-2 sm:hidden border-t border-gray-100">
+                    <div className="pt-2 sm:hidden border-t border-border-custom">
                         <Link
                             href="/login"
                             onClick={() => setIsMobileMenuOpen(false)}
-                            className="flex items-center justify-center gap-2 w-full bg-[#2563eb] hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-xl text-base transition shadow-sm"
+                            className="flex items-center justify-center gap-2 w-full bg-primary hover:bg-primary-hover text-white font-semibold px-5 py-3 rounded-xl text-base transition shadow-sm"
                         >
                             <User className="w-5 h-5 stroke-[2.5]" />
                             <span>Login</span>

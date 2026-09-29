@@ -2,12 +2,45 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0f172a;
+
+  --primary: #1d63ed;
+  --primary-hover: #154fc1;
+  --secondary: #0284c7;
+
+  --tag-blue-bg: #e0f2fe;
+  --tag-blue-text: #0284c7;
+  --tag-green-bg: #dcfce7;
+  --tag-green-text: #15803d;
+  --tag-amber-bg: #fef3c7;
+  --tag-amber-text: #b45309;
+
+  --card-bg: #ffffff;
+  --section-bg: #f8fafc;
+  --border-color: #e2e8f0;
+  --muted-text: #64748b;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+
+  --color-tag-blue-bg: var(--tag-blue-bg);
+  --color-tag-blue-text: var(--tag-blue-text);
+  --color-tag-green-bg: var(--tag-green-bg);
+  --color-tag-green-text: var(--tag-green-text);
+  --color-tag-amber-bg: var(--tag-amber-bg);
+  --color-tag-amber-text: var(--tag-amber-text);
+
+  --color-card: var(--card-bg);
+  --color-section: var(--section-bg);
+  --color-border-custom: var(--border-color);
+  --color-muted: var(--muted-text);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -15,12 +48,12 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #ffffff;
-    --foreground: #000000;
+    --foreground: #0f172a;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
