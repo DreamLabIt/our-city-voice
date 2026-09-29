@@ -20,7 +20,7 @@ export default function HomeLayout() {
                         </div>
                     </div>
 
-                    <div className="lg:col-span-4 xl:col-span-3 space-y-6">
+                    <div className="lg:col-span-4 xl:col-span-3 space-y-4">
                         <FilterPostsCard />
                         <RecentActivityCard />
                     </div>

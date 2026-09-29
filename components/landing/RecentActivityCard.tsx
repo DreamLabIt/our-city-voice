@@ -72,7 +72,7 @@ export default function RecentActivityCard(): React.JSX.Element {
 
     return (
         <div className="w-full bg-[#f8fafc]/80 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
-            <div className="flex items-center justify-between pb-1 p-4">
+            <div className="flex items-center justify-between pb-0 p-4">
                 <div className="flex items-center gap-2 text-[#0f172a] font-bold text-base">
                     <Clock className="w-5 h-5 text-[#0f172a]" />
                     <span>Recent Activity</span>
