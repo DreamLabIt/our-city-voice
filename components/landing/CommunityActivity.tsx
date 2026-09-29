@@ -83,7 +83,7 @@ export default function CommunityActivity(): React.JSX.Element {
     const yTicks: number[] = [200, 150, 100, 50, 0];
 
     return (
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
+        <div className="w-full bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
                 <div className="lg:col-span-7 space-y-3">

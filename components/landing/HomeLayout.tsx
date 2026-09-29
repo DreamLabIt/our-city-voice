@@ -3,6 +3,7 @@
 import CommunityActivity from "./CommunityActivity";
 import FilterPostsCard from "./FilterPostsCard";
 import RecentActivityCard from "./RecentActivityCard";
+import RecentPosts from "./RecentPosts";
 
 export default function HomeLayout() {
     return (
@@ -15,7 +16,7 @@ export default function HomeLayout() {
                             <CommunityActivity />
                         </div>
                         <div className="w-full">
-
+                            <RecentPosts />
                         </div>
                     </div>
 
