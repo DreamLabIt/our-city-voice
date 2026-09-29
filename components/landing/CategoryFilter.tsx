@@ -26,27 +26,27 @@ export interface CategoryItem {
 }
 
 const categories: CategoryItem[] = [
-    { id: "all", label: "All", icon: LayoutGrid, iconColor: "text-[#1d63ed]" },
-    { id: "roads", label: "Roads", icon: Road, iconColor: "text-[#0f172a]" },
-    { id: "water", label: "Water & Sewer", icon: Droplets, iconColor: "text-[#1d63ed]" },
-    { id: "stormwater", label: "Stormwater & Flooding", icon: CloudRain, iconColor: "text-[#1d63ed]" },
-    { id: "parks", label: "Parks & Recreation", icon: Trees, iconColor: "text-[#16a34a]" },
-    { id: "waste", label: "Waste & Recycling", icon: Trash2, iconColor: "text-[#16a34a]" },
-    { id: "streetlights", label: "Streetlights & Signals", icon: Lightbulb, iconColor: "text-[#0f172a]" },
-    { id: "buildings", label: "Buildings & Facilities", icon: Building2, iconColor: "text-[#0f172a]" },
-    { id: "transit", label: "Transit & Mobility", icon: Bus, iconColor: "text-[#1d63ed]" },
-    { id: "environment", label: "Environment", icon: TreePine, iconColor: "text-[#16a34a]" },
-    { id: "community", label: "Community & Safety", icon: Users, iconColor: "text-[#1d63ed]" },
+    { id: "all", label: "All", icon: LayoutGrid, iconColor: "text-primary" },
+    { id: "roads", label: "Roads", icon: Road, iconColor: "text-foreground" },
+    { id: "water", label: "Water & Sewer", icon: Droplets, iconColor: "text-primary" },
+    { id: "stormwater", label: "Stormwater & Flooding", icon: CloudRain, iconColor: "text-primary" },
+    { id: "parks", label: "Parks & Recreation", icon: Trees, iconColor: "text-tag-green-text" },
+    { id: "waste", label: "Waste & Recycling", icon: Trash2, iconColor: "text-tag-green-text" },
+    { id: "streetlights", label: "Streetlights & Signals", icon: Lightbulb, iconColor: "text-foreground" },
+    { id: "buildings", label: "Buildings & Facilities", icon: Building2, iconColor: "text-foreground" },
+    { id: "transit", label: "Transit & Mobility", icon: Bus, iconColor: "text-primary" },
+    { id: "environment", label: "Environment", icon: TreePine, iconColor: "text-tag-green-text" },
+    { id: "community", label: "Community & Safety", icon: Users, iconColor: "text-primary" },
     { id: "other", label: "Other", icon: MoreHorizontal, isOther: true },
 ];
 
-export default function CategoryFilter() {
+export default function CategoryFilter(): React.JSX.Element {
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
     const otherCategory = categories.find((c) => c.isOther);
     const mainCategories = categories.filter((c) => !c.isOther);
 
     return (
-        <section className="w-full bg-white py-4">
+        <section className="w-full bg-card py-4">
             <div className="max-w-[1940px] mx-auto px-4 sm:px-8 md:px-10">
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:flex lg:flex-wrap items-center gap-3 sm:gap-4 md:gap-6 justify-center sm:justify-start">
 
@@ -62,21 +62,21 @@ export default function CategoryFilter() {
                                 type="button"
                                 className={`${isHiddenOnMobile ? "hidden sm:flex" : "flex"
                                     } group relative flex-col items-center justify-between w-full sm:w-27.5 h-24 sm:h-25 md:w-30 md:h-27.5 p-2.5 sm:p-3 rounded-2xl transition-all duration-200 select-none cursor-pointer border ${isSelected
-                                        ? "bg-[#edf4ff] border-2 border-[#22a56c] shadow-sm"
-                                        : "bg-[#f8fafc] border-slate-200/70 hover:bg-slate-100/80 hover:border-[#22a56c]"
+                                        ? "bg-tag-blue-bg border-2 border-tag-green-text shadow-sm"
+                                        : "bg-section border-border-custom hover:bg-slate-100/80 hover:border-tag-green-text"
                                     }`}
                             >
                                 <div className="flex-1 flex items-center justify-center">
                                     <Icon
                                         className={`w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 transition-colors stroke-2 ${isSelected
-                                            ? "text-[#1d63ed]"
-                                            : cat.iconColor || "text-slate-700"
+                                            ? "text-primary"
+                                            : cat.iconColor || "text-foreground/80"
                                             }`}
                                     />
                                 </div>
 
                                 <span
-                                    className={`text-[10px] sm:text-[11px] md:text-[12px] font-semibold text-center leading-tight transition-colors line-clamp-2 px-0.5 ${isSelected ? "text-[#1d63ed]" : "text-slate-700"
+                                    className={`text-[10px] sm:text-[11px] md:text-[12px] font-semibold text-center leading-tight transition-colors line-clamp-2 px-0.5 ${isSelected ? "text-primary" : "text-foreground/80"
                                         }`}
                                 >
                                     {cat.label}
@@ -95,15 +95,15 @@ export default function CategoryFilter() {
                                 onClick={() => setSelectedCategory(otherCategory.id)}
                                 type="button"
                                 className={`flex group relative flex-col items-center justify-between w-full sm:w-27.5 h-24 sm:h-25 md:w-30 md:h-27.5 p-2.5 sm:p-3 rounded-2xl transition-all duration-200 select-none cursor-pointer border ${isSelected
-                                    ? "bg-[#edf4ff] border-2 border-[#22a56c] shadow-sm"
-                                    : "bg-[#f8fafc] border-slate-200/70 hover:bg-slate-100/80 hover:border-[#22a56c]"
+                                    ? "bg-tag-blue-bg border-2 border-tag-green-text shadow-sm"
+                                    : "bg-section border-border-custom hover:bg-slate-100/80 hover:border-tag-green-text"
                                     }`}
                             >
                                 <div className="flex-1 flex items-center justify-center">
                                     <div
                                         className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-colors ${isSelected
-                                            ? "bg-[#1d63ed] text-white"
-                                            : "bg-slate-200/80 text-slate-700 group-hover:bg-slate-300/80"
+                                            ? "bg-primary text-white"
+                                            : "bg-slate-200/80 text-foreground/80 group-hover:bg-slate-300/80"
                                             }`}
                                     >
                                         <Icon className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
@@ -111,7 +111,7 @@ export default function CategoryFilter() {
                                 </div>
 
                                 <span
-                                    className={`text-[10px] sm:text-[11px] md:text-[12px] font-semibold text-center leading-tight transition-colors line-clamp-2 px-0.5 ${isSelected ? "text-[#1d63ed]" : "text-slate-700"
+                                    className={`text-[10px] sm:text-[11px] md:text-[12px] font-semibold text-center leading-tight transition-colors line-clamp-2 px-0.5 ${isSelected ? "text-primary" : "text-foreground/80"
                                         }`}
                                 >
                                     {otherCategory.label}
