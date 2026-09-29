@@ -14,7 +14,7 @@ import {
 
 export default function FilterPostsCard(): React.JSX.Element {
     return (
-        <div className="bg-[#f8fafc]/80 rounded-2xl border border-slate-200/80 p-4 shadow-xs space-y-3">
+        <div className="w-full bg-[#f8fafc]/80 rounded-2xl border border-slate-200/80 p-4 shadow-xs space-y-3">
             <div className="flex items-center justify-between pb-1">
                 <div className="flex items-center gap-2 text-[#0f172a] font-bold text-base">
                     <Filter className="w-5 h-5 text-[#1d63ed] fill-[#1d63ed]" />
