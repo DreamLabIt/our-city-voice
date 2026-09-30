@@ -8,7 +8,7 @@ import { ChevronRight, Home } from "lucide-react";
 
 interface PageHeaderProps {
     title: string;
-    description?: string;
+    description?: React.ReactNode;
     bgImage?: string;
     customBreadcrumbName?: string;
 }
