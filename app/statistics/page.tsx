@@ -145,7 +145,7 @@ export default function StatisticsPage(): React.JSX.Element {
 
     return (
         <div>
-
+            Hello
         </div>
     );
 }
