@@ -117,7 +117,7 @@ export default function AboutPage(): React.JSX.Element {
                 </section>
 
                 <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-card border border-border-custom p-8 rounded-2xl space-y-4 hover:border-primary/50 transition-all shadow-sm">
+                    <div className="bg-card border border-border-custom p-8 rounded-2xl space-y-4 hover:border-primary/50 transition-all border-l-6 border-l-primary/80">
                         <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
                             <Target className="w-6 h-6" />
                         </div>
@@ -129,7 +129,7 @@ export default function AboutPage(): React.JSX.Element {
                         </p>
                     </div>
 
-                    <div className="bg-card border border-border-custom p-8 rounded-2xl space-y-4 hover:border-primary/50 transition-all shadow-sm">
+                    <div className="bg-card border border-border-custom p-8 rounded-2xl space-y-4 hover:border-primary/50 transition-all border-l-6 border-l-primary/80">
                         <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
                             <Eye className="w-6 h-6" />
                         </div>
@@ -141,7 +141,7 @@ export default function AboutPage(): React.JSX.Element {
                         </p>
                     </div>
 
-                    <div className="bg-card border border-border-custom p-8 rounded-2xl space-y-4 hover:border-primary/50 transition-all shadow-sm">
+                    <div className="bg-card border border-border-custom p-8 rounded-2xl space-y-4 hover:border-primary/50 transition-all border-l-6 border-l-primary/80">
                         <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
                             <ShieldCheck className="w-6 h-6" />
                         </div>
