@@ -4,10 +4,10 @@ import HomeLayout from "@/components/landing/HomeLayout";
 
 export default function Home() {
   return (
-    <main className="">
+    <section className="">
       <HeroSection />
       <CategoryFilter />
       <HomeLayout />
-    </main>
+    </section>
   );
 }
