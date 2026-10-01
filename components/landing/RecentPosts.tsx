@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { MapPin, MessageSquare, ThumbsUp, Eye, Play, Video } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { MapPin, MessageSquare, ThumbsUp, Eye, Play, Video, Pause } from "lucide-react";
 import Image from "next/image";
 
 export interface PostItem {
@@ -18,6 +18,7 @@ export interface PostItem {
     likes: number;
     views: number;
     image: string;
+    video?: string;
     isVideo?: boolean;
     duration?: string;
     category: "Latest" | "Most Commented" | "Nearby" | "Map View";
@@ -43,6 +44,7 @@ export default function RecentPosts(): React.JSX.Element {
             likes: 8,
             views: 245,
             image: "/road_surface .jpeg",
+            video: "https://lorem.video/1280x720_h264_20s_30fps",
             isVideo: true,
             duration: "0:32",
             category: "Latest",
@@ -102,6 +104,35 @@ export default function RecentPosts(): React.JSX.Element {
             ? posts
             : posts.filter((post) => post.category === activeTab);
 
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const [duration, setDuration] = useState("0:00");
+    const [isPlaying, setIsPlaying] = useState(false);
+
+    const handleVideoPlay = () => {
+        if (!videoRef.current) return;
+
+        if (videoRef.current.paused) {
+            videoRef.current.play();
+            setIsPlaying(true);
+        } else {
+            videoRef.current.pause();
+            setIsPlaying(false);
+        }
+    };
+
+    const handleLoadedMetadata = () => {
+        // console.log("Video metadata loaded", videoRef.current?.duration);
+        if (!videoRef.current) return;
+
+        const totalSeconds = Math.floor(videoRef.current.duration);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+
+        setDuration(
+            `${minutes}:${seconds.toString().padStart(2, "0")}`
+        );
+    };
+
     return (
         <div className="w-full bg-card rounded-2xl border border-border-custom p-5 shadow-xs">
             <div className="flex items-start justify-start border-b border-border-custom/60 gap-6 sm:gap-8 overflow-x-auto no-scrollbar">
@@ -135,25 +166,43 @@ export default function RecentPosts(): React.JSX.Element {
                         className="border border-border-custom rounded-2xl overflow-hidden bg-card hover:shadow-md transition-all flex flex-col justify-between group"
                     >
                         <div>
-                            <div className="relative w-full h-40 bg-slate-100 overflow-hidden cursor-pointer">
-                                <Image
-                                    src={post.image}
-                                    alt={post.title}
-                                    width={100}
-                                    height={100}
-                                    className="w-full h-full group-hover:scale-101 transition-transform duration-100"
-                                />
+                            <div className="relative w-full h-40 bg-slate-100 overflow-hidden cursor-pointer group">
+
+                                {post.isVideo && post.video ? (
+                                    <video
+                                        ref={videoRef}
+                                        src={post.video}
+                                        onLoadedMetadata={handleLoadedMetadata}
+                                        onEnded={() => setIsPlaying(false)}
+                                        className="w-full h-full object-cover transition-transform duration-100 group-hover:scale-101"
+                                    />
+                                ) : (
+                                    <Image
+                                        src={post.image}
+                                        alt={post.title}
+                                        width={100}
+                                        height={100}
+                                        className="w-full h-full object-cover transition-transform duration-100 group-hover:scale-101"
+                                    />
+                                )}
 
                                 {post.isVideo && (
                                     <>
-                                        <div className="absolute bottom-0 right-2 bg-black/75 text-white text-[16px] font-medium px-2 py-0.5 rounded-md flex items-center gap-1.5 backdrop-blur-xs z-10">
-                                            <span>{post.duration}</span>
+                                        <div className="absolute bottom-2 right-2 bg-black/75 text-white text-[16px] font-medium px-2 py-0.5 rounded-md flex items-center gap-1.5 backdrop-blur-xs z-10">
+                                            <span>{duration}</span>
                                             <Video className="w-4 h-4 fill-current" />
                                         </div>
 
-                                        <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <div
+                                            onClick={handleVideoPlay}
+                                            className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                                        >
                                             <div className="w-10 h-10 rounded-full bg-white/90 text-primary flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
-                                                <Play className="w-5 h-5 fill-current ml-0.5" />
+                                                {isPlaying ? (
+                                                    <Pause className="w-5 h-5 fill-current" />
+                                                ) : (
+                                                    <Play className="w-5 h-5 fill-current ml-0.5" />
+                                                )}
                                             </div>
                                         </div>
                                     </>
