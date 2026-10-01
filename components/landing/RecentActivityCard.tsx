@@ -40,13 +40,13 @@ export default function RecentActivityCard(): React.ReactNode {
                                     <p className="font-medium text-foreground text-[17px] leading-tight truncate">
                                         {item.title}
                                     </p>
-                                    <p className="text-[15px] text-muted font-normal leading-tight mt-0.5">
+                                    <p className="text-[15px] text-muted-foreground font-normal leading-tight mt-0.5">
                                         {item.code}
                                     </p>
                                 </div>
                             </div>
 
-                            <span className="text-[14px] text-muted font-medium shrink-0 self-start pt-0.5">
+                            <span className="text-[14px] text-muted-foreground font-medium shrink-0 self-start pt-0.5">
                                 {item.time}
                             </span>
                         </div>

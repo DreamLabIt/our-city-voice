@@ -132,7 +132,7 @@ export default function StatisticsPage(): React.ReactNode {
                 <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 bg-card border border-border-custom p-4 sm:p-5 rounded-2xl">
                     <div className="flex flex-col gap-2">
                         <h2 className="text-base font-bold text-foreground">Live Analytics Control Hub</h2>
-                        <p className="text-xs text-muted">Showing data aggregated for selected timeframe</p>
+                        <p className="text-xs text-muted-foreground">Showing data aggregated for selected timeframe</p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3">
@@ -143,7 +143,7 @@ export default function StatisticsPage(): React.ReactNode {
                                     onClick={() => setTimeRange(range)}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer uppercase ${timeRange === range
                                         ? "bg-primary text-white shadow-sm"
-                                        : "text-muted hover:text-foreground"
+                                        : "text-muted-foreground hover:text-foreground"
                                         }`}
                                 >
                                     {range === "7d"
@@ -180,7 +180,7 @@ export default function StatisticsPage(): React.ReactNode {
                 <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="bg-primary/6 p-6 rounded-2xl space-y-3 hover:border-primary/40 transition-colors border-l-6 border-l-primary/80">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-muted uppercase tracking-wider">Total Issues</span>
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Issues</span>
                             <div className="p-2.5 bg-primary/10 text-primary rounded-xl">
                                 <BarChart3 className="w-5 h-5" />
                             </div>
@@ -195,7 +195,7 @@ export default function StatisticsPage(): React.ReactNode {
 
                     <div className="bg-primary/6 p-6 rounded-2xl space-y-3 hover:border-primary/40 transition-colors border-l-6 border-l-primary/80">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-muted uppercase tracking-wider">Resolved Cases</span>
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Resolved Cases</span>
                             <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-xl">
                                 <CheckCircle2 className="w-5 h-5" />
                             </div>
@@ -210,7 +210,7 @@ export default function StatisticsPage(): React.ReactNode {
 
                     <div className="bg-primary/6 p-6 rounded-2xl space-y-3 hover:border-primary/40 transition-colors border-l-6 border-l-primary/80">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-muted uppercase tracking-wider">Active Pending</span>
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Active Pending</span>
                             <div className="p-2.5 bg-amber-500/10 text-amber-500 rounded-xl">
                                 <Clock className="w-5 h-5" />
                             </div>
@@ -225,7 +225,7 @@ export default function StatisticsPage(): React.ReactNode {
 
                     <div className="bg-primary/6 p-6 rounded-2xl space-y-3 hover:border-primary/40 transition-colors border-l-6 border-l-primary/80">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-muted uppercase tracking-wider">Avg Response Time</span>
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Avg Response Time</span>
                             <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-xl">
                                 <Calendar className="w-5 h-5" />
                             </div>
@@ -247,7 +247,7 @@ export default function StatisticsPage(): React.ReactNode {
                                     <Activity className="w-5 h-5 text-primary" />
                                     <span>Resolution vs Reported Issues Trend</span>
                                 </h3>
-                                <p className="text-xs text-muted mt-0.5">
+                                <p className="text-xs text-muted-foreground mt-0.5">
                                     Comparative monthly breakdown of incoming civic reports versus completed repairs.
                                 </p>
                             </div>
@@ -291,7 +291,7 @@ export default function StatisticsPage(): React.ReactNode {
                                 <PieChart className="w-5 h-5 text-primary" />
                                 <span>Category Distribution</span>
                             </h3>
-                            <p className="text-xs text-muted mt-0.5">Top complaint categories</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Top complaint categories</p>
                         </div>
 
                         <div className="w-full h-55 relative flex items-center justify-center">
@@ -322,7 +322,7 @@ export default function StatisticsPage(): React.ReactNode {
                                         <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
                                         {cat.name}
                                     </span>
-                                    <span className="text-muted">{cat.value.toLocaleString()}</span>
+                                    <span className="text-muted-foreground">{cat.value.toLocaleString()}</span>
                                 </div>
                             ))}
                         </div>
@@ -336,7 +336,7 @@ export default function StatisticsPage(): React.ReactNode {
                                 <Award className="w-5 h-5 text-primary" />
                                 <span>Departmental SLA Target Performance</span>
                             </h3>
-                            <p className="text-xs text-muted mt-0.5">
+                            <p className="text-xs text-muted-foreground mt-0.5">
                                 Performance efficiency of individual civic departments against resolution SLAs.
                             </p>
                         </div>
@@ -365,7 +365,7 @@ export default function StatisticsPage(): React.ReactNode {
                                     <div className="w-full h-2 bg-card rounded-full overflow-hidden">
                                         <div className="h-full bg-primary rounded-full" style={{ width: `${d.rate}%` }} />
                                     </div>
-                                    <div className="flex justify-between text-[11px] text-muted pt-0.5">
+                                    <div className="flex justify-between text-[11px] text-muted-foreground pt-0.5">
                                         <span>Solved: {d.solved.toLocaleString()}</span>
                                         <span>Target: {d.target.toLocaleString()}</span>
                                     </div>
@@ -382,20 +382,20 @@ export default function StatisticsPage(): React.ReactNode {
                                 <Building2 className="w-5 h-5 text-primary" />
                                 <span>Ward-wise Master Data Matrix</span>
                             </h3>
-                            <p className="text-xs text-muted mt-0.5">
+                            <p className="text-xs text-muted-foreground mt-0.5">
                                 Search, filter, and audit area-wise municipal complaint resolution progress.
                             </p>
                         </div>
 
                         <div className="flex flex-col sm:flex-row items-center gap-3">
                             <div className="relative w-full sm:w-64">
-                                <Search className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                                <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
                                 <input
                                     type="text"
                                     placeholder="Search ward or location..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-9 pr-4 py-2 bg-section border border-border-custom rounded-xl text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="w-full pl-9 pr-4 py-2 bg-section border border-border-custom rounded-xl text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                                 />
                             </div>
 
@@ -418,7 +418,7 @@ export default function StatisticsPage(): React.ReactNode {
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="border-b border-border-custom text-muted text-xs uppercase tracking-wider bg-section/60">
+                                <tr className="border-b border-border-custom text-muted-foreground text-xs uppercase tracking-wider bg-section/60">
                                     <th className="py-3.5 px-4 font-bold">Ward Area</th>
                                     <th className="py-3.5 px-4 font-bold">Total Reports</th>
                                     <th className="py-3.5 px-4 font-bold">Resolved</th>
@@ -436,7 +436,7 @@ export default function StatisticsPage(): React.ReactNode {
                                                 <MapPin className="w-4 h-4 text-primary shrink-0" />
                                                 <span>{item.ward}</span>
                                             </td>
-                                            <td className="py-4 px-4 font-medium text-muted">{item.total.toLocaleString()}</td>
+                                            <td className="py-4 px-4 font-medium text-muted-foreground">{item.total.toLocaleString()}</td>
                                             <td className="py-4 px-4 font-bold text-emerald-500">{item.resolved.toLocaleString()}</td>
                                             <td className="py-4 px-4 font-bold text-amber-500">{item.pending.toLocaleString()}</td>
                                             <td className="py-4 px-4 font-medium text-foreground">{item.avgTimeHours} Hours</td>
@@ -457,7 +457,7 @@ export default function StatisticsPage(): React.ReactNode {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={7} className="text-center py-8 text-muted text-xs">
+                                        <td colSpan={7} className="text-center py-8 text-muted-foreground text-xs">
                                             No ward matching your search query or status filter.
                                         </td>
                                     </tr>

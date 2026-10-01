@@ -65,13 +65,13 @@ export default function HeroSection(): React.ReactNode {
 
                             <form onSubmit={handleSearch} className="flex items-center gap-3">
                                 <div className="relative flex-1 flex items-center">
-                                    <Search className="absolute left-3.5 sm:left-4 w-5 h-5 text-muted pointer-events-none stroke-2" />
+                                    <Search className="absolute left-3.5 sm:left-4 w-5 h-5 text-muted-foreground pointer-events-none stroke-2" />
                                     <input
                                         type="text"
                                         value={searchQuery}
                                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
                                         placeholder="Search by ID number, address, road, ward or keyword..."
-                                        className="w-full pl-11 pr-4 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl border border-border-custom bg-card text-foreground placeholder:text-muted text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition shadow-sm"
+                                        className="w-full pl-11 pr-4 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl border border-border-custom bg-card text-foreground placeholder:text-muted-foreground text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition shadow-sm"
                                     />
                                 </div>
 
@@ -83,7 +83,7 @@ export default function HeroSection(): React.ReactNode {
                                 </button>
                             </form>
 
-                            <p className="text-xs sm:text-[13px] text-muted font-medium">
+                            <p className="text-xs sm:text-[13px] text-muted-foreground font-medium">
                                 Example: #1024, Finch Ave, Ward 5, M1B 3J4
                             </p>
 

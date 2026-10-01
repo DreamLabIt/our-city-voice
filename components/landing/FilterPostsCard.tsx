@@ -76,7 +76,7 @@ export default function FilterPostsCard(): React.ReactNode {
                     <input
                         type="text"
                         placeholder="Road / Street Name"
-                        className="w-full pl-12 pr-3 py-2.5 bg-card border border-border-custom/90 rounded text-xs font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
+                        className="w-full pl-12 pr-3 py-2.5 bg-card border border-border-custom/90 rounded text-xs font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
                     />
                 </div>
 
@@ -87,7 +87,7 @@ export default function FilterPostsCard(): React.ReactNode {
                     <input
                         type="text"
                         placeholder="Postal Code"
-                        className="w-full pl-12 pr-3 py-2.5 bg-card border border-border-custom/90 rounded text-xs font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
+                        className="w-full pl-12 pr-3 py-2.5 bg-card border border-border-custom/90 rounded text-xs font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
                     />
                 </div>
 
@@ -98,7 +98,7 @@ export default function FilterPostsCard(): React.ReactNode {
                     <input
                         type="text"
                         placeholder="Address / Property"
-                        className="w-full pl-12 pr-3 py-2.5 bg-card border border-border-custom/90 rounded text-xs font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
+                        className="w-full pl-12 pr-3 py-2.5 bg-card border border-border-custom/90 rounded text-xs font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
                     />
                 </div>
 

@@ -44,13 +44,13 @@ export default function Footer(): React.ReactNode {
                                     <span className="text-foreground">OurCity</span>
                                     <span className="text-primary">Voice</span>
                                 </div>
-                                <p className="text-[11px] sm:text-[14px] font-semibold text-muted tracking-wide mt-1">
+                                <p className="text-[11px] sm:text-[14px] font-semibold text-muted-foreground tracking-wide mt-1">
                                     Report &nbsp;&nbsp;·&nbsp;&nbsp;Share&nbsp;&nbsp;·&nbsp;&nbsp;Improve&nbsp;&nbsp;·&nbsp;&nbsp;Together
                                 </p>
                             </div>
                         </Link>
 
-                        <p className="text-sm text-muted leading-relaxed max-w-sm">
+                        <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
                             Empowering communities to report, track, and resolve local infrastructure issues together. Make your neighborhood safer and better today.
                         </p>
                         <div className="flex items-center gap-3 pt-2">
@@ -95,23 +95,23 @@ export default function Footer(): React.ReactNode {
                         </div>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-3 ">
                         <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
                             Quick Links
                         </h3>
-                        <ul className="space-y-2 text-sm text-muted">
+                        <ul className="space-y-2 text-sm text-muted-foreground">
                             <li>
                                 <Link href="#" className="hover:text-primary transition-colors">
                                     All Categories
                                 </Link>
                             </li>
                             <li>
-                                <Link href="#" className="hover:text-primary transition-colors">
+                                <Link href="#" className="hover:text-primary  transition-colors">
                                     Recent Reports
                                 </Link>
                             </li>
                             <li>
-                                <Link href="#" className="hover:text-primary transition-colors">
+                                <Link href="#" className="hover:text-primary  transition-colors">
                                     Community Map
                                 </Link>
                             </li>
@@ -132,7 +132,7 @@ export default function Footer(): React.ReactNode {
                         <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
                             Contact & Support
                         </h3>
-                        <ul className="space-y-2.5 text-sm text-muted">
+                        <ul className="space-y-2.5 text-sm text-muted-foreground">
                             <li className="flex items-start gap-2.5">
                                 <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                                 <span>City Hall Plaza, Scarborough, ON</span>
@@ -152,7 +152,7 @@ export default function Footer(): React.ReactNode {
                         <h3 className="text-sm font-bold text-foreground uppercase tracking-wider ">
                             Stay Updated
                         </h3>
-                        <p className="text-xs text-muted leading-relaxed">
+                        <p className="text-xs text-muted-foreground leading-relaxed">
                             Subscribe to receive monthly civic reports and infrastructure updates.
                         </p>
                         <form onSubmit={handleSubscribe} className="space-y-2">
@@ -160,7 +160,7 @@ export default function Footer(): React.ReactNode {
                                 <input
                                     type="email"
                                     placeholder="Enter your email"
-                                    className="w-full pl-3 pr-10 py-2 bg-section border border-border-custom rounded-lg text-xs font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary"
+                                    className="w-full pl-3 pr-10 py-2 bg-section border border-border-custom rounded-lg text-xs font-medium text-muted-foreground placeholder:text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                                 />
                                 <button
                                     type="submit"
@@ -175,7 +175,7 @@ export default function Footer(): React.ReactNode {
 
                 </div>
 
-                <div className="border-t border-border-custom/60 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted">
+                <div className="border-t border-border-custom/60 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-foreground">
                     <p>© {new Date().getFullYear()} OurCityVoice. All rights reserved.</p>
 
                     <div className="flex items-center gap-1">

@@ -45,10 +45,10 @@ export default function AboutPage(): React.ReactNode {
                         <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-foreground leading-tight max-w-180">
                             Bridging the Gap Between <span className="text-primary">Citizens</span> & <span className="text-primary">City Authorities</span>
                         </h2>
-                        <p className="text-muted text-sm sm:text-base leading-relaxed">
+                        <p className="text-muted-foreground text-sm sm:text-base leading-relaxed">
                             OurCityVoice is a community-driven civic management system designed to make city infrastructure reporting seamless, transparent, and actionable. From pothole repairs to street light outage fixes, we empower residents to report issues and track resolutions in real time.
                         </p>
-                        <p className="text-muted text-sm sm:text-base leading-relaxed">
+                        <p className="text-muted-foreground text-sm sm:text-base leading-relaxed">
                             By fostering collaboration between active citizens and municipality teams, we are building cleaner, safer, and more resilient urban environments for everyone.
                         </p>
 
@@ -83,7 +83,7 @@ export default function AboutPage(): React.ReactNode {
 
                             <div className="absolute bottom-4 left-6 right-6 bg-card/60 p-5 rounded-xl shadow-lg flex items-center justify-between">
                                 <div className="space-y-1">
-                                    <p className="text-xs text-muted uppercase font-bold tracking-wider">Impact Created</p>
+                                    <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Impact Created</p>
                                     <p className="text-xl sm:text-2xl font-extrabold text-foreground">12,500+ Issues Resolved</p>
                                 </div>
                                 <div className="p-3 bg-primary/10 text-primary rounded-lg shrink-0">
@@ -102,7 +102,7 @@ export default function AboutPage(): React.ReactNode {
                         <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
                             <span>Our Mission</span>
                         </h3>
-                        <p className="text-sm text-muted leading-relaxed">
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                             To provide an accessible, transparent, and technology-driven platform that empowers citizens to report local infrastructure issues and hold civic bodies accountable.
                         </p>
                     </div>
@@ -114,7 +114,7 @@ export default function AboutPage(): React.ReactNode {
                         <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
                             <span>Our Vision</span>
                         </h3>
-                        <p className="text-sm text-muted leading-relaxed">
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                             To become the leading digital ecosystem for smart cities, where citizen participation directly shapes modern, well-maintained, and sustainable urban infrastructure.
                         </p>
                     </div>
@@ -126,7 +126,7 @@ export default function AboutPage(): React.ReactNode {
                         <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
                             <span>Our Values</span>
                         </h3>
-                        <p className="text-sm text-muted leading-relaxed">
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                             Transparency in progress, inclusivity in civic engagement, rapid response time, and trust between neighborhood communities and municipal teams.
                         </p>
                     </div>
@@ -138,7 +138,7 @@ export default function AboutPage(): React.ReactNode {
                         <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
                             Why Choose OurCityVoice?
                         </h2>
-                        <p className="text-sm sm:text-base text-muted max-w-150 mx-auto">
+                        <p className="text-sm sm:text-base text-muted-foreground max-w-150 mx-auto">
                             Designed with ease-of-use and speed in mind, providing an end-to-end workflow for civic problem reporting.
                         </p>
                     </div>
@@ -149,7 +149,7 @@ export default function AboutPage(): React.ReactNode {
                                 <MapPin className="w-5 h-5" />
                             </div>
                             <h4 className="font-bold text-base text-foreground">Geo-Tagged Reporting</h4>
-                            <p className="text-xs sm:text-sm text-muted leading-relaxed">
+                            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                                 Pinpoint exact locations of damages, road cracks, or broken street lights directly on an interactive map.
                             </p>
                         </div>
@@ -159,7 +159,7 @@ export default function AboutPage(): React.ReactNode {
                                 <Clock className="w-5 h-5" />
                             </div>
                             <h4 className="font-bold text-base text-foreground">Real-Time Status Tracking</h4>
-                            <p className="text-xs sm:text-sm text-muted leading-relaxed">
+                            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                                 Receive instant email or in-app updates as your reported issue moves from submitted to resolved.
                             </p>
                         </div>
@@ -169,7 +169,7 @@ export default function AboutPage(): React.ReactNode {
                                 <Users className="w-5 h-5" />
                             </div>
                             <h4 className="font-bold text-base text-foreground">Community Upvoting</h4>
-                            <p className="text-xs sm:text-sm text-muted leading-relaxed">
+                            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                                 Neighbors can upvote critical issues to highlight urgent repairs to local authorities faster.
                             </p>
                         </div>
@@ -179,7 +179,7 @@ export default function AboutPage(): React.ReactNode {
                                 <BarChart3 className="w-5 h-5" />
                             </div>
                             <h4 className="font-bold text-base text-foreground">Open Data Analytics</h4>
-                            <p className="text-xs sm:text-sm text-muted leading-relaxed">
+                            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                                 Transparent dashboards showing city-wide resolution rates and active maintenance progress.
                             </p>
                         </div>
@@ -192,7 +192,7 @@ export default function AboutPage(): React.ReactNode {
                             <FileText className="w-5 h-5" />
                         </div>
                         <p className="text-2xl sm:text-3xl font-extrabold text-primary">15,000+</p>
-                        <p className="text-xs sm:text-sm font-medium text-muted">Total Reports Submitted</p>
+                        <p className="text-xs sm:text-sm font-medium text-muted-foreground">Total Reports Submitted</p>
                     </div>
 
                     <div className="bg-card border border-border-custom p-6 rounded-2xl text-center space-y-2 hover:border-primary/40 transition-colors">
@@ -200,7 +200,7 @@ export default function AboutPage(): React.ReactNode {
                             <CheckCircle2 className="w-5 h-5" />
                         </div>
                         <p className="text-2xl sm:text-3xl font-extrabold text-primary">88%</p>
-                        <p className="text-xs sm:text-sm font-medium text-muted">Resolution Success Rate</p>
+                        <p className="text-xs sm:text-sm font-medium text-muted-foreground">Resolution Success Rate</p>
                     </div>
 
                     <div className="bg-card border border-border-custom p-6 rounded-2xl text-center space-y-2 hover:border-primary/40 transition-colors">
@@ -208,7 +208,7 @@ export default function AboutPage(): React.ReactNode {
                             <Clock className="w-5 h-5" />
                         </div>
                         <p className="text-2xl sm:text-3xl font-extrabold text-primary">48 Hours</p>
-                        <p className="text-xs sm:text-sm font-medium text-muted">Average Response Time</p>
+                        <p className="text-xs sm:text-sm font-medium text-muted-foreground">Average Response Time</p>
                     </div>
 
                     <div className="bg-card border border-border-custom p-6 rounded-2xl text-center space-y-2 hover:border-primary/40 transition-colors">
@@ -216,7 +216,7 @@ export default function AboutPage(): React.ReactNode {
                             <Users className="w-5 h-5" />
                         </div>
                         <p className="text-2xl sm:text-3xl font-extrabold text-primary">50,000+</p>
-                        <p className="text-xs sm:text-sm font-medium text-muted">Active Community Members</p>
+                        <p className="text-xs sm:text-sm font-medium text-muted-foreground">Active Community Members</p>
                     </div>
                 </section>
 
@@ -225,7 +225,7 @@ export default function AboutPage(): React.ReactNode {
                         <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
                             Frequently Asked Questions
                         </h2>
-                        <p className="text-sm sm:text-base text-muted max-w-140 mx-auto">
+                        <p className="text-sm sm:text-base text-muted-foreground max-w-140 mx-auto">
                             Find quick answers to common questions about how our platform works and how you can participate.
                         </p>
                     </div>
@@ -247,13 +247,13 @@ export default function AboutPage(): React.ReactNode {
                                             {faq.question}
                                         </span>
                                         <ChevronDown
-                                            className={`w-5 h-5 text-muted shrink-0 transition-transform duration-300 ${isOpen ? "rotate-180 text-primary" : ""
+                                            className={`w-5 h-5 text-muted-foreground shrink-0 transition-transform duration-300 ${isOpen ? "rotate-180 text-primary" : ""
                                                 }`}
                                         />
                                     </button>
 
                                     {isOpen && (
-                                        <div className="px-6 pb-6 text-sm text-muted leading-relaxed border-t border-border-custom/50 pt-4">
+                                        <div className="px-6 pb-6 text-sm text-muted-foreground leading-relaxed border-t border-border-custom/50 pt-4">
                                             {faq.answer}
                                         </div>
                                     )}
@@ -268,7 +268,7 @@ export default function AboutPage(): React.ReactNode {
                         <h3 className="text-2xl sm:text-3xl font-extrabold text-foreground flex items-center justify-center md:justify-start gap-2">
                             <span>Ready to Make Your Neighborhood Better?</span>
                         </h3>
-                        <p className="text-sm text-muted max-w-120">
+                        <p className="text-sm text-muted-foreground max-w-120">
                             Join thousands of residents already reporting issues and transforming city infrastructure today.
                         </p>
                     </div>

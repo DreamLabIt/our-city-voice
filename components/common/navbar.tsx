@@ -37,7 +37,7 @@ export default function Navbar(): React.ReactNode {
                             <span className="text-foreground">OurCity</span>
                             <span className="text-primary">Voice</span>
                         </div>
-                        <p className="text-[11px] sm:text-[14px] font-semibold text-muted tracking-wide mt-1">
+                        <p className="text-[11px] sm:text-[14px] font-semibold text-muted-foreground tracking-wide mt-1">
                             Report &nbsp;&nbsp;·&nbsp;&nbsp;Share&nbsp;&nbsp;·&nbsp;&nbsp;Improve&nbsp;&nbsp;·&nbsp;&nbsp;Together
                         </p>
                     </div>

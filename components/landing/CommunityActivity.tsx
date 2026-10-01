@@ -38,10 +38,10 @@ export default function CommunityActivity(): React.ReactNode {
                                                 <span className="text-[11px] font-bold text-tag-green-text block leading-tight">
                                                     {item.badge}
                                                 </span>
-                                                <p className="text-[9px] text-muted leading-tight">{item.sub}</p>
+                                                <p className="text-[9px] text-muted-foreground leading-tight">{item.sub}</p>
                                             </div>
                                         ) : (
-                                            <p className="text-[12px] text-muted mt-0.5">{item.sub}</p>
+                                            <p className="text-[12px] text-muted-foreground mt-0.5">{item.sub}</p>
                                         )}
                                     </div>
                                 </div>
@@ -52,13 +52,13 @@ export default function CommunityActivity(): React.ReactNode {
 
                 <div className="lg:col-span-5 border-t lg:border-t-0 lg:border-l border-border-custom pt-4 lg:pt-0 lg:pl-6 space-y-2">
                     <h2 className="text-base font-bold text-foreground">
-                        Posts per Month <span className="text-xs font-normal text-muted">(This Year)</span>
+                        Posts per Month <span className="text-xs font-normal text-muted-foreground">(This Year)</span>
                     </h2>
 
                     <div className="relative pt-2">
                         <div className="h-32 flex items-stretch">
 
-                            <div className="flex flex-col justify-between text-[10px] text-muted font-medium pr-2 text-right shrink-0">
+                            <div className="flex flex-col justify-between text-[10px] text-muted-foreground font-medium pr-2 text-right shrink-0">
                                 {yTicks.map((tick: number) => (
                                     <span key={tick} className="leading-none">{tick}</span>
                                 ))}
@@ -88,7 +88,7 @@ export default function CommunityActivity(): React.ReactNode {
 
                         <div className="flex justify-between pl-6 mt-1.5">
                             {chartMonths.map((m: ChartMonth, i: number) => (
-                                <span key={i} className="flex-1 text-center text-[10px] text-muted font-medium">
+                                <span key={i} className="flex-1 text-center text-[10px] text-muted-foreground font-medium">
                                     {m.month}
                                 </span>
                             ))}

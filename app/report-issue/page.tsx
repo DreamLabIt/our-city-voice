@@ -122,7 +122,7 @@ export default function ReportIssuePage(): React.ReactNode {
                             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
                                 Submit Infrastructure Details
                             </h2>
-                            <p className="text-sm text-muted">
+                            <p className="text-sm text-muted-foreground">
                                 Please fill in accurate information to help field inspectors review and resolve the issue quickly.
                             </p>
                         </div>
@@ -141,7 +141,7 @@ export default function ReportIssuePage(): React.ReactNode {
                                         required: "Issue title is required",
                                         minLength: { value: 6, message: "Title must be at least 6 characters" },
                                     })}
-                                    className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all mt-2"
+                                    className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all mt-2"
                                 />
                                 {errors.title && (
                                     <p className="text-xs text-destructive mt-1">{errors.title.message}</p>
@@ -193,7 +193,7 @@ export default function ReportIssuePage(): React.ReactNode {
                                         type="text"
                                         placeholder="Near Station Road, Ward 4"
                                         {...register("location", { required: "Location details are required" })}
-                                        className="w-full pl-10 pr-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all mt-2"
+                                        className="w-full pl-10 pr-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all mt-2"
                                     />
                                     <MapPin className="w-4 h-4 text-primary absolute left-3.5 top-1/2 -translate-y-1/2" />
                                 </div>
@@ -214,7 +214,7 @@ export default function ReportIssuePage(): React.ReactNode {
                                         required: "Description is required",
                                         minLength: { value: 15, message: "Description must be at least 15 characters" },
                                     })}
-                                    className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none mt-2"
+                                    className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none mt-2"
                                 />
                                 {errors.description && (
                                     <p className="text-xs text-destructive mt-1">{errors.description.message}</p>
@@ -241,9 +241,9 @@ export default function ReportIssuePage(): React.ReactNode {
                                         </div>
                                         <div>
                                             <p className="text-sm font-semibold text-foreground">
-                                                Click to upload <span className="text-muted font-normal">or drag and drop</span>
+                                                Click to upload <span className="text-muted-foreground font-normal">or drag and drop</span>
                                             </p>
-                                            <p className="text-xs text-muted mt-1">PNG, JPG, WEBP up to 5MB each</p>
+                                            <p className="text-xs text-muted-foreground mt-1">PNG, JPG, WEBP up to 5MB each</p>
                                         </div>
                                     </label>
                                 </div>
@@ -278,7 +278,7 @@ export default function ReportIssuePage(): React.ReactNode {
                                         <span>Reporter Details</span>
                                     </h3>
 
-                                    <label className="flex items-center gap-2 text-xs text-muted cursor-pointer font-medium select-none">
+                                    <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer font-medium select-none">
                                         <input
                                             type="checkbox"
                                             {...register("isAnonymous")}
@@ -299,7 +299,7 @@ export default function ReportIssuePage(): React.ReactNode {
                                                 type="text"
                                                 placeholder="Enter your name"
                                                 {...register("reporterName")}
-                                                className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all mt-2"
+                                                className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all mt-2"
                                             />
                                         </div>
 
@@ -318,7 +318,7 @@ export default function ReportIssuePage(): React.ReactNode {
                                                         message: "Invalid email address",
                                                     },
                                                 })}
-                                                className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all mt-2"
+                                                className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all mt-2"
                                             />
                                             {errors.reporterEmail && (
                                                 <p className="text-xs text-destructive mt-1">{errors.reporterEmail.message}</p>
@@ -364,7 +364,7 @@ export default function ReportIssuePage(): React.ReactNode {
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="bg-section border border-border-custom/80 p-3.5 rounded-xl space-y-1">
-                                    <div className="flex items-center gap-1.5 text-xs text-muted">
+                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                         <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
                                         <span>Received</span>
                                     </div>
@@ -372,7 +372,7 @@ export default function ReportIssuePage(): React.ReactNode {
                                 </div>
 
                                 <div className="bg-section border border-border-custom/80 p-3.5 rounded-xl space-y-1">
-                                    <div className="flex items-center gap-1.5 text-xs text-muted">
+                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                                         <span>Solved</span>
                                     </div>
@@ -382,7 +382,7 @@ export default function ReportIssuePage(): React.ReactNode {
 
                             <div className="bg-section border border-border-custom/80 p-3.5 rounded-xl flex items-center justify-between">
                                 <div className="space-y-0.5">
-                                    <p className="text-xs text-muted">Success Resolution Rate</p>
+                                    <p className="text-xs text-muted-foreground">Success Resolution Rate</p>
                                     <p className="text-lg font-bold text-emerald-500">88.06%</p>
                                 </div>
                                 <div className="w-9 h-9 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold text-xs">
@@ -435,13 +435,13 @@ export default function ReportIssuePage(): React.ReactNode {
                                     <span>High Activity Areas</span>
                                 </div>
                                 <div className="flex flex-wrap gap-1.5 text-xs">
-                                    <span className="bg-section border border-border-custom text-muted px-2.5 py-1 rounded-md">
+                                    <span className="bg-section border border-border-custom text-muted-foreground px-2.5 py-1 rounded-md">
                                         Main Commercial Zone (Ward 3)
                                     </span>
-                                    <span className="bg-section border border-border-custom text-muted px-2.5 py-1 rounded-md">
+                                    <span className="bg-section border border-border-custom text-muted-foreground px-2.5 py-1 rounded-md">
                                         Station Road Crossing
                                     </span>
-                                    <span className="bg-section border border-border-custom text-muted px-2.5 py-1 rounded-md">
+                                    <span className="bg-section border border-border-custom text-muted-foreground px-2.5 py-1 rounded-md">
                                         Sector 4 Bypass
                                     </span>
                                 </div>
@@ -469,12 +469,12 @@ export default function ReportIssuePage(): React.ReactNode {
                                             >
                                                 <span>{faq.q}</span>
                                                 <ChevronDown
-                                                    className={`w-3.5 h-3.5 text-muted shrink-0 transition-transform ${isOpen ? "rotate-180 text-primary" : ""
+                                                    className={`w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform ${isOpen ? "rotate-180 text-primary" : ""
                                                         }`}
                                                 />
                                             </button>
                                             {isOpen && (
-                                                <div className="px-3 pb-3 text-xs text-muted leading-relaxed border-t border-border-custom/40 pt-2">
+                                                <div className="px-3 pb-3 text-xs text-muted-foreground leading-relaxed border-t border-border-custom/40 pt-2">
                                                     {faq.a}
                                                 </div>
                                             )}
@@ -489,11 +489,11 @@ export default function ReportIssuePage(): React.ReactNode {
                                 <ShieldAlert className="w-4 h-4 text-primary" />
                                 <span>Quick Reminder</span>
                             </div>
-                            <p className="text-xs text-muted leading-relaxed">
+                            <p className="text-xs text-muted-foreground leading-relaxed">
                                 Please provide accurate and complete information when submitting a report. This helps our team understand the issue clearly.
                             </p>
 
-                            <p className="text-xs text-muted leading-relaxed">
+                            <p className="text-xs text-muted-foreground leading-relaxed">
                                 Avoid submitting fake or duplicate reports. Accurate descriptions help field teams prioritize genuine public hazards faster.
                             </p>
                         </div>

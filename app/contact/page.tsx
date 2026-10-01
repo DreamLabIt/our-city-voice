@@ -71,7 +71,7 @@ export default function ContactPage(): React.ReactNode {
                         </div>
                         <div className="space-y-1">
                             <h3 className="font-bold text-base text-foreground">Our Location</h3>
-                            <p className="text-xs sm:text-sm text-muted leading-relaxed">
+                            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                                 City Hall Plaza, Scarborough, ON, Canada
                             </p>
                         </div>
@@ -83,10 +83,10 @@ export default function ContactPage(): React.ReactNode {
                         </div>
                         <div className="space-y-1">
                             <h3 className="font-bold text-base text-foreground">Phone Number</h3>
-                            <p className="text-xs sm:text-sm text-muted">
+                            <p className="text-xs sm:text-sm text-muted-foreground">
                                 Toll Free: +1 (800) 123-4567
                             </p>
-                            <p className="text-xs sm:text-sm text-muted">
+                            <p className="text-xs sm:text-sm text-muted-foreground">
                                 Direct: +1 (416) 987-6543
                             </p>
                         </div>
@@ -98,8 +98,8 @@ export default function ContactPage(): React.ReactNode {
                         </div>
                         <div className="space-y-1">
                             <h3 className="font-bold text-base text-foreground">Email Address</h3>
-                            <p className="text-xs sm:text-sm text-muted">support@ourcityvoice.org</p>
-                            <p className="text-xs sm:text-sm text-muted">media@ourcityvoice.org</p>
+                            <p className="text-xs sm:text-sm text-muted-foreground">support@ourcityvoice.org</p>
+                            <p className="text-xs sm:text-sm text-muted-foreground">media@ourcityvoice.org</p>
                         </div>
                     </div>
 
@@ -109,8 +109,8 @@ export default function ContactPage(): React.ReactNode {
                         </div>
                         <div className="space-y-1">
                             <h3 className="font-bold text-base text-foreground">Working Hours</h3>
-                            <p className="text-xs sm:text-sm text-muted">Mon - Fri: 8:30 AM - 5:00 PM</p>
-                            <p className="text-xs sm:text-sm text-muted">Sat - Sun: Closed</p>
+                            <p className="text-xs sm:text-sm text-muted-foreground">Mon - Fri: 8:30 AM - 5:00 PM</p>
+                            <p className="text-xs sm:text-sm text-muted-foreground">Sat - Sun: Closed</p>
                         </div>
                     </div>
                 </div>
@@ -122,7 +122,7 @@ export default function ContactPage(): React.ReactNode {
                             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
                                 How Can We Help You?
                             </h2>
-                            <p className="text-sm text-muted">
+                            <p className="text-sm text-muted-foreground">
                                 Fill out the form below and our team will get back to you within 24 hours.
                             </p>
                         </div>
@@ -138,7 +138,7 @@ export default function ContactPage(): React.ReactNode {
                                         type="text"
                                         placeholder="Enter your name"
                                         {...register("name", { required: "Full name is required" })}
-                                        className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                                        className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                                     />
                                     {errors.name && (
                                         <p className="text-xs text-destructive mt-1">{errors.name.message}</p>
@@ -160,7 +160,7 @@ export default function ContactPage(): React.ReactNode {
                                                 message: "Invalid email address",
                                             },
                                         })}
-                                        className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                                        className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                                     />
                                     {errors.email && (
                                         <p className="text-xs text-destructive mt-1">{errors.email.message}</p>
@@ -178,7 +178,7 @@ export default function ContactPage(): React.ReactNode {
                                         type="tel"
                                         placeholder="Enter your phone number"
                                         {...register("phone")}
-                                        className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                                        className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                                     />
                                 </div>
 
@@ -208,7 +208,7 @@ export default function ContactPage(): React.ReactNode {
                                     type="text"
                                     placeholder="Brief summary of your message"
                                     {...register("subject", { required: "Subject is required" })}
-                                    className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                                    className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                                 />
                                 {errors.subject && (
                                     <p className="text-xs text-destructive mt-1">{errors.subject.message}</p>
@@ -230,7 +230,7 @@ export default function ContactPage(): React.ReactNode {
                                             message: "Message must be at least 10 characters long",
                                         },
                                     })}
-                                    className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
+                                    className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
                                 />
                                 {errors.message && (
                                     <p className="text-xs text-destructive mt-1">{errors.message.message}</p>
@@ -276,7 +276,7 @@ export default function ContactPage(): React.ReactNode {
                                 <HelpCircle className="w-5 h-5 shrink-0" />
                                 <span>Emergency Infrastructure Damage?</span>
                             </div>
-                            <p className="text-xs sm:text-sm text-muted leading-relaxed">
+                            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                                 For urgent hazards requiring immediate emergency response (e.g., exposed high-voltage cables, water main bursts), please call <strong>311</strong> directly or contact city emergency services.
                             </p>
                         </div>

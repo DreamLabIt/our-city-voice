@@ -132,20 +132,20 @@ export default function ReportsPage(): React.ReactNode {
                 <div className="bg-border-custom/30 p-5 rounded-2xl shadow-sm space-y-4">
                     <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
                         <div className="relative flex-1">
-                            <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
                             <input
                                 type="text"
                                 placeholder="Search by report title, id or location..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-10 pr-10 py-2.5 bg-section border border-border-custom rounded-xl text-xs sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                                className="w-full pl-10 pr-10 py-2.5 bg-section border border-border-custom rounded-xl text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                             />
                             {searchQuery && (
                                 <button
                                     type="button"
                                     onClick={() => setSearchQuery("")}
                                     aria-label="Clear search input"
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground cursor-pointer"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
@@ -174,7 +174,7 @@ export default function ReportsPage(): React.ReactNode {
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-border-custom/60">
                         <div className="space-y-1">
-                            <label htmlFor="category-select" className="text-[11px] font-bold text-muted uppercase tracking-wider flex items-center gap-1">
+                            <label htmlFor="category-select" className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                                 <Tag className="w-3 h-3 text-primary" /> Category
                             </label>
                             <select
@@ -190,7 +190,7 @@ export default function ReportsPage(): React.ReactNode {
                         </div>
 
                         <div className="space-y-1">
-                            <label htmlFor="status-select" className="text-[11px] font-bold text-muted uppercase tracking-wider flex items-center gap-1">
+                            <label htmlFor="status-select" className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                                 <Filter className="w-3 h-3 text-primary" /> Status
                             </label>
                             <select
@@ -206,7 +206,7 @@ export default function ReportsPage(): React.ReactNode {
                         </div>
 
                         <div className="space-y-1">
-                            <label htmlFor="ward-select" className="text-[11px] font-bold text-muted uppercase tracking-wider flex items-center gap-1">
+                            <label htmlFor="ward-select" className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                                 <Building2 className="w-3 h-3 text-primary" /> Ward / Region
                             </label>
                             <select
@@ -223,7 +223,7 @@ export default function ReportsPage(): React.ReactNode {
                     </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs font-bold text-muted px-1">
+                <div className="flex items-center justify-between text-xs font-bold text-muted-foreground px-1">
                     <span>
                         Showing <strong className="text-foreground">{filteredReports.length}</strong> of {reports.length} Public Reports
                     </span>
@@ -284,7 +284,7 @@ export default function ReportsPage(): React.ReactNode {
                                         </div>
 
                                         <div className="p-5 space-y-3">
-                                            <div className="flex items-center justify-between text-[11px] font-semibold text-muted">
+                                            <div className="flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
                                                 <span className="text-primary font-bold">{report.category}</span>
                                                 <span className="flex items-center gap-1">
                                                     <Calendar className="w-3 h-3" /> {report.date}
@@ -295,7 +295,7 @@ export default function ReportsPage(): React.ReactNode {
                                                 {report.title}
                                             </h3>
 
-                                            <p className="text-xs text-muted line-clamp-2 leading-relaxed">
+                                            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
                                                 {report.description}
                                             </p>
                                         </div>
@@ -314,7 +314,7 @@ export default function ReportsPage(): React.ReactNode {
                                             <span>{report.upvotes}</span>
                                         </button>
 
-                                        <div className="flex items-center gap-3 text-muted">
+                                        <div className="flex items-center gap-3 text-muted-foreground">
                                             <span className="flex items-center gap-1">
                                                 <MessageSquare className="w-3.5 h-3.5" /> {report.commentsCount}
                                             </span>
@@ -329,9 +329,9 @@ export default function ReportsPage(): React.ReactNode {
                     </div>
                 ) : (
                     <div className="bg-card border border-border-custom rounded-2xl p-12 text-center space-y-3">
-                        <AlertCircle className="w-10 h-10 text-muted mx-auto" />
+                        <AlertCircle className="w-10 h-10 text-muted-foreground mx-auto" />
                         <h3 className="text-lg font-bold text-foreground">No Civic Reports Found</h3>
-                        <p className="text-xs text-muted max-w-md mx-auto">
+                        <p className="text-xs text-muted-foreground max-w-md mx-auto">
                             We couldn't find any reports matching your search query or selected category filter. Try clearing filters.
                         </p>
                     </div>
@@ -362,7 +362,7 @@ export default function ReportsPage(): React.ReactNode {
                                 <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md">
                                     {activeReport.trackingId}
                                 </span>
-                                <span className="text-xs font-bold text-muted">{activeReport.category}</span>
+                                <span className="text-xs font-bold text-muted-foreground">{activeReport.category}</span>
                             </div>
                             <h2 className="text-xl font-extrabold text-foreground">{activeReport.title}</h2>
                         </div>
@@ -372,7 +372,7 @@ export default function ReportsPage(): React.ReactNode {
                         </div>
 
                         <div className="space-y-2">
-                            <h4 className="text-xs font-bold text-muted uppercase tracking-wider">Report Description</h4>
+                            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Report Description</h4>
                             <p className="text-xs sm:text-sm text-foreground leading-relaxed bg-section p-4 rounded-xl border border-border-custom">
                                 {activeReport.description}
                             </p>
@@ -380,21 +380,21 @@ export default function ReportsPage(): React.ReactNode {
 
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                             <div className="bg-section p-3 rounded-xl border border-border-custom">
-                                <span className="text-muted block text-[10px]">Location / Ward</span>
+                                <span className="text-muted-foreground block text-[10px]">Location / Ward</span>
                                 <span className="font-bold text-foreground mt-0.5 block">{activeReport.ward}</span>
                             </div>
                             <div className="bg-section p-3 rounded-xl border border-border-custom">
-                                <span className="text-muted block text-[10px]">Department</span>
+                                <span className="text-muted-foreground block text-[10px]">Department</span>
                                 <span className="font-bold text-primary mt-0.5 block">{activeReport.department}</span>
                             </div>
                             <div className="bg-section p-3 rounded-xl border border-border-custom">
-                                <span className="text-muted block text-[10px]">Assigned Officer</span>
+                                <span className="text-muted-foreground block text-[10px]">Assigned Officer</span>
                                 <span className="font-bold text-foreground mt-0.5 block">{activeReport.assignedOfficer || "Unassigned"}</span>
                             </div>
                         </div>
 
                         <div className="pt-4 border-t border-border-custom flex items-center justify-between">
-                            <span className="text-xs text-muted">Last updated: {activeReport.updatedAt}</span>
+                            <span className="text-xs text-muted-foreground">Last updated: {activeReport.updatedAt}</span>
                             <button
                                 type="button"
                                 onClick={() => setActiveReport(null)}
