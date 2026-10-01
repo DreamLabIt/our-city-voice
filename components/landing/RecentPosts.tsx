@@ -100,9 +100,7 @@ export default function RecentPosts(): React.JSX.Element {
     ];
 
     const filteredPosts =
-        activeTab === "Latest"
-            ? posts
-            : posts.filter((post) => post.category === activeTab);
+        activeTab === "Latest" ? posts : posts.filter((post) => post.category === activeTab);
 
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const [duration, setDuration] = useState("0:00");
@@ -121,34 +119,31 @@ export default function RecentPosts(): React.JSX.Element {
     };
 
     const handleLoadedMetadata = () => {
-        // console.log("Video metadata loaded", videoRef.current?.duration);
+        console.log("Video metadata loaded", videoRef.current);
         if (!videoRef.current) return;
 
         const totalSeconds = Math.floor(videoRef.current.duration);
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
 
-        setDuration(
-            `${minutes}:${seconds.toString().padStart(2, "0")}`
-        );
+        setDuration(`${minutes}:${seconds.toString().padStart(2, "0")}`);
     };
 
     return (
         <div className="w-full bg-card rounded-2xl border border-border-custom p-5 shadow-xs">
             <div className="flex items-start justify-start border-b border-border-custom/60 gap-6 sm:gap-8 overflow-x-auto no-scrollbar">
-                <h2 className="text-base font-bold text-foreground">
-                    Recent Posts
-                </h2>
+                <h2 className="text-base font-bold text-foreground">Recent Posts</h2>
                 <div className="flex items-center gap-6 overflow-x-auto">
                     {tabs.map((tab) => (
                         <button
                             key={tab}
                             type="button"
                             onClick={() => setActiveTab(tab)}
-                            className={`text-md font-semibold relative pb-2.5 transition-all cursor-pointer whitespace-nowrap ${activeTab === tab
-                                ? "text-primary"
-                                : "text-muted hover:text-foreground"
-                                }`}
+                            className={`text-md font-semibold relative pb-2.5 transition-all cursor-pointer whitespace-nowrap ${
+                                activeTab === tab
+                                    ? "text-primary"
+                                    : "text-muted hover:text-foreground"
+                            }`}
                         >
                             {tab}
                             {activeTab === tab && (
@@ -167,11 +162,11 @@ export default function RecentPosts(): React.JSX.Element {
                     >
                         <div>
                             <div className="relative w-full h-40 bg-slate-100 overflow-hidden cursor-pointer group">
-
                                 {post.isVideo && post.video ? (
                                     <video
                                         ref={videoRef}
                                         src={post.video}
+                                        poster={post.image}
                                         onLoadedMetadata={handleLoadedMetadata}
                                         onEnded={() => setIsPlaying(false)}
                                         className="w-full h-full object-cover transition-transform duration-100 group-hover:scale-101"
@@ -211,12 +206,8 @@ export default function RecentPosts(): React.JSX.Element {
 
                             <div className="p-3.5 space-y-2">
                                 <div className="flex items-center justify-between text-[15px]">
-                                    <span className="font-bold text-primary">
-                                        {post.code}
-                                    </span>
-                                    <span className="text-muted font-medium">
-                                        {post.date}
-                                    </span>
+                                    <span className="font-bold text-primary">{post.code}</span>
+                                    <span className="text-muted font-medium">{post.date}</span>
                                 </div>
 
                                 <div>
