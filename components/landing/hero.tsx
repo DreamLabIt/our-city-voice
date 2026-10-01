@@ -34,9 +34,9 @@ export default function HeroSection(): React.ReactNode {
                             Report infrastructure and community issues, share photos or videos, and help build a better, safer and stronger city for everyone.
                         </p>
 
-
                         <div className="pt-2 flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4">
                             <Button
+                                nativeButton={false}
                                 render={
                                     <Link
                                         href={{
@@ -47,7 +47,7 @@ export default function HeroSection(): React.ReactNode {
                                 }
                                 className="group h-auto rounded-2xl border-2 border-white/90 bg-tag-green-text px-6 py-3 font-semibold text-white shadow-md transition-all duration-200 hover:opacity-90 sm:px-7 sm:py-3.5"
                             >
-                                <Video className="h-8 w-8 fill-white text-white stroke-[1.5] sm:h-12 sm:w-12" />
+                                <Video className="h-8! w-8! shrink-0 fill-white text-white" />
 
                                 <span className="text-base font-medium tracking-wide text-white sm:text-lg">
                                     Video an Issue
@@ -57,6 +57,7 @@ export default function HeroSection(): React.ReactNode {
                             </Button>
 
                             <Button
+                                nativeButton={false}
                                 render={
                                     <Link
                                         href={{
@@ -67,8 +68,7 @@ export default function HeroSection(): React.ReactNode {
                                 }
                                 className="group h-auto rounded-2xl border-2 border-white/90 bg-tag-green-text px-6 py-3 font-semibold text-white shadow-md transition-all duration-200 hover:opacity-90 sm:px-7 sm:py-3.5"
                             >
-                                <ImageUp className="h-8 w-8 fill-white text-white stroke-[1.5] sm:h-12 sm:w-12" />
-
+                                <ImageUp className="h-8! w-8! shrink-0 text-white" />
                                 <span className="text-base font-medium tracking-wide text-white sm:text-lg">
                                     Picture an Issue
                                 </span>
