@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Search, Video, ChevronRight } from "lucide-react";
 import { useState } from "react";
+import IssueSearchBar from "../Search/IssueSearchBar";
 
 export default function HeroSection(): React.ReactNode {
     const [searchQuery, setSearchQuery] = useState<string>("");
@@ -14,7 +15,7 @@ export default function HeroSection(): React.ReactNode {
     };
 
     return (
-        <section className="relative w-full min-h-80 lg:min-h-100 flex items-center justify-center overflow-hidden">
+        <section className="relative w-full min-h-80 lg:min-h-100 flex items-center justify-center ">
 
             <div className="absolute inset-0 z-0">
                 <Image
@@ -57,37 +58,7 @@ export default function HeroSection(): React.ReactNode {
                     </div>
 
                     <div className="lg:col-span-6">
-                        <div className="bg-card/80 backdrop-blur-[20%] p-6 sm:p-7 rounded-2xl sm:rounded-3xl space-y-1">
-
-                            <h2 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">
-                                Find Issues
-                            </h2>
-
-                            <form onSubmit={handleSearch} className="flex items-center gap-3">
-                                <div className="relative flex-1 flex items-center">
-                                    <Search className="absolute left-3.5 sm:left-4 w-5 h-5 text-muted-foreground pointer-events-none stroke-2" />
-                                    <input
-                                        type="text"
-                                        value={searchQuery}
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                                        placeholder="Search by ID number, address, road, ward or keyword..."
-                                        className="w-full pl-11 pr-4 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl border border-border-custom bg-card text-foreground placeholder:text-muted-foreground text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition shadow-sm"
-                                    />
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    className="bg-primary hover:bg-primary-hover text-white font-semibold px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-sm sm:text-base transition-all duration-200 shadow-md hover:shadow-lg shrink-0"
-                                >
-                                    Search
-                                </button>
-                            </form>
-
-                            <p className="text-xs sm:text-[13px] text-muted-foreground font-medium">
-                                Example: #1024, Finch Ave, Ward 5, M1B 3J4
-                            </p>
-
-                        </div>
+                        <IssueSearchBar />
                     </div>
 
                 </div>

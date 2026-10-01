@@ -12,16 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import type { SearchSuggestion } from "@/types";
+import { mockSuggestions } from "@/data/mock-data";
 
-
-const mockSuggestions: SearchSuggestion[] = [
-    { id: "1", title: "Major Pothole Hazard on Main Bypass Road", category: "Roads & Potholes", location: "Ward 03", type: "report" },
-    { id: "2", title: "Broken LED Street Lights in Station Area", category: "Street Lighting", location: "Ward 02", type: "report" },
-    { id: "3", title: "Overflowing Waste Bin near Public Park", category: "Waste Management", location: "Ward 01", type: "report" },
-    { id: "4", title: "Waterlogging issues during monsoon season", category: "Drainage", location: "Ward 04", type: "post" },
-    { id: "5", title: "Annual Clean City Volunteers Meetup", category: "Community", location: "Central Hall", type: "announcement" },
-];
 
 export default function SearchDialog(): React.JSX.Element {
     const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -30,6 +22,7 @@ export default function SearchDialog(): React.JSX.Element {
         if (!searchQuery.trim()) return [];
         return mockSuggestions.filter(
             (item) =>
+                item.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 item.location.toLowerCase().includes(searchQuery.toLowerCase())
