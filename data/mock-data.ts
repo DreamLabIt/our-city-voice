@@ -11,7 +11,6 @@ import {
     TreePine,
     Users,
     MoreHorizontal,
-    Clock,
     MessageSquare,
     MessageCircle,
     Calendar,
@@ -25,6 +24,7 @@ import type {
     PostItem,
     StatItem,
     WardData,
+    SearchSuggestion
 } from "@/types";
 
 // ── Navigation ──────────────────────────────────────────────
@@ -412,7 +412,6 @@ export const reportWards = [
     "Ward 05 (South Suburbs)",
 ];
 
-// ── Statistics Page ────────────────────────────────────────
 export const monthlyTrendData = [
     { month: "Jan", reported: 1100, resolved: 980 },
     { month: "Feb", reported: 1320, resolved: 1150 },
@@ -455,3 +454,16 @@ export const CHART_TOOLTIP_STYLE: React.CSSProperties = {
     color: "#fff",
     fontSize: "12px",
 };
+
+export const mockSuggestions: SearchSuggestion[] = [
+    { id: "1", title: "Major Pothole Hazard on Main Bypass Road", category: "Roads & Potholes", location: "Ward 03", type: "report" },
+    { id: "2", title: "Broken LED Street Lights in Station Area", category: "Street Lighting", location: "Ward 02", type: "report" },
+    { id: "3", title: "Overflowing Waste Bin near Public Park", category: "Waste Management", location: "Ward 01", type: "report" },
+    { id: "4", title: "Waterlogging issues during monsoon season", category: "Drainage", location: "Ward 04", type: "post" },
+    { id: "5", title: "Annual Clean City Volunteers Meetup", category: "Community", location: "Central Hall", type: "announcement" },
+    { id: "6", title: "New Recycling Program Launch", category: "Waste Management", location: "Ward 05", type: "announcement" },
+    { id: "7", title: "Community Safety Awareness Campaign", category: "Community", location: "Ward 02", type: "post" },
+    { id: "8", title: "Stormwater Drainage Maintenance Schedule", category: "Drainage", location: "Ward 03", type: "post" },
+    { id: "9", title: "Public Park Renovation Updates", category: "Parks & Recreation", location: "Ward 01", type: "announcement" },
+    { id: "10", title: "Traffic Signal Malfunction Reported", category: "Traffic & Signals", location: "Ward 04", type: "report" },
+];

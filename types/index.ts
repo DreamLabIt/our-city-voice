@@ -131,3 +131,12 @@ export interface ReportIssueFormData {
     reporterPhone?: string;
     isAnonymous: boolean;
 }
+
+// ── SearchSuggestion ──────────────────────────────────────
+export interface SearchSuggestion {
+    id: string;
+    title: string;
+    category: string;
+    location: string;
+    type: "report" | "post" | "announcement";
+}

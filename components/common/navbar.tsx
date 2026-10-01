@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Search, User, Menu, X } from "lucide-react";
+import { User, Menu, X } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { navItems } from "@/data/mock-data";
 import type { NavItem } from "@/types";
+import SearchDialog from "../Dialog/SearchDialog";
 
 export default function Navbar(): React.ReactNode {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
@@ -62,12 +63,7 @@ export default function Navbar(): React.ReactNode {
                 </nav>
 
                 <div className="flex items-center gap-2 sm:gap-4">
-                    <button
-                        aria-label="Search"
-                        className="p-2 text-foreground/80 hover:text-primary hover:bg-section rounded-full transition"
-                    >
-                        <Search className="w-6 h-6 stroke-[2.2]" />
-                    </button>
+                    <SearchDialog />
 
                     <Link
                         href="/login"
