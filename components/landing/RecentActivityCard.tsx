@@ -1,74 +1,11 @@
 "use client";
 
 import React from "react";
-import {
-    Clock,
-    Road,
-    Building2,
-    Leaf,
-    Lightbulb,
-    Droplet,
-    LucideIcon,
-} from "lucide-react";
+import { Clock } from "lucide-react";
+import { activities } from "@/data/mock-data";
+import type { ActivityItem } from "@/types";
 
-interface ActivityItem {
-    id: string;
-    title: string;
-    code: string;
-    time: string;
-    icon: LucideIcon;
-    iconBg: string;
-    iconColor: string;
-}
-
-export default function RecentActivityCard(): React.JSX.Element {
-    const activities: ActivityItem[] = [
-        {
-            id: "1",
-            title: "New post on Roads",
-            code: "#2024-001245",
-            time: "5 min ago",
-            icon: Road,
-            iconBg: "bg-tag-blue-bg",
-            iconColor: "text-tag-blue-text",
-        },
-        {
-            id: "2",
-            title: "New comment on Flooding",
-            code: "#2024-001238",
-            time: "18 min ago",
-            icon: Building2,
-            iconBg: "bg-tag-blue-bg",
-            iconColor: "text-tag-blue-text",
-        },
-        {
-            id: "3",
-            title: "New post on Parks",
-            code: "#2024-001240",
-            time: "1 hour ago",
-            icon: Leaf,
-            iconBg: "bg-tag-green-bg",
-            iconColor: "text-tag-green-text",
-        },
-        {
-            id: "4",
-            title: "New comment on Streetlights",
-            code: "#2024-001230",
-            time: "2 hours ago",
-            icon: Lightbulb,
-            iconBg: "bg-tag-amber-bg",
-            iconColor: "text-tag-amber-text",
-        },
-        {
-            id: "5",
-            title: "New post on Water & Sewer",
-            code: "#2024-001239",
-            time: "3 hours ago",
-            icon: Droplet,
-            iconBg: "bg-tag-blue-bg",
-            iconColor: "text-tag-blue-text",
-        },
-    ];
+export default function RecentActivityCard(): React.ReactNode {
 
     return (
         <div className="w-full bg-section rounded-2xl border border-border-custom shadow-xs space-y-3">

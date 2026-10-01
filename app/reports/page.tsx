@@ -18,123 +18,16 @@ import {
     ChevronRight,
     Tag,
 } from "lucide-react";
+import {
+    initialReports,
+    reportCategories as categories,
+    reportStatuses as statuses,
+    reportWards as wards,
+} from "@/data/mock-data";
+import type { CivicReport } from "@/types";
+import Link from "next/link";
 
-type ReportStatus = "Pending" | "In Progress" | "Resolved" | "Rejected";
-type PriorityLevel = "Low" | "Medium" | "High" | "Critical";
-
-interface CivicReport {
-    id: string;
-    trackingId: string;
-    title: string;
-    category: string;
-    ward: string;
-    location: string;
-    status: ReportStatus;
-    priority: PriorityLevel;
-    date: string;
-    description: string;
-    upvotes: number;
-    commentsCount: number;
-    department: string;
-    image: string;
-    assignedOfficer?: string;
-    updatedAt: string;
-}
-
-const initialReports: CivicReport[] = [
-    {
-        id: "1",
-        trackingId: "OCV-982410",
-        title: "Major Pothole Hazard on Main Bypass Road",
-        category: "Roads & Potholes",
-        ward: "Ward 03 (Sector 4 Bypass)",
-        location: "Near Sector 4 Bus Station",
-        status: "In Progress",
-        priority: "High",
-        date: "2026-09-28",
-        description: "Large deep pothole causing severe traffic slowdowns and potential accidents during rainy hours. Immediate resurfacing required.",
-        upvotes: 142,
-        commentsCount: 18,
-        department: "Public Works Department",
-        image: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?q=80&w=600&auto=format&fit=crop",
-        assignedOfficer: "Eng. Kamrul Hasan",
-        updatedAt: "2 hours ago",
-    },
-    {
-        id: "2",
-        trackingId: "OCV-982398",
-        title: "Broken LED Street Lights in Station Area",
-        category: "Street Lighting",
-        ward: "Ward 02 (Station Road)",
-        location: "Opposite to Railway Ticket Counter",
-        status: "Resolved",
-        priority: "Medium",
-        date: "2026-09-25",
-        description: "Entire row of streetlights flickering and dark at night, posing safety concerns for night commuters.",
-        upvotes: 89,
-        commentsCount: 6,
-        department: "Electrical Safety Cell",
-        image: "https://images.unsplash.com/photo-1509114397022-ed747cca3f65?q=80&w=600&auto=format&fit=crop",
-        assignedOfficer: "Sub-Inspector Rafiqul T.",
-        updatedAt: "1 day ago",
-    },
-    {
-        id: "3",
-        trackingId: "OCV-982350",
-        title: "Overflowing Waste Bin near Public Park",
-        category: "Waste Management",
-        ward: "Ward 01 (Central Hub)",
-        location: "Park Gate No. 2",
-        status: "Pending",
-        priority: "Critical",
-        date: "2026-09-30",
-        description: "Garbage container unemptied for 4 days. Waste spreading across sidewalk creating unhygienic environment.",
-        upvotes: 215,
-        commentsCount: 24,
-        department: "Sanitation & Waste Management",
-        image: "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=600&auto=format&fit=crop",
-        assignedOfficer: "Unassigned",
-        updatedAt: "3 hours ago",
-    },
-    {
-        id: "4",
-        trackingId: "OCV-982210",
-        title: "Blocked Storm Drainage Outlet causing Waterlogging",
-        category: "Drainage & Water",
-        ward: "Ward 04 (Commercial Zone)",
-        location: "Market Alley 5",
-        status: "Resolved",
-        priority: "High",
-        date: "2026-09-20",
-        description: "Clogged main storm drain causing severe standing water after light rainfall. Impeding shopkeeper operations.",
-        upvotes: 178,
-        commentsCount: 12,
-        department: "Water & Sewerage Board",
-        image: "https://images.unsplash.com/photo-1541888946425-d0fbb186a5b3?q=80&w=600&auto=format&fit=crop",
-        assignedOfficer: "Superintendent M. Rahim",
-        updatedAt: "4 days ago",
-    },
-    {
-        id: "5",
-        trackingId: "OCV-982115",
-        title: "Damaged Public Park Bench and Fencing",
-        category: "Parks & Open Spaces",
-        ward: "Ward 05 (South Suburbs)",
-        location: "Community Green Park",
-        status: "Pending",
-        priority: "Low",
-        date: "2026-09-29",
-        description: "Vandalized wooden seating benches and bent security wire along pedestrian walk path.",
-        upvotes: 45,
-        commentsCount: 3,
-        department: "Parks & Urban Forestry",
-        image: "https://images.unsplash.com/photo-1588880331179-bc9b93a8cb5e?q=80&w=600&auto=format&fit=crop",
-        assignedOfficer: "Unassigned",
-        updatedAt: "1 day ago",
-    },
-];
-
-export default function ReportsPage(): React.JSX.Element {
+export default function ReportsPage(): React.ReactNode {
     const [reports, setReports] = useState<CivicReport[]>(initialReports);
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [selectedCategory, setSelectedCategory] = useState<string>("All");
@@ -142,10 +35,6 @@ export default function ReportsPage(): React.JSX.Element {
     const [selectedWard, setSelectedWard] = useState<string>("All");
     const [upvotedIds, setUpvotedIds] = useState<string[]>([]);
     const [activeReport, setActiveReport] = useState<CivicReport | null>(null);
-
-    const categories = ["All", "Roads & Potholes", "Street Lighting", "Waste Management", "Drainage & Water", "Parks & Open Spaces"];
-    const statuses = ["All", "Pending", "In Progress", "Resolved", "Rejected"];
-    const wards = ["All", "Ward 01 (Central Hub)", "Ward 02 (Station Road)", "Ward 03 (Sector 4 Bypass)", "Ward 04 (Commercial Zone)", "Ward 05 (South Suburbs)"];
 
     useEffect(() => {
         if (!activeReport) return;
@@ -273,13 +162,13 @@ export default function ReportsPage(): React.JSX.Element {
                                 <span className="hidden sm:inline">Export CSV</span>
                             </button>
 
-                            <a
+                            <Link
                                 href="/report-issue"
                                 className="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shadow-sm"
                             >
                                 <Plus className="w-4 h-4" />
                                 <span>Report an Issue</span>
-                            </a>
+                            </Link>
                         </div>
                     </div>
 

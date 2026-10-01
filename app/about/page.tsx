@@ -19,31 +19,9 @@ import {
     FileText,
     HeartHandshake,
 } from "lucide-react";
+import { faqs } from "@/data/mock-data";
 
-const faqs = [
-    {
-        question: "How do I report an infrastructure issue on this platform?",
-        answer: "Simply click on the 'Report an Issue' button, upload a photo or video of the problem, drop the location pin on the interactive map, add a brief description, and submit. The report will automatically route to the relevant authority.",
-    },
-    {
-        question: "How long does it take for an reported issue to be resolved?",
-        answer: "Initial review and acknowledgement usually happen within 24 to 48 hours. The actual repair timeframe depends on the issue category and priority, but you can track live status updates on your dashboard.",
-    },
-    {
-        question: "Can other citizens support or upvote my report?",
-        answer: "Yes! Neighboring residents can upvote reported issues to highlight urgency. Reports with high community upvotes get prioritized by municipal field inspection teams.",
-    },
-    {
-        question: "Is my personal identity publicly visible when I post a report?",
-        answer: "You can choose to keep your profile anonymous when submitting reports. Your location and issue details will be public, but your personal contact details remain private and secure.",
-    },
-    {
-        question: "What types of issues can I report here?",
-        answer: "You can report potholes, broken streetlights, illegal waste dumping, blocked drainage lines, damaged water pipes, traffic sign issues, and other public infrastructure problems.",
-    },
-];
-
-export default function AboutPage(): React.JSX.Element {
+export default function AboutPage(): React.ReactNode {
     const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
     const toggleFaq = (index: number) => {

@@ -13,17 +13,9 @@ import {
     HelpCircle,
     Loader2,
 } from "lucide-react";
+import type { ContactFormData } from "@/types";
 
-export interface ContactFormData {
-    name: string;
-    email: string;
-    phone?: string;
-    category: string;
-    subject: string;
-    message: string;
-}
-
-export default function ContactPage(): React.JSX.Element {
+export default function ContactPage(): React.ReactNode {
     const {
         register,
         handleSubmit,

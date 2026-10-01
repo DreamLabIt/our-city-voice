@@ -5,24 +5,12 @@ import { Search, User, Menu, X } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { navItems } from "@/data/mock-data";
+import type { NavItem } from "@/types";
 
-interface NavItem {
-    name: string;
-    href: string;
-}
-
-export default function Navbar(): React.JSX.Element {
+export default function Navbar(): React.ReactNode {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
     const pathname = usePathname();
-
-    const navItems: NavItem[] = [
-        { name: "Home", href: "/" },
-        { name: "Issues Map", href: "/issues" },
-        { name: "Reports", href: "/reports" },
-        { name: "Statistics", href: "/statistics" },
-        { name: "About", href: "/about" },
-        { name: "Contact", href: "/contact" },
-    ];
 
     return (
         <header className="w-full bg-card relative">

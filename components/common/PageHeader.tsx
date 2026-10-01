@@ -5,20 +5,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { ChevronRight, Home } from "lucide-react";
-
-interface PageHeaderProps {
-    title: string;
-    description?: React.ReactNode;
-    bgImage?: string;
-    customBreadcrumbName?: string;
-}
+import type { PageHeaderProps } from "@/types";
 
 export default function PageHeader({
     title,
     description,
     bgImage = "/hero-bg.png",
     customBreadcrumbName,
-}: PageHeaderProps): React.JSX.Element {
+}: PageHeaderProps): React.ReactNode {
     const pathname = usePathname();
 
     const pathSegments = pathname.split("/").filter((segment) => segment !== "");

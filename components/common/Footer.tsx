@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 
-export default function Footer(): React.JSX.Element {
+export default function Footer(): React.ReactNode {
     const handleSubscribe = (e: FormEvent<HTMLFormElement>): void => {
         e.preventDefault();
     };

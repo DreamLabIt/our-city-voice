@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Search, Video, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
-export default function HeroSection(): React.JSX.Element {
+export default function HeroSection(): React.ReactNode {
     const [searchQuery, setSearchQuery] = useState<string>("");
 
     const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
@@ -42,7 +42,7 @@ export default function HeroSection(): React.JSX.Element {
 
                         <div className="pt-2">
                             <Link
-                                href="/submit-issue"
+                                href="/report-issue"
                                 className="inline-flex items-center gap-3.5 bg-tag-green-text hover:opacity-90 text-white font-semibold px-6 py-3 sm:px-7 sm:py-3.5 rounded-2xl border-2 border-white/90 shadow-md transition-all duration-200 group"
                             >
                                 <Video className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-white stroke-[1.5]" />

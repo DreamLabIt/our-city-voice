@@ -12,7 +12,7 @@ import {
     ChevronDown,
 } from "lucide-react";
 
-export default function FilterPostsCard(): React.JSX.Element {
+export default function FilterPostsCard(): React.ReactNode {
     return (
         <div className="w-full bg-section rounded-2xl border border-border-custom p-4 shadow-xs space-y-3">
             <div className="flex items-center justify-between">

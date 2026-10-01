@@ -3,101 +3,10 @@
 import React, { useRef, useState } from "react";
 import { MapPin, MessageSquare, ThumbsUp, Eye, Play, Video, Pause } from "lucide-react";
 import Image from "next/image";
+import { posts, tabs } from "@/data/mock-data";
 
-export interface PostItem {
-    id: string;
-    code: string;
-    date: string;
-    tag: string;
-    tagBg: string;
-    tagText: string;
-    location: string;
-    title: string;
-    desc: string;
-    comments: number;
-    likes: number;
-    views: number;
-    image: string;
-    video?: string;
-    isVideo?: boolean;
-    duration?: string;
-    category: "Latest" | "Most Commented" | "Nearby" | "Map View";
-}
-
-export default function RecentPosts(): React.JSX.Element {
+export default function RecentPosts(): React.ReactNode {
     const [activeTab, setActiveTab] = useState<string>("Latest");
-
-    const tabs: string[] = ["Latest", "Most Commented", "Nearby", "Map View"];
-
-    const posts: PostItem[] = [
-        {
-            id: "1",
-            code: "#2024-001245",
-            date: "Oct 26, 2026",
-            tag: "Roads",
-            tagBg: "bg-tag-blue-bg",
-            tagText: "text-tag-blue-text",
-            location: "Finch Ave E, Scarborough",
-            title: "Large pothole causing traffic issues",
-            desc: "This pothole has been getting bigger and is causing vehicle damage.",
-            comments: 12,
-            likes: 8,
-            views: 245,
-            image: "/road_surface .jpeg",
-            video: "https://lorem.video/1280x720_h264_20s_30fps",
-            isVideo: true,
-            duration: "0:32",
-            category: "Latest",
-        },
-        {
-            id: "2",
-            code: "#2024-001244",
-            date: "Oct 26, 2026",
-            tag: "Stormwater & Flooding",
-            tagBg: "bg-tag-blue-bg",
-            tagText: "text-tag-blue-text",
-            location: "Morningside Ave, Scarborough",
-            title: "Flooding during heavy rain",
-            desc: "Water is not draining properly on this street after rain.",
-            comments: 7,
-            likes: 5,
-            views: 180,
-            image: "/residential_street.jpeg",
-            category: "Most Commented",
-        },
-        {
-            id: "3",
-            code: "#2024-001243",
-            date: "Oct 25, 2026",
-            tag: "Sidewalks",
-            tagBg: "bg-tag-green-bg",
-            tagText: "text-tag-green-text",
-            location: "Sheppard Ave W, North York",
-            title: "Broken sidewalk near bus stop",
-            desc: "The sidewalk is cracked and unsafe for pedestrians.",
-            comments: 3,
-            likes: 6,
-            views: 95,
-            image: "/uneven_concrete.jpeg",
-            category: "Nearby",
-        },
-        {
-            id: "4",
-            code: "#2024-001242",
-            date: "Oct 24, 2026",
-            tag: "Streetlights & Signals",
-            tagBg: "bg-tag-amber-bg",
-            tagText: "text-tag-amber-text",
-            location: "Markham Rd, Scarborough",
-            title: "Streetlight not working",
-            desc: "This streetlight has been out for over a week.",
-            comments: 4,
-            likes: 3,
-            views: 120,
-            image: "/street_light.jpeg",
-            category: "Map View",
-        },
-    ];
 
     const filteredPosts =
         activeTab === "Latest" ? posts : posts.filter((post) => post.category === activeTab);
@@ -139,11 +48,10 @@ export default function RecentPosts(): React.JSX.Element {
                             key={tab}
                             type="button"
                             onClick={() => setActiveTab(tab)}
-                            className={`text-md font-semibold relative pb-2.5 transition-all cursor-pointer whitespace-nowrap ${
-                                activeTab === tab
-                                    ? "text-primary"
-                                    : "text-muted hover:text-foreground"
-                            }`}
+                            className={`text-md font-semibold relative pb-2.5 transition-all cursor-pointer whitespace-nowrap ${activeTab === tab
+                                ? "text-primary"
+                                : "text-muted hover:text-foreground"
+                                }`}
                         >
                             {tab}
                             {activeTab === tab && (

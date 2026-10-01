@@ -24,46 +24,10 @@ import {
     PieChart,
     HelpCircle,
 } from "lucide-react";
+import { REPORT_CATEGORIES, MINI_FAQS } from "@/data/mock-data";
+import type { ReportIssueFormData } from "@/types";
 
-export interface ReportIssueFormData {
-    title: string;
-    category: string;
-    priority: "Low" | "Medium" | "High" | "Critical";
-    location: string;
-    description: string;
-    reporterName?: string;
-    reporterEmail: string;
-    reporterPhone?: string;
-    isAnonymous: boolean;
-}
-
-const CATEGORIES = [
-    "Roads & Potholes",
-    "Street Lighting",
-    "Waste Management & Garbage",
-    "Drainage & Waterlogging",
-    "Water Supply & Leakage",
-    "Parks & Public Spaces",
-    "Traffic Signs & Signals",
-    "Others",
-];
-
-const MINI_FAQS = [
-    {
-        q: "How are submitted issues verified?",
-        a: "Our field team reviews location accuracy and cross-checks photo evidence within 12-24 hours.",
-    },
-    {
-        q: "How long does repair usually take?",
-        a: "High priority hazards are addressed within 24–48 hours, while general repairs take 3–5 working days.",
-    },
-    {
-        q: "How will I know when it's resolved?",
-        a: "You will receive an automated email notification with photo proof once the field inspector updates the status.",
-    },
-];
-
-export default function ReportIssuePage(): React.JSX.Element {
+export default function ReportIssuePage(): React.ReactNode {
     const [selectedImages, setSelectedImages] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
     const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
@@ -194,7 +158,7 @@ export default function ReportIssuePage(): React.JSX.Element {
                                         {...register("category", { required: "Please select a category" })}
                                         className="w-full px-4 py-2.5 bg-section border border-border-custom rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer mt-2"
                                     >
-                                        {CATEGORIES.map((cat) => (
+                                        {REPORT_CATEGORIES.map((cat) => (
                                             <option key={cat} value={cat}>
                                                 {cat}
                                             </option>

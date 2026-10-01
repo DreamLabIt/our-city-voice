@@ -1,86 +1,10 @@
 "use client";
 
 import React from "react";
-import { MessageSquare, MessageCircle, Users, Calendar, LucideIcon } from "lucide-react";
+import { stats, chartMonths, yTicks } from "@/data/mock-data";
+import type { StatItem, ChartMonth } from "@/types";
 
-interface StatItem {
-    title: string;
-    sub: string;
-    value: string;
-    icon: LucideIcon;
-    cardBg: string;
-    circleBg: string;
-    iconColor: string;
-    valueColor: string;
-    badge?: string;
-}
-
-interface ChartMonth {
-    month: string;
-    val: number;
-}
-
-export default function CommunityActivity(): React.JSX.Element {
-    const stats: StatItem[] = [
-        {
-            title: "Total Posts",
-            sub: "This Year",
-            value: "1,248",
-            icon: MessageSquare,
-            cardBg: "bg-tag-blue-bg/40",
-            circleBg: "bg-tag-blue-bg",
-            iconColor: "text-primary",
-            valueColor: "text-[#1e3a8a]",
-        },
-        {
-            title: "Comments",
-            sub: "This Year",
-            value: "3,892",
-            icon: MessageCircle,
-            cardBg: "bg-tag-green-bg/40",
-            circleBg: "bg-tag-green-bg",
-            iconColor: "text-tag-green-text",
-            valueColor: "text-[#064e3b]",
-        },
-        {
-            title: "Active Users",
-            sub: "This Year",
-            value: "410",
-            icon: Users,
-            cardBg: "bg-tag-amber-bg/40",
-            circleBg: "bg-tag-amber-bg",
-            iconColor: "text-tag-amber-text",
-            valueColor: "text-tag-amber-text",
-        },
-        {
-            title: "Posts This Month",
-            sub: "vs. Last Month",
-            badge: "↑ 12%",
-            value: "105",
-            icon: Calendar,
-            cardBg: "bg-purple-50/60",
-            circleBg: "bg-purple-100",
-            iconColor: "text-purple-600",
-            valueColor: "text-purple-900",
-        },
-    ];
-
-    const chartMonths: ChartMonth[] = [
-        { month: "Jan", val: 38 },
-        { month: "Feb", val: 52 },
-        { month: "Mar", val: 65 },
-        { month: "Apr", val: 72 },
-        { month: "May", val: 88 },
-        { month: "Jun", val: 60 },
-        { month: "Jul", val: 102 },
-        { month: "Aug", val: 125 },
-        { month: "Sep", val: 152 },
-        { month: "Oct", val: 168 },
-        { month: "Nov", val: 138 },
-        { month: "Dec", val: 116 },
-    ];
-
-    const yTicks: number[] = [200, 150, 100, 50, 0];
+export default function CommunityActivity(): React.ReactNode {
 
     return (
         <div className="w-full bg-card rounded-2xl border border-border-custom p-5 shadow-xs">

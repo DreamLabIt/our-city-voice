@@ -1,46 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import {
-    LayoutGrid,
-    Road,
-    Droplets,
-    CloudRain,
-    Trees,
-    Trash2,
-    Lightbulb,
-    Building2,
-    Bus,
-    TreePine,
-    Users,
-    MoreHorizontal,
-    LucideIcon,
-} from "lucide-react";
+import { LucideIcon } from "lucide-react";
+import { categories } from "@/data/mock-data";
+import type { CategoryItem } from "@/types";
 
-export interface CategoryItem {
-    id: string;
-    label: string;
-    icon: LucideIcon;
-    iconColor?: string;
-    isOther?: boolean;
-}
-
-const categories: CategoryItem[] = [
-    { id: "all", label: "All", icon: LayoutGrid, iconColor: "text-primary" },
-    { id: "roads", label: "Roads", icon: Road, iconColor: "text-foreground" },
-    { id: "water", label: "Water & Sewer", icon: Droplets, iconColor: "text-primary" },
-    { id: "stormwater", label: "Stormwater & Flooding", icon: CloudRain, iconColor: "text-primary" },
-    { id: "parks", label: "Parks & Recreation", icon: Trees, iconColor: "text-tag-green-text" },
-    { id: "waste", label: "Waste & Recycling", icon: Trash2, iconColor: "text-tag-green-text" },
-    { id: "streetlights", label: "Streetlights & Signals", icon: Lightbulb, iconColor: "text-foreground" },
-    { id: "buildings", label: "Buildings & Facilities", icon: Building2, iconColor: "text-foreground" },
-    { id: "transit", label: "Transit & Mobility", icon: Bus, iconColor: "text-primary" },
-    { id: "environment", label: "Environment", icon: TreePine, iconColor: "text-tag-green-text" },
-    { id: "community", label: "Community & Safety", icon: Users, iconColor: "text-primary" },
-    { id: "other", label: "Other", icon: MoreHorizontal, isOther: true },
-];
-
-export default function CategoryFilter(): React.JSX.Element {
+export default function CategoryFilter(): React.ReactNode {
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
     const otherCategory = categories.find((c) => c.isOther);
     const mainCategories = categories.filter((c) => !c.isOther);
