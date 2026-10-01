@@ -1,18 +1,11 @@
-"use client";
 
 import Image from "next/image";
 import Link from "next/link";
-import { Search, Video, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { Video, ChevronRight, ImageUp } from "lucide-react";
 import IssueSearchBar from "../Search/IssueSearchBar";
+import { Button } from "@/components/ui/button";
 
 export default function HeroSection(): React.ReactNode {
-    const [searchQuery, setSearchQuery] = useState<string>("");
-
-    const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        console.log("Searching for:", searchQuery);
-    };
 
     return (
         <section className="relative w-full min-h-80 lg:min-h-100 flex items-center justify-center ">
@@ -41,20 +34,49 @@ export default function HeroSection(): React.ReactNode {
                             Report infrastructure and community issues, share photos or videos, and help build a better, safer and stronger city for everyone.
                         </p>
 
-                        <div className="pt-2">
-                            <Link
-                                href="/report-issue"
-                                className="inline-flex items-center gap-3.5 bg-tag-green-text hover:opacity-90 text-white font-semibold px-6 py-3 sm:px-7 sm:py-3.5 rounded-2xl border-2 border-white/90 shadow-md transition-all duration-200 group"
-                            >
-                                <Video className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-white stroke-[1.5]" />
 
-                                <span className="text-base sm:text-lg font-medium tracking-wide text-white">
-                                    Submit an Issue
+                        <div className="pt-2 flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4">
+                            <Button
+                                render={
+                                    <Link
+                                        href={{
+                                            pathname: "/report-issue",
+                                            query: { type: "video" },
+                                        }}
+                                    />
+                                }
+                                className="group h-auto rounded-2xl border-2 border-white/90 bg-tag-green-text px-6 py-3 font-semibold text-white shadow-md transition-all duration-200 hover:opacity-90 sm:px-7 sm:py-3.5"
+                            >
+                                <Video className="h-8 w-8 fill-white text-white stroke-[1.5] sm:h-12 sm:w-12" />
+
+                                <span className="text-base font-medium tracking-wide text-white sm:text-lg">
+                                    Video an Issue
                                 </span>
 
-                                <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-white stroke-[2.5] ml-1 transition-transform group-hover:translate-x-1" />
-                            </Link>
+                                <ChevronRight className="ml-1 h-5 w-5 text-white stroke-[2.5] transition-transform group-hover:translate-x-1 sm:h-6 sm:w-6" />
+                            </Button>
+
+                            <Button
+                                render={
+                                    <Link
+                                        href={{
+                                            pathname: "/report-issue",
+                                            query: { type: "picture" },
+                                        }}
+                                    />
+                                }
+                                className="group h-auto rounded-2xl border-2 border-white/90 bg-tag-green-text px-6 py-3 font-semibold text-white shadow-md transition-all duration-200 hover:opacity-90 sm:px-7 sm:py-3.5"
+                            >
+                                <ImageUp className="h-8 w-8 fill-white text-white stroke-[1.5] sm:h-12 sm:w-12" />
+
+                                <span className="text-base font-medium tracking-wide text-white sm:text-lg">
+                                    Picture an Issue
+                                </span>
+
+                                <ChevronRight className="ml-1 h-5 w-5 text-white stroke-[2.5] transition-transform group-hover:translate-x-1 sm:h-6 sm:w-6" />
+                            </Button>
                         </div>
+
                     </div>
 
                     <div className="lg:col-span-6">
