@@ -45,7 +45,6 @@ export default function PostCard({ post }: { post: PostItem }): React.ReactNode 
 
     return (
         <Card className="rounded-2xl overflow-hidden hover:shadow-md transition-all flex flex-col justify-between group border-border p-0">
-            {/* Media Section — a video thumbnail plays in place, an image opens the details page */}
             {hasVideo ? (
                 <div className="relative w-full h-40 bg-muted overflow-hidden group/media">
                     <video
@@ -102,7 +101,6 @@ export default function PostCard({ post }: { post: PostItem }): React.ReactNode 
                 </Link>
             )}
 
-            {/* Body + footer — opens the single issue details page */}
             <Link href={detailsHref} className="flex flex-col justify-between flex-1">
                 <CardContent className="p-0">
                     <div className="p-3.5 space-y-4">

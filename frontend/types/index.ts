@@ -186,3 +186,22 @@ export interface SearchSuggestion {
     location: string;
     type: "report" | "post" | "announcement";
 }
+
+// ── LocationItem ──────────────────────────────────────
+export interface LocationItem {
+    id: string;
+    name: string;
+    subTitle: string;
+    reportsCount: number;
+    image: string;
+    slug: string;
+}
+
+// ── StepItem ──────────────────────────────────────
+export interface StepItem {
+    step: string;
+    title: string;
+    description: string;
+    icon: React.ElementType;
+    badgeText: string;
+}

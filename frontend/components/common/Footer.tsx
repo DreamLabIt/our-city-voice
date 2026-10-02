@@ -10,6 +10,7 @@ import {
     Code2,
 } from "lucide-react";
 import Image from "next/image";
+import SectionContainer from "./SectionContainer";
 
 export default function Footer(): React.ReactNode {
     const handleSubscribe = (e: FormEvent<HTMLFormElement>): void => {
@@ -18,11 +19,12 @@ export default function Footer(): React.ReactNode {
 
     return (
         <footer className="w-full bg-card border-t border-border-custom text-foreground pt-12 pb-6">
-            <div className="max-w-[1940px] mx-auto px-8 md:px-10 space-y-10">
+
+            <SectionContainer>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
 
-                    <div className="lg:col-span-2 space-y-4">
+                    <div className="lg:col-span-2 space-y-4 mb-8">
 
                         <Link
                             href="/"
@@ -194,7 +196,7 @@ export default function Footer(): React.ReactNode {
                     </div>
                 </div>
 
-            </div>
+            </SectionContainer>
         </footer>
     );
 }

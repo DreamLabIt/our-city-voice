@@ -14,6 +14,9 @@ import {
     MessageSquare,
     MessageCircle,
     Calendar,
+    CheckCircle2,
+    SearchCheck,
+    Camera,
 } from "lucide-react";
 import type {
     ActivityItem,
@@ -25,7 +28,9 @@ import type {
     PostItem,
     StatItem,
     WardData,
-    SearchSuggestion
+    SearchSuggestion,
+    StepItem,
+    LocationItem
 } from "@/types";
 
 // ── Navigation ──────────────────────────────────────────────
@@ -1180,4 +1185,66 @@ export const mockSuggestions: SearchSuggestion[] = [
     { id: "8", title: "Stormwater Drainage Maintenance Schedule", category: "Drainage", location: "Ward 03", type: "post" },
     { id: "9", title: "Public Park Renovation Updates", category: "Parks & Recreation", location: "Ward 01", type: "announcement" },
     { id: "10", title: "Traffic Signal Malfunction Reported", category: "Traffic & Signals", location: "Ward 04", type: "report" },
+];
+
+
+
+
+export const topLocations: LocationItem[] = [
+    {
+        id: "1",
+        name: "Ward 01",
+        subTitle: "Central City Zone",
+        reportsCount: 24,
+        image: "https://images.unsplash.com/photo-1519501025264-65ba15a82390?q=80&w=800&auto=format&fit=crop",
+        slug: "ward-01",
+    },
+    {
+        id: "2",
+        name: "Ward 02",
+        subTitle: "Station & Market Area",
+        reportsCount: 18,
+        image: "/residential_street.jpeg",
+        slug: "ward-02",
+    },
+    {
+        id: "3",
+        name: "Ward 03",
+        subTitle: "Main Bypass & Highway",
+        reportsCount: 12,
+        image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=800&auto=format&fit=crop",
+        slug: "ward-03",
+    },
+    {
+        id: "4",
+        name: "Ward 04",
+        subTitle: "Residential & Lake View",
+        reportsCount: 9,
+        image: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?q=80&w=800&auto=format&fit=crop",
+        slug: "ward-04",
+    },
+];
+
+export const steps: StepItem[] = [
+    {
+        step: "01",
+        title: "Report an Issue",
+        description: "Take a picture or video of the issue (pothole, broken light, waste), select location & post it directly.",
+        icon: Camera,
+        badgeText: "Quick Snap & Post",
+    },
+    {
+        step: "02",
+        title: "Track & Verify Progress",
+        description: "Citizens upvote the issue while municipal admins and officials review, assign, and update status in real-time.",
+        icon: SearchCheck,
+        badgeText: "Real-time Tracking",
+    },
+    {
+        step: "03",
+        title: "Resolved Together",
+        description: "Once fixed, authority uploads completion proof. The community marks it solved and celebrates a better city.",
+        icon: CheckCircle2,
+        badgeText: "City Improved",
+    },
 ];
