@@ -1,41 +1,40 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
-/node_modules
-/.pnp
+node_modules/
+.pnp
 .pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
 
-# testing
-/coverage
+# build output
+dist/
+build/
+out/
+.next/
+*.tsbuildinfo
 
-# next.js
-/.next/
-/out/
+# env files. real secrets never get committed, examples always do
+.env
+.env.*
+!.env.example
+!.env.*.example
 
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
+# logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# local docker state
+.docker-data/
+
+# editors / os
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# coverage
+coverage/
 
 # vercel
 .vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
