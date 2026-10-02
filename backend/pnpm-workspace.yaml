@@ -1,0 +1,9 @@
+# Makes this directory a standalone pnpm root (the frontend has its own).
+#
+# pnpm blocks package install scripts by default, which is a good default:
+# a postinstall script is arbitrary code from the internet. Anything that
+# genuinely needs one has to be listed here explicitly.
+#
+# esbuild is tsx's compiler and its postinstall places the platform binary.
+allowBuilds:
+  esbuild: true

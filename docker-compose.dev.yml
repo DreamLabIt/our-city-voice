@@ -1,0 +1,108 @@
+# Development stack. Driven by ./dev.sh, which supplies --env-file .env.
+#
+# Differences from production that are deliberate:
+#   - source is bind mounted, so edits reload without rebuilding an image
+#   - postgres publishes its port, so a GUI client on the host can connect
+#   - no nginx. It would only add a layer between you and your own bugs
+
+name: ourcityvoice-dev
+
+services:
+  # ── postgres ──────────────────────────────────────────────────────
+  postgres:
+    image: postgres:17-alpine
+    container_name: ocv-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Pin collation so index ordering is identical on every machine.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # A named volume, not a bind mount. Bind-mounted pgdata hits permission
+      # and fsync problems, and a named volume survives `down` (but not
+      # `down -v`, which is what ./dev.sh clean does).
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks: [ocv]
+
+  # ── backend ───────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      target: development
+    container_name: ocv-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+      # Host is "postgres", the service name. Inside the compose network
+      # there is no localhost postgres to talk to.
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    volumes:
+      - ./backend:/app
+      # Keeps the container's node_modules instead of letting the bind mount
+      # above hide it. Docker seeds this volume from the image on first run.
+      # After changing dependencies: ./dev.sh install backend
+      - backend-node-modules:/app/node_modules
+    depends_on:
+      postgres:
+        # Without this the backend starts before postgres accepts
+        # connections and crash-loops for the first 10 seconds.
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks: [ocv]
+
+  # ── frontend ──────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      target: development
+    container_name: ocv-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      # Browser-side: resolves on your machine.
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api/v1}
+      # Server-side: resolves inside the docker network.
+      INTERNAL_API_URL: ${INTERNAL_API_URL:-http://backend:4000/api/v1}
+      WATCHPACK_POLLING: "false"
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+      # .next is build output. Keeping it in a volume stops the container
+      # writing it back onto your host tree.
+      - frontend-next:/app/.next
+    depends_on:
+      backend:
+        condition: service_started
+    networks: [ocv]
+
+volumes:
+  postgres-data:
+  backend-node-modules:
+  frontend-node-modules:
+  frontend-next:
+
+networks:
+  ocv:
+    driver: bridge

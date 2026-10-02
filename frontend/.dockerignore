@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+build
+dist
+.env
+.env.*
+!.env.example
+*.log
+*.tsbuildinfo
+.git
+.gitignore
+.vercel
+Dockerfile
+.dockerignore
+README.md
