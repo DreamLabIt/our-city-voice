@@ -42,6 +42,52 @@ export interface PostItem {
     isVideo?: boolean;
     duration?: string;
     category: "Latest" | "Most Commented" | "Nearby" | "Map View";
+
+    // ── Single issue details ──
+    status: ReportStatus;
+    priority: PriorityLevel;
+    ward: string;
+    department: string;
+    assignedOfficer?: string;
+    reportedBy: string;
+    reporterInitials: string;
+    address: string;
+    postalCode: string;
+    updatedAt: string;
+    details: string[];
+    gallery: string[];
+    updates: IssueUpdate[];
+}
+
+// ── Issue Status Timeline ──────────────────────────────────
+export interface IssueUpdate {
+    id: string;
+    status: ReportStatus;
+    title: string;
+    note: string;
+    date: string;
+    actor: string;
+}
+
+// ── Issue Comments ─────────────────────────────────────────
+export type CommenterRole =
+    | "Resident"
+    | "Local Business"
+    | "Field Inspector"
+    | "Municipal Officer"
+    | "Ward Councillor";
+
+export interface PostComment {
+    id: string;
+    postId: string;
+    author: string;
+    initials: string;
+    role: CommenterRole;
+    time: string;
+    body: string;
+    likes: number;
+    isOfficial?: boolean;
+    replies?: PostComment[];
 }
 
 // ── Recent Activity ────────────────────────────────────────
