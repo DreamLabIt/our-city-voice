@@ -131,3 +131,52 @@ domain (`app.example.com` and `api.example.com`), a cookie with
 
 CORS already allows `*.vercel.app` preview URLs outside production, since
 Vercel mints a new one per commit. In production the allowlist is exact.
+
+## Database workflow
+
+The schema lives in `backend/prisma/schema.prisma`. Everything below runs
+inside the backend container, where `DATABASE_URL` already points at the
+`postgres` service.
+
+```bash
+./dev.sh migrate add_something  # create and apply a migration
+./dev.sh migrate                # apply pending migrations
+./dev.sh migrate:status         # what has run
+./dev.sh seed                   # load fixtures (truncates first)
+./dev.sh generate               # regenerate the client after a schema edit
+./dev.sh studio                 # database GUI on :5555
+```
+
+Seeding gives you 36 users, 13 reports, 31 comments and 178 likes, built from
+`frontend/data/mock-data.ts`. Every account's password is `password123`.
+
+When the frontend fixtures change, re-extract them:
+
+```bash
+cd backend && pnpm seed:extract && cd .. && ./dev.sh seed
+```
+
+Three decisions in the schema that are worth knowing about:
+
+**Generated client in `src/`, not `node_modules`.** The schema uses Prisma's
+`prisma-client` generator with `output = "../src/generated/prisma"`. The
+production Docker stage installs a fresh `node_modules` with production
+dependencies only, so a client generated into `node_modules` during the build
+would be discarded. Emitting into `src/` means `tsc` compiles it into `dist/`
+like any other module. `src/generated/` is gitignored; run `./dev.sh generate`
+after cloning.
+
+**BigInt ids, serialised as strings.** `JSON.stringify` refuses to touch a
+BigInt and throws, so `src/lib/serialize.ts` teaches it to emit a string.
+Strings are the right wire format anyway: a JSON number above 2^53 loses
+precision when the browser parses it, and the frontend's types already declare
+`id: string`.
+
+**Counters are caches, and the seed proves it.** `posts.like_count` and
+`comment_count` are recomputed from the rows actually inserted, never copied
+from the fixture numbers. `post_status_history` is append-only and is what
+makes "average time to resolution" answerable at all.
+
+Two constraints live in a hand-written migration because Prisma's schema
+language cannot express them: a unique index on `lower(email)`, and
+`CHECK (id = 1)` on the single-row `site_contact_info` table.

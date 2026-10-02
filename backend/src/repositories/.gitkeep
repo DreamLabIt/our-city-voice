@@ -1,0 +1,8 @@
+Database access lives here: the only layer allowed to import the Prisma client.
+
+Nothing yet, because the health check deliberately uses the raw pg pool
+instead. The first real repository arrives with the posts endpoints.
+
+The rule this directory exists to enforce: nothing above it touches the ORM,
+and nothing below controllers/ knows what HTTP is. A service you can call with
+plain arguments is a service you can test without a server.

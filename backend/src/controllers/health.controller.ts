@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 
-import * as healthService from "./health.service.js";
+import * as healthService from "../services/health.service.js";
 
 /**
  * Controllers are the only layer that knows about HTTP. They read the request,

@@ -1,6 +1,7 @@
 import { createApp } from "./app.js";
 import { env } from "./config/env.js";
 import { closePool } from "./db/pool.js";
+import { disconnectPrisma } from "./db/prisma.js";
 import { logger } from "./lib/logger.js";
 
 const app = createApp();
@@ -37,6 +38,8 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
     await new Promise<void>((resolve, reject) => {
       server.close((error) => (error ? reject(error) : resolve()));
     });
+    // Prisma first: it holds checked-out clients from the same pool.
+    await disconnectPrisma();
     await closePool();
     logger.info("shutdown complete");
     process.exit(0);

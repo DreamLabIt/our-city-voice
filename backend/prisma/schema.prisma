@@ -1,0 +1,401 @@
+// OurCityVoice database schema.
+//
+// Mirrors backend/docs/generate-er.py. If you change one, change the other:
+// the generator draws the diagram, this file builds the database.
+//
+// Conventions:
+//   - models are PascalCase singular, tables are snake_case plural via @@map
+//   - every timestamp is timestamptz (@db.Timestamptz), never a bare timestamp.
+//     A bare timestamp drops the offset and the bug only shows up when the VPS
+//     runs in a different timezone than your laptop
+//   - BigInt primary keys. Prisma serialises these to JS BigInt, which
+//     JSON.stringify refuses to touch, so src/lib/serialize.ts turns them into
+//     strings on the way out. That is the right wire format anyway: an id past
+//     2^53 silently loses precision as a JSON number, and the frontend's types
+//     already declare `id: string`
+
+generator client {
+  // The newer generator, which emits TypeScript into the source tree instead
+  // of writing into node_modules. That matters for Docker: the production
+  // stage installs a fresh node_modules with production dependencies only, so
+  // a client generated into node_modules during the build would be thrown
+  // away. Emitting into src/ means tsc compiles it into dist/ like any other
+  // module and it ships with the build output.
+  //
+  // src/generated/ is gitignored. Run `pnpm db:generate` after cloning.
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+  runtime      = "nodejs"
+}
+
+datasource db {
+  provider = "postgresql"
+  // No `url` here. Prisma 7 moved connection configuration out of the schema:
+  // the CLI reads it from prisma.config.ts, and the runtime client gets a
+  // driver adapter instead. See src/db/prisma.ts.
+}
+
+// ── enums ───────────────────────────────────────────────────────────
+//
+// These are real Postgres enum types. I argued for CHECK constraints when we
+// sketched the schema, and that still holds for raw SQL. With Prisma the
+// calculus changes: an enum here generates a TypeScript union, so an
+// exhaustive switch over PostStatus fails the build when you add a value.
+// A CHECK constraint gives the database the same guarantee but leaves
+// TypeScript seeing `string`.
+//
+// The cost is that Postgres enums are awkward to change. Adding a value is one
+// migration line; removing one is not. These four sets are stable enough for
+// that to be the right trade.
+
+enum UserRole {
+  citizen
+  officer
+  admin
+
+  @@map("user_role")
+}
+
+enum PostStatus {
+  pending
+  in_progress
+  resolved
+  rejected
+
+  @@map("post_status")
+}
+
+enum PostPriority {
+  low
+  medium
+  high
+  critical
+
+  @@map("post_priority")
+}
+
+enum MediaType {
+  image
+  video
+
+  @@map("media_type")
+}
+
+// ── identity ────────────────────────────────────────────────────────
+
+model User {
+  id            BigInt    @id @default(autoincrement())
+  name          String
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  phone         String?
+  role          UserRole  @default(citizen)
+  departmentId  BigInt?   @map("department_id")
+  avatarKey     String?   @map("avatar_key")
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  department       Department?         @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  refreshTokens    RefreshToken[]
+  posts            Post[]              @relation("PostAuthor")
+  assignedPosts    Post[]              @relation("PostAssignee")
+  statusChanges    PostStatusHistory[]
+  comments         Comment[]
+  postLikes        PostLike[]
+  commentLikes     CommentLike[]
+  handledMessages  ContactMessage[]
+
+  // Emails are stored lowercased by the service layer. @unique alone would
+  // let "A@x.com" and "a@x.com" both exist; the migration adds a unique index
+  // on lower(email) to close that.
+  @@index([departmentId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        BigInt    @id @default(autoincrement())
+  userId    BigInt    @map("user_id")
+  // sha256 of the token. Storing the token itself means a database leak is a
+  // full session takeover.
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+  userAgent String?   @map("user_agent")
+  ipAddress String?   @map("ip_address") @db.Inet
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("refresh_tokens")
+}
+
+// ── taxonomy ────────────────────────────────────────────────────────
+
+model Ward {
+  id          BigInt   @id @default(autoincrement())
+  name        String
+  // The public filter value, e.g. "ward-03". Slugs keep URLs stable when a
+  // ward gets renamed.
+  code        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  posts Post[]
+
+  @@map("wards")
+}
+
+model Department {
+  id          BigInt   @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  email       String?
+  phone       String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  users      User[]
+  categories Category[]
+  posts      Post[]
+
+  // No SLA target column: SLA statistics were dropped from the UI.
+  @@map("departments")
+}
+
+model Category {
+  id                  BigInt   @id @default(autoincrement())
+  name                String
+  slug                String   @unique
+  description         String?
+  // A lucide icon name like "Droplets", not a CSS class. Colours stay in the
+  // frontend: the API has no business shipping Tailwind classes.
+  icon                String
+  defaultDepartmentId BigInt?  @map("default_department_id")
+  sortOrder           Int      @default(0) @map("sort_order")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  defaultDepartment Department? @relation(fields: [defaultDepartmentId], references: [id], onDelete: SetNull)
+  posts             Post[]
+
+  @@index([defaultDepartmentId])
+  @@map("categories")
+}
+
+// ── reports ─────────────────────────────────────────────────────────
+
+model Post {
+  id           BigInt @id @default(autoincrement())
+  // The human-facing ticket number, e.g. "OCV-982410". Deliberately separate
+  // from the primary key: sequential ids in public URLs leak how many reports
+  // the platform has.
+  trackingCode String @unique @map("tracking_code")
+  title        String
+  description  String
+
+  userId            BigInt  @map("user_id")
+  categoryId        BigInt  @map("category_id")
+  wardId            BigInt  @map("ward_id")
+  departmentId      BigInt? @map("department_id")
+  assignedOfficerId BigInt? @map("assigned_officer_id")
+
+  status      PostStatus   @default(pending)
+  priority    PostPriority @default(medium)
+  isAnonymous Boolean      @default(false) @map("is_anonymous")
+
+  street     String?
+  city       String
+  address    String
+  postalCode String?  @map("postal_code")
+  latitude   Decimal? @db.Decimal(9, 6)
+  longitude  Decimal? @db.Decimal(9, 6)
+
+  // Caches. post_status_history and the like/comment rows are the source of
+  // truth; these exist so the feed does not need three subqueries per row.
+  viewCount    Int @default(0) @map("view_count")
+  likeCount    Int @default(0) @map("like_count")
+  commentCount Int @default(0) @map("comment_count")
+
+  resolvedAt DateTime? @map("resolved_at") @db.Timestamptz(3)
+  // Soft delete, so moderation is reversible and replies survive.
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  author          User                @relation("PostAuthor", fields: [userId], references: [id], onDelete: Restrict)
+  assignedOfficer User?               @relation("PostAssignee", fields: [assignedOfficerId], references: [id], onDelete: SetNull)
+  category        Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  ward            Ward                @relation(fields: [wardId], references: [id], onDelete: Restrict)
+  department      Department?         @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  media           Media[]
+  comments        Comment[]
+  likes           PostLike[]
+  statusHistory   PostStatusHistory[]
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([wardId, status])
+  @@index([categoryId, status])
+  @@index([userId])
+  @@index([assignedOfficerId])
+  @@index([departmentId])
+  // The keyset cursor for the feed. Paginating with OFFSET skips and
+  // duplicates rows when new reports arrive mid-scroll.
+  @@index([createdAt(sort: Desc), id(sort: Desc)])
+  @@map("posts")
+}
+
+model PostStatusHistory {
+  id         BigInt      @id @default(autoincrement())
+  postId     BigInt      @map("post_id")
+  // Null when the actor was a department or an automated step rather than a
+  // named person.
+  actorId    BigInt?     @map("actor_id")
+  // Null on the first row, where the report was created rather than moved.
+  fromStatus PostStatus? @map("from_status")
+  toStatus   PostStatus  @map("to_status")
+  title      String
+  note       String?
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  post  Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  // Append only. Never UPDATE, never DELETE. This table is what makes
+  // "average time to resolution" answerable at all.
+  @@index([postId, createdAt])
+  @@map("post_status_history")
+}
+
+model Media {
+  id           BigInt    @id @default(autoincrement())
+  postId       BigInt    @map("post_id")
+  type         MediaType
+  // A bucket key, not a URL. Build URLs at read time so you can change
+  // buckets or put a CDN in front without rewriting every row.
+  storageKey   String    @map("storage_key")
+  thumbnailKey String?   @map("thumbnail_key")
+  mimeType     String    @map("mime_type")
+  sizeBytes    BigInt    @map("size_bytes")
+  durationSecs Int?      @map("duration_secs")
+  sortOrder    Int       @default(0) @map("sort_order")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId, sortOrder])
+  @@map("media")
+}
+
+// ── engagement ──────────────────────────────────────────────────────
+
+model Comment {
+  id        BigInt    @id @default(autoincrement())
+  postId    BigInt    @map("post_id")
+  userId    BigInt    @map("user_id")
+  // Self reference. Null means top level. One level of nesting is enforced in
+  // the service layer, not here: the database happily allows arbitrary depth.
+  parentId  BigInt?   @map("parent_id")
+  message   String
+  likeCount Int       @default(0) @map("like_count")
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  post    Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author  User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  parent  Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[]     @relation("CommentReplies")
+  likes   CommentLike[]
+
+  @@index([postId, createdAt])
+  @@index([parentId])
+  @@index([userId])
+  @@map("comments")
+}
+
+model PostLike {
+  id        BigInt   @id @default(autoincrement())
+  postId    BigInt   @map("post_id")
+  userId    BigInt   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // The entire reason this table exists instead of a counter column. Without
+  // it one user can like the same report fifty times.
+  @@unique([postId, userId])
+  @@index([userId])
+  @@map("post_likes")
+}
+
+model CommentLike {
+  id        BigInt   @id @default(autoincrement())
+  commentId BigInt   @map("comment_id")
+  userId    BigInt   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([userId])
+  @@map("comment_likes")
+}
+
+// ── contact ─────────────────────────────────────────────────────────
+
+model ContactCategory {
+  id        BigInt   @id @default(autoincrement())
+  name      String   @unique
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  messages ContactMessage[]
+
+  @@map("contact_categories")
+}
+
+model ContactMessage {
+  id         BigInt    @id @default(autoincrement())
+  categoryId BigInt    @map("category_id")
+  // No userId. Anyone can use the contact form without an account, which is
+  // also why the endpoint needs rate limiting.
+  name       String
+  email      String
+  phone      String?
+  subject    String
+  message    String
+  handledAt  DateTime? @map("handled_at") @db.Timestamptz(3)
+  handledBy  BigInt?   @map("handled_by")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  category ContactCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  handler  User?           @relation(fields: [handledBy], references: [id], onDelete: SetNull)
+
+  @@index([categoryId, createdAt])
+  @@index([handledAt])
+  @@map("contact_messages")
+}
+
+model SiteContactInfo {
+  // Single row. The migration adds CHECK (id = 1) so it stays that way.
+  id           Int      @id @default(1)
+  location     String
+  phone        String
+  email        String
+  workingHours String   @map("working_hours")
+  holidayNote  String?  @map("holiday_note")
+  latitude     Decimal? @db.Decimal(9, 6)
+  longitude    Decimal? @db.Decimal(9, 6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("site_contact_info")
+}

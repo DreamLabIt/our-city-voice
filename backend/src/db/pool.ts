@@ -29,6 +29,18 @@ pool.on("error", (error) => {
   logger.error({ err: error }, "idle postgres client errored");
 });
 
+let closed = false;
+
+/**
+ * Idempotent. The Prisma adapter wraps this same pool, so $disconnect may
+ * already have ended it; calling pool.end() twice throws.
+ */
 export async function closePool(): Promise<void> {
-  await pool.end();
+  if (closed) return;
+  closed = true;
+  try {
+    await pool.end();
+  } catch (error) {
+    logger.warn({ err: error }, "pg pool was already closed");
+  }
 }

@@ -141,6 +141,65 @@ cmd_install() {
   ok "done, $service restarted"
 }
 
+# ── database ────────────────────────────────────────────────────────
+# All of these run inside the backend container, where compose has already
+# set DATABASE_URL to point at the postgres service. Running them from your
+# host would need a second DATABASE_URL pointing at localhost, and the two
+# drift apart the moment you change a port.
+
+cmd_migrate() {
+  preflight
+  if [[ $# -gt 0 ]]; then
+    info "creating and applying migration: $*"
+    dc exec backend pnpm prisma migrate dev --name "$*"
+  else
+    info "applying pending migrations"
+    dc exec backend pnpm prisma migrate dev
+  fi
+  ok "database schema is up to date"
+}
+
+cmd_seed() {
+  preflight
+  warn "the seed truncates every table before inserting"
+  dc exec backend pnpm db:seed
+}
+
+cmd_generate() {
+  preflight
+  info "regenerating the Prisma client into src/generated"
+  dc exec backend pnpm db:generate
+  ok "done. tsx will pick it up on the next reload."
+}
+
+# Prisma Studio is a database GUI. It binds inside the container, so the
+# port has to be published for your browser to reach it.
+cmd_studio() {
+  preflight
+  info "Prisma Studio on http://localhost:5555  (ctrl-c to stop)"
+  dc exec -e BROWSER=none backend pnpm db:studio --port 5555
+}
+
+cmd_migrate_status() {
+  preflight
+  dc exec backend pnpm prisma migrate status
+}
+
+# Dependencies live in a named volume so the bind mount does not hide them.
+# pnpm repairs that volume by itself when package.json changes. This is for
+# the case it cannot fix: a volume seeded from an older image whose files are
+# owned by the wrong user, which shows up as EACCES on /app/node_modules.
+cmd_refresh_deps() {
+  preflight
+  local service="${1:-backend}"
+  info "recreating the $service dependency volume from the image"
+  dc stop "$service" >/dev/null 2>&1 || true
+  dc rm -f "$service" >/dev/null 2>&1 || true
+  docker volume rm "ourcityvoice-dev_${service}-node-modules" >/dev/null 2>&1 || true
+  dc up -d "$service"
+  ok "$service restarted with a fresh node_modules"
+}
+
 cmd_clean() {
   preflight
   warn "This deletes the postgres volume. Every row in your local database goes with it."
@@ -166,10 +225,18 @@ ${BOLD}everyday${RESET}
   ps                    what is running, and its health
   health                curl both health endpoints
 
+${BOLD}database${RESET}
+  migrate [name]        create and apply a migration ${DIM}(omit name to just apply)${RESET}
+  migrate:status        which migrations have run
+  seed                  load the frontend fixtures into real tables
+  generate              regenerate the Prisma client after a schema edit
+  studio                Prisma Studio, a database GUI, on :5555
+
 ${BOLD}digging in${RESET}
   psql [args...]        a psql prompt on the dev database
   sh [service]          a shell inside a container ${DIM}(default: backend)${RESET}
   install [service]     reinstall deps after editing package.json ${DIM}(default: backend)${RESET}
+  refresh-deps [service]  rebuild the node_modules volume ${DIM}(fixes EACCES on it)${RESET}
 
 ${BOLD}starting over${RESET}
   build [service...]    rebuild images from scratch, no cache
@@ -197,6 +264,12 @@ main() {
     psql|db)          cmd_psql "$@" ;;
     sh|shell|exec)    cmd_sh "$@" ;;
     install)          cmd_install "$@" ;;
+    refresh-deps)     cmd_refresh_deps "$@" ;;
+    migrate)          cmd_migrate "$@" ;;
+    migrate:status)   cmd_migrate_status "$@" ;;
+    seed)             cmd_seed "$@" ;;
+    generate)         cmd_generate "$@" ;;
+    studio)           cmd_studio "$@" ;;
     clean|nuke)       cmd_clean "$@" ;;
     reset)            cmd_reset "$@" ;;
     help|-h|--help)   cmd_help ;;

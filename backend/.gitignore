@@ -1,0 +1,6 @@
+# Prisma writes the generated client here. It is build output, not source:
+# regenerate it with `./dev.sh generate` after cloning or changing the schema.
+src/generated/
+
+# pnpm inside the container writes its store into the bind mount.
+.pnpm-store/

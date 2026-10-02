@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { healthRouter } from "./modules/health/health.routes.js";
+import { healthRouter } from "./health.routes.js";
 
 /**
  * Every module router gets mounted here, and this is mounted at /api/v1.

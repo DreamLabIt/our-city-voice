@@ -1,5 +1,5 @@
-import { pool } from "../../db/pool.js";
-import { env } from "../../config/env.js";
+import { pool } from "../db/pool.js";
+import { env } from "../config/env.js";
 
 export interface DependencyCheck {
   status: "ok" | "error";

@@ -7,5 +7,6 @@ dist
 .git
 .gitignore
 docs
+src/generated
 Dockerfile
 .dockerignore

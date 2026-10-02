@@ -8,7 +8,7 @@ import { randomUUID } from "node:crypto";
 import { env } from "./config/env.js";
 import { logger } from "./lib/logger.js";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler.js";
-import { apiRouter } from "./routes.js";
+import { apiRouter } from "./routes/index.js";
 
 const API_PREFIX = "/api/v1";
 

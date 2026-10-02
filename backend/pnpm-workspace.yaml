@@ -1,9 +1,22 @@
 # Makes this directory a standalone pnpm root (the frontend has its own).
-#
+
 # pnpm blocks package install scripts by default, which is a good default:
 # a postinstall script is arbitrary code from the internet. Anything that
 # genuinely needs one has to be listed here explicitly.
 #
-# esbuild is tsx's compiler and its postinstall places the platform binary.
+#   esbuild          tsx's compiler, postinstall places the platform binary
+#   prisma/engines   downloads the query and schema engine binaries
 allowBuilds:
   esbuild: true
+  prisma: true
+  "@prisma/engines": true
+
+# pnpm checks node_modules against the lockfile before running a script, and
+# repairs it when they disagree. In dev, node_modules lives in a named docker
+# volume that does not update when package.json changes, so that check is
+# exactly what we want: the container heals itself after a dependency change
+# instead of failing with a confusing missing-module error.
+#
+# The repair normally asks for confirmation first, and a container has no TTY
+# to answer, so pnpm aborts. This answers yes in advance.
+confirmModulesPurge: false
