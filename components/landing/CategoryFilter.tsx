@@ -11,7 +11,7 @@ export default function CategoryFilter(): React.ReactNode {
     const mainCategories = categories.filter((c) => !c.isOther);
 
     return (
-        <section className="w-full bg-card py-4">
+        <section className="max-w-458 mx-auto bg-card py-4">
             <div className="px-4 sm:px-8 md:px-10">
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:flex lg:flex-wrap items-center gap-3 sm:gap-4 md:gap-6 justify-center sm:justify-between">
                     {mainCategories.map((cat: CategoryItem, index: number) => {
