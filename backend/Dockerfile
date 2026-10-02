@@ -42,15 +42,44 @@ FROM base AS development
 
 ENV NODE_ENV=development
 
-# --chown matters here. COPY runs as root, and the compose file mounts named
-# volumes over node_modules (and .next). Docker seeds a named volume from the
-# image path, ownership included, so a root-owned directory in the image
-# becomes a volume the `node` user cannot write to.
-COPY --from=deps --chown=node:node /app/node_modules ./node_modules
-COPY --chown=node:node . .
+# This stage runs with your source bind mounted at /app, so the user inside
+# the container has to be able to read and write files owned by you on the
+# host. Linux bind mounts pass raw numeric uids straight through: there is no
+# translating layer, so a container user of 1000 and a host user of 1001 are
+# different people as far as the kernel is concerned, and your source is
+# simply unreadable. It surfaces as the server dying on startup with
+# `EACCES: permission denied, open '/app/package.json'`.
+#
+# So the host's ids arrive as build arguments and the image's `node` user is
+# remapped to match. ./dev.sh fills them in from `id -u` and `id -g`.
+#
+# -o allows an id that something in the image already holds. gid 20 is
+# `dialout` on debian and `staff` on macOS, so the macOS default of 501:20
+# would fail to build without it.
+#
+# The 1000:1000 default keeps a bare `docker compose build` working. The
+# production stage below deliberately remaps nothing: it owns its files at
+# build time and bind mounts nothing, so there is no host user to agree with,
+# and a production image that varied by who built it would be worse than one
+# that is always the same.
+ARG UID=1000
+ARG GID=1000
 
-# uid 1000, which matches a typical Linux desktop user, so files written
-# through the bind mount are not owned by root on the host.
+RUN groupmod -o -g "${GID}" node \
+ && usermod  -o -u "${UID}" -g "${GID}" node \
+ && chown -R "${UID}:${GID}" /home/node \
+ && chown "${UID}:${GID}" /app
+
+# --chown matters here. COPY runs as root, and the compose file mounts a named
+# volume over node_modules. Docker seeds a named volume from the image path,
+# ownership included, so a root-owned directory in the image becomes a volume
+# the container user cannot write to.
+COPY --from=deps --chown=${UID}:${GID} /app/node_modules ./node_modules
+COPY --chown=${UID}:${GID} . .
+
+# Resolves through /etc/passwd, which the remap above rewrote, so this is
+# whatever UID was passed in. When UID is 0 it is root, which is what rootless
+# docker needs.
 USER node
 
 EXPOSE 4000

@@ -37,16 +37,27 @@ FROM base AS development
 ENV NODE_ENV=development \
     NEXT_TELEMETRY_DISABLED=1
 
+# The host's ids, so the user inside the container is the same person who owns
+# the bind mounted source. Without this the container cannot read your files
+# whenever your host uid is not 1000. The reasoning is written out once, in
+# the dev stage of backend/Dockerfile.
+ARG UID=1000
+ARG GID=1000
+
+RUN groupmod -o -g "${GID}" node \
+ && usermod  -o -u "${UID}" -g "${GID}" node \
+ && chown -R "${UID}:${GID}" /home/node
+
 # --chown matters here. COPY runs as root, and the compose file mounts named
-# volumes over node_modules (and .next). Docker seeds a named volume from the
+# volumes over node_modules and .next. Docker seeds a named volume from the
 # image path, ownership included, so a root-owned directory in the image
-# becomes a volume the `node` user cannot write to.
-COPY --from=deps --chown=node:node /app/node_modules ./node_modules
-COPY --chown=node:node . .
+# becomes a volume the container user cannot write to.
+COPY --from=deps --chown=${UID}:${GID} /app/node_modules ./node_modules
+COPY --chown=${UID}:${GID} . .
 
 # .next does not exist in the image, so without this the named volume mounted
 # over it is created root-owned and the dev server cannot write its build.
-RUN mkdir -p /app/.next && chown node:node /app/.next /app
+RUN mkdir -p /app/.next && chown "${UID}:${GID}" /app/.next /app
 
 USER node
 

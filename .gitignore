@@ -25,6 +25,8 @@ yarn-error.log*
 
 # local docker state
 .docker-data/
+# the uid:gid the dev images were last built with, per machine
+.dev-container-user
 
 # editors / os
 .DS_Store

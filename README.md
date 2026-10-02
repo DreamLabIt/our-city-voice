@@ -43,6 +43,37 @@ Source is bind mounted, so edits reload without rebuilding. Dependencies are
 not: they live in a named volume, which is why adding a package needs
 `./dev.sh install`.
 
+### The dev containers run as you
+
+A linux bind mount passes raw numeric uids through to the container. There is
+no translating layer, so a container user of 1000 and a host user of 1001 are
+different people as far as the kernel is concerned, and the mounted source is
+unreadable. The symptom is the API crash-looping before it ever reaches your
+code:
+
+```
+Error: EACCES: permission denied, open '/app/package.json'
+```
+
+So `./dev.sh` reads your `id -u` and `id -g` and passes them to the dev
+images, which remap their `node` user to match. Files you create inside a
+container come out owned by you on the host, and files you create on the host
+are readable inside. Nothing to configure, and it travels between machines.
+
+Two details worth knowing:
+
+- **Rootless docker is handled separately.** It already maps the container's
+  root onto the host user who started the daemon, so there the containers run
+  as root, and matching your real uid would be the thing that breaks.
+- **Only the dev stages do this.** Production owns its files at build time and
+  bind mounts nothing, so there is no host user to agree with. A production
+  image that varied by whoever built it would be worse than one that is
+  always identical.
+
+Named volumes are seeded from the image once, ownership included, so a volume
+created under a different user outlives the rebuild that changed it. `./dev.sh
+up` notices and recreates them; `./dev.sh refresh-deps` does it on demand.
+
 ## Two health endpoints, on purpose
 
 `/health` is liveness. It touches nothing and answers 200 as long as the

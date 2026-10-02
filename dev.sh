@@ -16,6 +16,10 @@ cd "$ROOT"
 COMPOSE_FILE="docker-compose.dev.yml"
 ENV_FILE=".env"
 
+# Records the uid:gid the dev images were last built with. See
+# sync_container_user below for what it is for. Gitignored.
+USER_STAMP=".dev-container-user"
+
 # Colours, but only when stdout is a terminal (so piping to a file stays clean).
 if [[ -t 1 ]]; then
   BOLD=$'\033[1m'; DIM=$'\033[2m'; RED=$'\033[31m'; GREEN=$'\033[32m'
@@ -31,6 +35,109 @@ die()   { printf '%serr%s %s\n' "$RED$BOLD" "$RESET" "$*" >&2; exit 1; }
 
 dc() { docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"; }
 
+# ── container user ──────────────────────────────────────────────────
+# The dev containers bind mount this repository, and a linux bind mount passes
+# raw numeric uids through without translating them. So the user inside the
+# container has to be the same number as the user who owns these files, or it
+# cannot read them and the backend crash-loops on startup with
+# `EACCES: permission denied, open '/app/package.json'`.
+#
+# The value is worked out per run rather than written into .env, because the
+# right answer is a property of the machine and not of the project: a checkout
+# copied to another box, or shared over NFS, should pick up the new host's ids
+# by itself rather than carry the old host's in a committed-adjacent file.
+resolve_container_user() {
+  CONTAINER_USER_GUESSED=0
+
+  # An explicit pair wins, for the cases this cannot work out by itself: a
+  # checkout owned by a service account, or a docker context pointed at a
+  # machine other than this one.
+  #
+  # .env is read as well as the environment. Exporting is what compose
+  # actually consumes, and an exported value outranks --env-file, so without
+  # this a value set in .env would be silently overridden by the guess below.
+  local uid="${HOST_UID:-}" gid="${HOST_GID:-}"
+  if [[ -f "$ENV_FILE" ]]; then
+    uid="${uid:-$(env_value HOST_UID "")}"
+    gid="${gid:-$(env_value HOST_GID "")}"
+  fi
+
+  if [[ -n "$uid" && -n "$gid" ]]; then
+    HOST_UID="$uid"
+    HOST_GID="$gid"
+    CONTAINER_USER_NOTE="set explicitly"
+    export HOST_UID HOST_GID
+    return 0
+  fi
+
+  CONTAINER_USER_GUESSED=1
+
+  # Rootless docker is the exception to matching your own uid. It maps the
+  # container's root onto the host user who started the daemon, so the files
+  # you own already appear root-owned inside the container, and matching your
+  # real uid would break what currently works.
+  if docker info --format '{{range .SecurityOptions}}{{println .}}{{end}}' 2>/dev/null |
+    grep -qx 'name=rootless'; then
+    HOST_UID=0
+    HOST_GID=0
+    CONTAINER_USER_NOTE="rootless docker, so root in the container is you on the host"
+  else
+    HOST_UID="$(id -u)"
+    HOST_GID="$(id -g)"
+    CONTAINER_USER_NOTE="your host user"
+  fi
+  export HOST_UID HOST_GID
+}
+
+# Matching the container user to *you* only helps if you actually own the
+# source. A tree cloned under sudo, restored from a backup, or copied from
+# another account is owned by somebody else and stays unreadable.
+check_source_ownership() {
+  # Only meaningful when the ids were guessed from your own account. An
+  # explicit override, or rootless docker, is a deliberate mismatch.
+  if [[ "$CONTAINER_USER_GUESSED" != "1" || "$HOST_UID" == "0" ]]; then
+    return 0
+  fi
+
+  # -c is GNU stat, -f is BSD stat, for the same field.
+  local owner
+  owner="$(stat -c '%u' backend/package.json 2>/dev/null ||
+    stat -f '%u' backend/package.json 2>/dev/null || echo "$HOST_UID")"
+  if [[ "$owner" == "$HOST_UID" ]]; then
+    return 0
+  fi
+
+  warn "backend/package.json is owned by uid $owner, but you are $HOST_UID."
+  warn "The containers run as you, so they will not be able to read it. Fix with:"
+  warn "  sudo chown -R $HOST_UID:$HOST_GID ."
+}
+
+# Named volumes are seeded from the image exactly once, ownership included.
+# So a volume created under a different container user survives the rebuild
+# that changed it, still owned by somebody who no longer exists in the image,
+# and pnpm fails with EACCES on /app/node_modules. Docker does not notice,
+# which is what this is for.
+sync_container_user() {
+  local want="${HOST_UID}:${HOST_GID}" have=""
+  if [[ -f "$USER_STAMP" ]]; then
+    have="$(cat "$USER_STAMP" 2>/dev/null || true)"
+  fi
+
+  # No stamp means a first run, where the volumes do not exist yet and get
+  # seeded correctly on their own.
+  if [[ -z "$have" || "$have" == "$want" ]]; then
+    return 0
+  fi
+
+  warn "container user changed, $have -> $want"
+  info "removing the dependency volumes so they reseed under the new owner"
+  dc down --remove-orphans >/dev/null 2>&1 || true
+  local volume
+  for volume in backend-node-modules frontend-node-modules frontend-next; do
+    docker volume rm "ourcityvoice-dev_${volume}" >/dev/null 2>&1 || true
+  done
+}
+
 preflight() {
   command -v docker >/dev/null 2>&1 || die "docker is not installed"
   docker compose version >/dev/null 2>&1 || die "the docker compose plugin is missing"
@@ -41,6 +148,9 @@ preflight() {
     cp .env.example "$ENV_FILE"
     ok "created $ENV_FILE. The defaults are fine for development."
   fi
+
+  # After the env file exists, since it is one of the places this looks.
+  resolve_container_user
 }
 
 # Reads a value out of .env without sourcing it (sourcing would run any
@@ -54,10 +164,15 @@ env_value() {
 
 cmd_up() {
   preflight
+  check_source_ownership
+  sync_container_user
+
+  info "containers run as ${HOST_UID}:${HOST_GID} ${DIM}(${CONTAINER_USER_NOTE})${RESET}"
   info "building images (cached layers are reused)"
   dc build "$@"
   info "starting services"
   dc up -d --remove-orphans "$@"
+  printf '%s:%s\n' "$HOST_UID" "$HOST_GID" >"$USER_STAMP"
 
   local backend_port frontend_port
   backend_port="$(env_value BACKEND_PORT 4000)"
@@ -189,15 +304,22 @@ cmd_migrate_status() {
 # pnpm repairs that volume by itself when package.json changes. This is for
 # the case it cannot fix: a volume seeded from an older image whose files are
 # owned by the wrong user, which shows up as EACCES on /app/node_modules.
+#
+# ./dev.sh up does this automatically when the container user changes. Run it
+# by hand when a volume is broken for some other reason.
 cmd_refresh_deps() {
   preflight
   local service="${1:-backend}"
-  info "recreating the $service dependency volume from the image"
+  info "recreating the $service dependency volumes from the image"
   dc stop "$service" >/dev/null 2>&1 || true
   dc rm -f "$service" >/dev/null 2>&1 || true
   docker volume rm "ourcityvoice-dev_${service}-node-modules" >/dev/null 2>&1 || true
+  # The frontend has a second seeded volume, for .next.
+  if [[ "$service" == "frontend" ]]; then
+    docker volume rm "ourcityvoice-dev_frontend-next" >/dev/null 2>&1 || true
+  fi
   dc up -d "$service"
-  ok "$service restarted with a fresh node_modules"
+  ok "$service restarted with fresh dependencies"
 }
 
 cmd_clean() {
@@ -246,6 +368,11 @@ ${BOLD}starting over${RESET}
 ${BOLD}services${RESET}  postgres, backend, frontend
 
 ${DIM}Config lives in .env, created from .env.example on first run.
+
+The dev containers run as your own uid:gid, so the bind mounted source is
+readable from both sides on any machine. Set HOST_UID / HOST_GID yourself to
+override that; changing either one triggers a rebuild of the dev images.
+
 Production is a separate script: ./prod.sh help${RESET}
 EOF
 }
