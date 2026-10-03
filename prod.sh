@@ -6,6 +6,12 @@
 #
 # Deliberately has no default command. On a server, a bare ./prod.sh that
 # silently restarts things is a bad idea.
+#
+# Note on the container user: `USER node` is commented out in the production
+# stages of both Dockerfiles, so these containers run as root inside their own
+# namespace. Nothing is bind mounted here, so nothing of yours is written as
+# root, but it does mean a process that escapes the runtime starts at uid 0.
+# docker-compose.prod.yml explains how to put it back.
 
 set -Eeuo pipefail
 
@@ -173,6 +179,9 @@ ${BOLD}database${RESET}
 
 ${DIM}Config comes from .env.prod, which is gitignored and lives only on the
 server. Start from .env.prod.example.
+
+The containers run as root: USER node is commented out in the production
+stages of both Dockerfiles. docker-compose.prod.yml says how to change that.
 
 While the frontend is on Vercel you can run without its container:
   ./prod.sh up postgres backend nginx${RESET}

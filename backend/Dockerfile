@@ -62,25 +62,24 @@ ENV NODE_ENV=development
 # build time and bind mounts nothing, so there is no host user to agree with,
 # and a production image that varied by who built it would be worse than one
 # that is always the same.
-ARG UID=1000
-ARG GID=1000
+# ARG UID=1000
+# ARG GID=1000
 
-RUN groupmod -o -g "${GID}" node \
- && usermod  -o -u "${UID}" -g "${GID}" node \
- && chown -R "${UID}:${GID}" /home/node \
- && chown "${UID}:${GID}" /app
+# RUN groupmod -o -g "${GID}" node \
+#  && usermod  -o -u "${UID}" -g "${GID}" node \
+#  && chown -R "${UID}:${GID}" /home/node \
+#  && chown "${UID}:${GID}" /app
 
 # --chown matters here. COPY runs as root, and the compose file mounts a named
 # volume over node_modules. Docker seeds a named volume from the image path,
 # ownership included, so a root-owned directory in the image becomes a volume
 # the container user cannot write to.
-COPY --from=deps --chown=${UID}:${GID} /app/node_modules ./node_modules
-COPY --chown=${UID}:${GID} . .
+COPY --from=deps /app/node_modules ./node_modules
 
 # Resolves through /etc/passwd, which the remap above rewrote, so this is
 # whatever UID was passed in. When UID is 0 it is root, which is what rootless
 # docker needs.
-USER node
+# USER node
 
 EXPOSE 4000
 CMD ["pnpm", "dev"]
@@ -120,7 +119,7 @@ COPY package.json ./
 COPY prisma/migrations ./prisma/migrations
 COPY prisma/schema.prisma ./prisma/schema.prisma
 
-USER node
+# USER node
 
 EXPOSE 4000
 

@@ -43,7 +43,7 @@ Source is bind mounted, so edits reload without rebuilding. Dependencies are
 not: they live in a named volume, which is why adding a package needs
 `./dev.sh install`.
 
-### The dev containers run as you
+### The dev containers run as root
 
 A linux bind mount passes raw numeric uids through to the container. There is
 no translating layer, so a container user of 1000 and a host user of 1001 are
@@ -55,24 +55,29 @@ code:
 Error: EACCES: permission denied, open '/app/package.json'
 ```
 
-So `./dev.sh` reads your `id -u` and `id -g` and passes them to the dev
-images, which remap their `node` user to match. Files you create inside a
-container come out owned by you on the host, and files you create on the host
-are readable inside. Nothing to configure, and it travels between machines.
+The dev images used to dodge that by remapping their `node` user to your
+`id -u`/`id -g` at build time. They no longer do: they run as root, and
+rootless docker maps the container's root onto the host user who started the
+daemon. Root inside the container is you outside it, so the checkout reads and
+writes from both sides, with nothing per-machine to configure and no rebuild
+when you move the repo to another account.
 
 Two details worth knowing:
 
-- **Rootless docker is handled separately.** It already maps the container's
-  root onto the host user who started the daemon, so there the containers run
-  as root, and matching your real uid would be the thing that breaks.
-- **Only the dev stages do this.** Production owns its files at build time and
-  bind mounts nothing, so there is no host user to agree with. A production
-  image that varied by whoever built it would be worse than one that is
-  always identical.
+- **Under rootful docker, root is real root.** The mount is readable either
+  way, but files a container creates in your checkout come out owned by root.
+  `backend/src/generated`, written by `prisma generate`, is the first one you
+  will meet. `./dev.sh up` prints which mode you are on and warns when it is
+  this one; `sudo chown -R $(id -u):$(id -g) .` is the way back.
+- **Production runs as root too.** `USER node` is commented out in the
+  production stages as well. Nothing is bind mounted there, so no file of
+  yours is written as root, but it is a deliberate tradeoff rather than an
+  oversight: `docker-compose.prod.yml` writes it down, along with the two
+  ways to revert it.
 
-Named volumes are seeded from the image once, ownership included, so a volume
-created under a different user outlives the rebuild that changed it. `./dev.sh
-up` notices and recreates them; `./dev.sh refresh-deps` does it on demand.
+Dependencies live in named volumes, seeded from the image exactly once.
+Nothing recreates them on its own, since they are no longer tied to a
+container uid: `./dev.sh refresh-deps [service]` does it when one goes stale.
 
 ## Two health endpoints, on purpose
 

@@ -7,6 +7,19 @@
 #     compose network, which is the single biggest security win here
 #   - nginx is the only container with ports open to the internet
 #
+# One thing that is NOT a difference any more: the container user. The dev
+# stages stopped remapping a `node` user to the host's uid, because rootless
+# docker already maps container root onto the host user, and `USER node` is
+# commented out in the production stages of both Dockerfiles as well. So these
+# containers run as root inside their own namespace.
+#
+# Nothing here is bind mounted and nothing writes to the host, so the blast
+# radius is a container that is already disposable; the cost is that a process
+# which escapes the runtime starts out as uid 0 rather than having to climb
+# there. To put it back, either uncomment `USER node` in the production stage
+# of backend/Dockerfile and frontend/Dockerfile, or add `user: "node"` to the
+# two services below -- no rebuild needed for the second one.
+#
 # While the frontend is on Vercel you can skip its container:
 #   ./prod.sh up postgres backend nginx
 
@@ -40,6 +53,7 @@ services:
       context: ./backend
       target: production
     image: ourcityvoice-backend:latest
+    # Runs as root. See the note at the top of this file.
     restart: always
     environment:
       NODE_ENV: production
@@ -64,6 +78,7 @@ services:
         # known at build time. Changing it means rebuilding the image.
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     image: ourcityvoice-frontend:latest
+    # Runs as root, like the backend. See the note at the top of this file.
     restart: always
     environment:
       NODE_ENV: production

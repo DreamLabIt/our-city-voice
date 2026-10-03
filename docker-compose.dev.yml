@@ -39,13 +39,13 @@ services:
     build:
       context: ./backend
       target: development
-      args:
-        # Your host uid/gid, so the container user owns the bind mounted
-        # source below instead of merely sharing a number with somebody who
-        # does. ./dev.sh exports these; the fallback keeps a plain
-        # `docker compose build` working on a stock 1000:1000 machine.
-        UID: ${HOST_UID:-1000}
-        GID: ${HOST_GID:-1000}
+      # args:
+        # # Your host uid/gid, so the container user owns the bind mounted
+        # # source below instead of merely sharing a number with somebody who
+        # # does. ./dev.sh exports these; the fallback keeps a plain
+        # # `docker compose build` working on a stock 1000:1000 machine.
+        # UID: ${HOST_UID:-1000}
+        # GID: ${HOST_GID:-1000}
     container_name: ocv-backend
     restart: unless-stopped
     environment:
@@ -82,9 +82,9 @@ services:
     build:
       context: ./frontend
       target: development
-      args:
-        UID: ${HOST_UID:-1000}
-        GID: ${HOST_GID:-1000}
+      # args:
+      #   UID: ${HOST_UID:-1000}
+      #   GID: ${HOST_GID:-1000}
     container_name: ocv-frontend
     restart: unless-stopped
     environment:
