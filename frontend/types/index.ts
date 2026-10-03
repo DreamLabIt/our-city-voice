@@ -205,3 +205,15 @@ export interface StepItem {
     icon: React.ElementType;
     badgeText: string;
 }
+
+// ── Issue ───────────────
+export interface Issue {
+    id: string;
+    title: string;
+    category: string;
+    location: string;
+    lat: number;
+    lng: number;
+    status: "Pending" | "In Progress" | "Resolved";
+    createdAt: string;
+}

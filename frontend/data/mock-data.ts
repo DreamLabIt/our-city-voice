@@ -30,13 +30,14 @@ import type {
     WardData,
     SearchSuggestion,
     StepItem,
-    LocationItem
+    LocationItem,
+    Issue
 } from "@/types";
 
 // ── Navigation ──────────────────────────────────────────────
 export const navItems: NavItem[] = [
     { name: "Home", href: "/" },
-    { name: "Issues Map", href: "/issues" },
+    { name: "Issues Map", href: "/issues-map" },
     { name: "Reports", href: "/reports" },
     { name: "Statistics", href: "/statistics" },
     { name: "About", href: "/about" },
@@ -1247,4 +1248,58 @@ export const steps: StepItem[] = [
         icon: CheckCircle2,
         badgeText: "City Improved",
     },
+];
+
+
+export const mockIssues: Issue[] = [
+    {
+        id: "ISSUE-101",
+        title: "Large Pothole near Central Station Entrance",
+        category: "Road & Transport",
+        location: "Station Road, Ward 04",
+        lat: 24.9172,
+        lng: 89.9482,
+        status: "In Progress",
+        createdAt: "2 hours ago"
+    },
+    {
+        id: "ISSUE-102",
+        title: "Broken Streetlight on College Road",
+        category: "Electricity",
+        location: "Govt. College Gate, Ward 02",
+        lat: 24.9201,
+        lng: 89.9410,
+        status: "Pending",
+        createdAt: "5 hours ago"
+    },
+    {
+        id: "ISSUE-103",
+        title: "Water Overflow from Main Drainage Pipe",
+        category: "Water & Sanitation",
+        location: "Market Plaza, Sector 3",
+        lat: 24.9120,
+        lng: 89.9520,
+        status: "In Progress",
+        createdAt: "1 day ago"
+    },
+    {
+        id: "ISSUE-104",
+        title: "Illegal Garbage Dumping in Residential Area",
+        category: "Waste Management",
+        location: "Green Avenue, Ward 07",
+        lat: 24.9250,
+        lng: 89.9380,
+        status: "Resolved",
+        createdAt: "2 days ago"
+    },
+    {
+        id: "ISSUE-105",
+        title: "Damaged Traffic Signpost at Crossroad",
+        category: "Road & Transport",
+        location: "Hospital Intersection",
+        lat: 24.9155,
+        lng: 89.9455,
+        status: "Pending",
+        createdAt: "3 days ago"
+    }
 ];
