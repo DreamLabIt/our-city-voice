@@ -49,15 +49,11 @@ export function toMapPin(post: PostItem): IssueMapPin | null {
 }
 
 export function toMapPins(posts: PostItem[]): IssueMapPin[] {
-    return posts
-        .map(toMapPin)
-        .filter((pin): pin is IssueMapPin => pin !== null);
+    return posts.map(toMapPin).filter((pin): pin is IssueMapPin => pin !== null);
 }
 
 /** South-west and north-east corners, for map.fitBounds. */
-export function pinBounds(
-    pins: IssueMapPin[],
-): [[number, number], [number, number]] | null {
+export function pinBounds(pins: IssueMapPin[]): [[number, number], [number, number]] | null {
     if (pins.length === 0) return null;
 
     const lats = pins.map((pin) => pin.lat);

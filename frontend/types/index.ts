@@ -235,7 +235,6 @@ export interface IssueMapPin {
     lat: number;
     lng: number;
     updatedAt: string;
-    createdAt: string;
 }
 
 export type LoginInputs = {
