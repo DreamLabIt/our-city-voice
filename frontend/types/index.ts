@@ -166,16 +166,70 @@ export interface CivicReport {
 }
 
 // ── Statistics ─────────────────────────────────────────────
-export type TimeRange = "7d" | "30d" | "1y" | "all";
+// Every figure on the statistics page is counted from the reports themselves,
+// so there is nothing here to keep in step by hand. The shapes below are what
+// buildStatistics() returns; see lib/statistics.ts.
+//
+// Deliberately absent: anything SLA-shaped. The schema has no SLA target
+// column ("SLA statistics were dropped from the UI"), so a rate against a
+// target cannot be derived from a report and would have to be invented.
 
-export interface WardData {
+/** The common shape both fixture sets reduce to. */
+export interface ReportSummary {
     id: string;
+    code: string;
+    title: string;
+    status: ReportStatus;
+    priority: PriorityLevel;
+    category: string;
+    ward: string;
+    department: string;
+    date: Date;
+    upvotes: number;
+    comments: number;
+    views: number;
+    /** Null unless the report carries a timeline that reaches Resolved. */
+    resolutionHours: number | null;
+}
+
+export interface CountRow {
+    label: string;
+    count: number;
+}
+
+export interface StatusCount {
+    status: ReportStatus;
+    count: number;
+}
+
+export interface WardBreakdown {
     ward: string;
     total: number;
-    resolved: number;
     pending: number;
-    avgTimeHours: number;
-    slaRate: number;
+    inProgress: number;
+    resolved: number;
+    rejected: number;
+}
+
+export interface PlatformStatistics {
+    total: number;
+    open: number;
+    resolved: number;
+    /** Percentage, one decimal. 0 when there are no reports. */
+    resolutionRate: number;
+    byStatus: StatusCount[];
+    byPriority: CountRow[];
+    byCategory: CountRow[];
+    byWard: WardBreakdown[];
+    upvotes: number;
+    comments: number;
+    views: number;
+    /** Median hours from first timeline entry to resolution, null when none. */
+    medianResolutionHours: number | null;
+    /** How many reports that median is based on. Small, so it is shown. */
+    resolutionSampleSize: number;
+    firstReportDate: Date | null;
+    latestReportDate: Date | null;
 }
 
 // ── Report Issue Form ──────────────────────────────────────
