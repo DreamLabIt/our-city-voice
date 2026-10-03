@@ -10,7 +10,7 @@ export const metadata = {
 
 export default function LoginPage() {
     return (
-        <main className="w-full min-h-screen relative flex flex-col lg:flex-row bg-background text-foreground overflow-hidden">
+        <section className="w-full min-h-screen relative flex flex-col lg:flex-row bg-background text-foreground overflow-hidden">
             <div className="w-full lg:w-[20%] xl:w-[44%] z-10 flex flex-col justify-center p-6 sm:p-10 lg:p-12 h-full min-h-screen bg-background">
                 <div>
                     <Link
@@ -77,6 +77,6 @@ export default function LoginPage() {
                     </p>
                 </div>
             </div>
-        </main>
+        </section>
     );
 }

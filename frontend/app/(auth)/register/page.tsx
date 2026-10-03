@@ -10,7 +10,7 @@ export const metadata = {
 
 export default function RegisterPage() {
     return (
-        <main className="w-full min-h-screen relative flex flex-col lg:flex-row bg-background text-foreground overflow-hidden">
+        <section className="w-full min-h-screen relative flex flex-col lg:flex-row bg-background text-foreground overflow-hidden">
             <div
                 className="hidden lg:block lg:w-[56%] absolute left-0 top-0 bottom-0 h-full overflow-hidden"
                 style={{
@@ -76,6 +76,6 @@ export default function RegisterPage() {
                     &copy; {new Date().getFullYear()} Our City Voice. All rights reserved.
                 </div>
             </div>
-        </main>
+        </section>
     );
 }

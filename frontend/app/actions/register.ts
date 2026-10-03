@@ -1,11 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-
-export type RegisterFormState = {
-    error?: string;
-    success?: boolean;
-};
+import type { RegisterFormState } from "@/types";
 
 export async function registerAction(
     prevState: RegisterFormState,

@@ -217,3 +217,26 @@ export interface Issue {
     status: "Pending" | "In Progress" | "Resolved";
     createdAt: string;
 }
+
+
+export type LoginInputs = {
+    email: string;
+    password: string;
+};
+
+export type RegisterInputs = {
+    name: string;
+    email: string;
+    password: string;
+    avatar?: FileList | null;
+};
+
+export type FormState = {
+    error?: string;
+    success?: boolean;
+};
+
+export type RegisterFormState = {
+    error?: string;
+    success?: boolean;
+};

@@ -15,13 +15,7 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { AlertCircle, Loader2, Lock, Mail, User, Upload, CheckCircle2 } from "lucide-react";
-
-type RegisterInputs = {
-    name: string;
-    email: string;
-    password: string;
-    avatar?: FileList | null;
-};
+import type { RegisterInputs } from "@/types";
 
 export default function RegisterForm() {
     const [serverError, setServerError] = useState<string>("");

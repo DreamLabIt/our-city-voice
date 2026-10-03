@@ -1,11 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-
-export type FormState = {
-    error?: string;
-    success?: boolean;
-};
+import type { FormState } from "@/types";
 
 export async function loginAction(
     prevState: FormState,
