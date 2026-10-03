@@ -13,7 +13,8 @@ export default function ConditionalLayout({
 
     const isAuthPage =
         pathname === "/login" ||
-        pathname === "/register";
+        pathname === "/register" ||
+        pathname === "/forgot-password";
 
     if (isAuthPage) {
         return <>{children}</>;
