@@ -51,8 +51,18 @@ export interface PostItem {
     assignedOfficer?: string;
     reportedBy: string;
     reporterInitials: string;
+
+    // ── Location ──
+    // Mirrors the posts table. `street` and `city` are the clean components a
+    // geocoder can resolve; `address` is the display string, which may carry a
+    // landmark hint ("near Birchmount Rd") that no geocoder handles.
+    // Coordinates are null when the location could not be resolved to a point.
+    street?: string;
+    city: string;
     address: string;
     postalCode: string;
+    latitude: number | null;
+    longitude: number | null;
     updatedAt: string;
     details: string[];
     gallery: string[];
@@ -71,11 +81,7 @@ export interface IssueUpdate {
 
 // ── Issue Comments ─────────────────────────────────────────
 export type CommenterRole =
-    | "Resident"
-    | "Local Business"
-    | "Field Inspector"
-    | "Municipal Officer"
-    | "Ward Councillor";
+    "Resident" | "Local Business" | "Field Inspector" | "Municipal Officer" | "Ward Councillor";
 
 export interface PostComment {
     id: string;
@@ -140,12 +146,19 @@ export interface CivicReport {
     category: string;
     ward: string;
     location: string;
+    street?: string;
+    city: string;
+    address: string;
+    postalCode?: string;
+    latitude: number | null;
+    longitude: number | null;
     status: ReportStatus;
     priority: PriorityLevel;
     date: string;
     description: string;
     upvotes: number;
     commentsCount: number;
+    views: number;
     department: string;
     image: string;
     assignedOfficer?: string;
@@ -206,18 +219,24 @@ export interface StepItem {
     badgeText: string;
 }
 
-// ── Issue ───────────────
-export interface Issue {
+// ── Issues map ──────────────────────────────────────
+// What a Leaflet marker needs, derived from a PostItem by toMapPin(). Leaflet
+// wants plain numbers for lat/lng, and the API will hand coordinates over as
+// strings because Postgres DECIMAL serialises that way, so the conversion
+// happens in one place rather than at every call site.
+export interface IssueMapPin {
     id: string;
+    code: string;
     title: string;
     category: string;
-    location: string;
+    address: string;
+    ward: string;
+    status: ReportStatus;
     lat: number;
     lng: number;
-    status: "Pending" | "In Progress" | "Resolved";
+    updatedAt: string;
     createdAt: string;
 }
-
 
 export type LoginInputs = {
     email: string;

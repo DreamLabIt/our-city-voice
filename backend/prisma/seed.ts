@@ -77,8 +77,12 @@ interface MockPost {
   department: string;
   assignedOfficer?: string;
   reportedBy: string;
+  street?: string;
+  city: string;
   address: string;
   postalCode: string;
+  latitude: number | null;
+  longitude: number | null;
   details: string[];
   gallery: string[];
   updates: MockUpdate[];
@@ -91,12 +95,19 @@ interface MockReport {
   category: string;
   ward: string;
   location: string;
+  street?: string;
+  city: string;
+  address: string;
+  postalCode?: string;
+  latitude: number | null;
+  longitude: number | null;
   status: string;
   priority: string;
   date: string;
   description: string;
   upvotes: number;
   commentsCount: number;
+  views: number;
   department: string;
   image: string;
   assignedOfficer?: string;
@@ -157,26 +168,13 @@ const ROLE_FROM_COMMENTER: Record<string, UserRole> = {
 };
 
 /**
- * The two fixture sets name categories differently: the landing page uses
- * "Roads", the reports page uses "Roads & Potholes". Both map onto one slug.
+ * Fixture category labels to slugs. Built from the category list rather than
+ * hand-written, so a renamed category cannot silently fall through to "other".
+ * "all" is a UI filter pseudo-entry, not a category.
  */
-const CATEGORY_SLUG: Record<string, string> = {
-  // landing page tags
-  Roads: "roads",
-  "Water & Sewer": "water",
-  "Stormwater & Flooding": "stormwater",
-  "Parks & Recreation": "parks",
-  "Waste & Recycling": "waste",
-  "Streetlights & Signals": "streetlights",
-  "Transit & Mobility": "transit",
-  Sidewalks: "sidewalks",
-  // reports page categories
-  "Roads & Potholes": "roads",
-  "Street Lighting": "streetlights",
-  "Waste Management": "waste",
-  "Drainage & Water": "water",
-  "Parks & Open Spaces": "parks",
-};
+const CATEGORY_SLUG = new Map(
+  fixtures.categories.filter((c) => c.id !== "all").map((c) => [c.label, c.id]),
+);
 
 /** Which department handles a category by default. */
 const CATEGORY_DEPARTMENT: Record<string, string> = {
@@ -238,11 +236,33 @@ function parseDate(value: string, fallback = new Date()): Date {
   return Number.isNaN(parsed.getTime()) ? fallback : parsed;
 }
 
-/** "Finch Ave E, Scarborough" -> "Scarborough". No comma means no city. */
-function cityFromLocation(location: string): string {
-  const parts = location.split(",").map((part) => part.trim()).filter(Boolean);
-  return parts.length > 1 ? parts[parts.length - 1]! : "Metro City";
+/**
+ * Decimal columns take a string so the value lands in Postgres exactly as
+ * written, with no float round-trip. Six places matches DECIMAL(9,6).
+ */
+function decimal(value: number | null | undefined): string | null {
+  return value === null || value === undefined ? null : value.toFixed(6);
 }
+
+// Coordinates come from the fixtures, which were geocoded once from
+// street + city against Nominatim and then written down. That keeps this
+// script offline and deterministic: seeding twice gives identical rows, and
+// a flaky network cannot produce a half-mapped database.
+//
+// Reports created through the API need the opposite arrangement. The post
+// service should resolve coordinates at write time, in this order:
+//
+//   1. the pin the reporter dropped on the map, if the form sent one
+//   2. a geocode of street + city, spaced to one request per second and
+//      capped with a short timeout
+//   3. null
+//
+// Step two must never fail the insert. A citizen reporting a burst water main
+// should not see an error because a third-party geocoder timed out, and a
+// marker at a guessed position is worse than no marker. Rows that come out
+// null get picked up by a backfill pass. Rate limit the submit endpoint too:
+// without that, an anonymous caller can drive outbound geocode requests until
+// the server's IP is blocked.
 
 function emailFor(name: string, taken: Set<string>): string {
   const base = slugify(name).replace(/-+/g, ".") || "user";
@@ -326,9 +346,7 @@ async function main(): Promise<void> {
   console.log(`  wards              ${wards.size}`);
 
   // ── categories ────────────────────────────────────────────────────
-  // "all" is a UI filter pseudo-entry, not a category. "sidewalks" appears on
-  // posts but is missing from the frontend's category list, so it is added
-  // here: the database holds the superset and the UI can catch up.
+  // "all" is a UI filter pseudo-entry, not a category.
   const categorySeeds = fixtures.categories
     .filter((c) => c.id !== "all")
     .map((c, index) => ({
@@ -337,12 +355,6 @@ async function main(): Promise<void> {
       icon: c.icon ?? "CircleHelp",
       sortOrder: index,
     }));
-  categorySeeds.push({
-    name: "Sidewalks",
-    slug: "sidewalks",
-    icon: "Footprints",
-    sortOrder: categorySeeds.length,
-  });
 
   await prisma.category.createMany({
     data: categorySeeds.map((c) => ({
@@ -442,14 +454,15 @@ async function main(): Promise<void> {
 
   for (const post of fixtures.posts) {
     const createdAt = parseDate(post.date);
-    const slug = CATEGORY_SLUG[post.tag] ?? "other";
+    const slug = CATEGORY_SLUG.get(post.tag) ?? "other";
     const status = STATUS[post.status] ?? "pending";
 
     const created = await prisma.post.create({
       data: {
-        // Fixture codes look like "#2024-001245". Normalise to the same shape
-        // the reports set already uses.
-        trackingCode: `OCV-${post.code.replace(/^#/, "")}`,
+        // Both fixture sets now carry the final tracking code, so there is
+        // nothing to normalise here. The UI prints the same string the
+        // database stores.
+        trackingCode: post.code,
         title: post.title,
         description: [post.desc, ...post.details].join("\n\n"),
         userId: users.get(post.reportedBy)!,
@@ -459,9 +472,12 @@ async function main(): Promise<void> {
         assignedOfficerId: post.assignedOfficer ? (users.get(post.assignedOfficer) ?? null) : null,
         status,
         priority: PRIORITY[post.priority] ?? "medium",
-        city: cityFromLocation(post.location),
+        street: post.street ?? null,
+        city: post.city,
         address: post.address,
         postalCode: post.postalCode,
+        latitude: decimal(post.latitude),
+        longitude: decimal(post.longitude),
         viewCount: post.views,
         resolvedAt: status === "resolved" ? createdAt : null,
         createdAt,
@@ -510,7 +526,7 @@ async function main(): Promise<void> {
 
   for (const report of fixtures.initialReports) {
     const createdAt = parseDate(report.date);
-    const slug = CATEGORY_SLUG[report.category] ?? "other";
+    const slug = CATEGORY_SLUG.get(report.category) ?? "other";
     const status = STATUS[report.status] ?? "pending";
     // This fixture set has no reporter, so reports are spread across citizens.
     const authorId = citizenIds[Math.floor(rng() * citizenIds.length)]!;
@@ -527,10 +543,13 @@ async function main(): Promise<void> {
         assignedOfficerId: report.assignedOfficer ? (users.get(report.assignedOfficer) ?? null) : null,
         status,
         priority: PRIORITY[report.priority] ?? "medium",
-        city: cityFromLocation(report.location),
-        address: report.location,
-        // Synthetic: this fixture set records upvotes but no view count.
-        viewCount: report.upvotes * 8,
+        street: report.street ?? null,
+        city: report.city,
+        address: report.address,
+        postalCode: report.postalCode ?? null,
+        latitude: decimal(report.latitude),
+        longitude: decimal(report.longitude),
+        viewCount: report.views,
         resolvedAt: status === "resolved" ? createdAt : null,
         createdAt,
         updatedAt: createdAt,
