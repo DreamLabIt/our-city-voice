@@ -15,7 +15,7 @@ export default function CategoryFilter(): React.ReactNode {
         <section className="py-4 mt-4">
             <SectionContainer>
                 <div className="w-full bg-card">
-                    <div className="flex items-center gap-3 sm:gap-4 overflow-x-auto scrollbar-none py-2 px-1 text-left">
+                    <div className="flex items-center gap-3 sm:gap-4 overflow-x-auto scrollbar-none py-2 px-1 text-left justify-baseline">
                         {mainCategories.map((cat: CategoryItem) => {
                             const isSelected: boolean = selectedCategory === cat.id;
                             const Icon: LucideIcon = cat.icon;

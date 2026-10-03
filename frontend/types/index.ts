@@ -312,3 +312,10 @@ export type RegisterFormState = {
     error?: string;
     success?: boolean;
 };
+
+
+export type TopWardLocation = {
+    ward: string;
+    reportsCount: number;
+    samplePost: PostItem;
+};
