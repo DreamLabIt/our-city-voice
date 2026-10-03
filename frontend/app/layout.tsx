@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { Inter, Geist } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/common/navbar";
-import Footer from "@/components/common/Footer";
 import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
+import ConditionalLayout from "@/components/common/ConditionalLayout";
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -22,15 +21,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={cn("font-sans", geist.variable)}>
-      <body className={`${inter.className} min-h-screen flex flex-col`}>
-        <Navbar />
-
-        <main className="flex-1">
+      <body className={`${inter.className} min-h-screen`}>
+        <ConditionalLayout>
           {children}
-          <Toaster position="top-right" richColors />
-        </main>
+        </ConditionalLayout>
 
-        <Footer />
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );
