@@ -13,23 +13,21 @@ export default function CategoryFilter(): React.ReactNode {
 
     return (
         <section className="py-4 mt-4">
-            <SectionContainer >
+            <SectionContainer>
                 <div className="w-full bg-card">
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:flex lg:flex-wrap items-center gap-3 sm:gap-4 md:gap-6 justify-center sm:justify-between">
-                        {mainCategories.map((cat: CategoryItem, index: number) => {
+                    <div className="flex items-center gap-3 sm:gap-4 overflow-x-auto scrollbar-none py-2 px-1 text-left justify-between">
+                        {mainCategories.map((cat: CategoryItem) => {
                             const isSelected: boolean = selectedCategory === cat.id;
                             const Icon: LucideIcon = cat.icon;
-                            const isHiddenOnMobile = index >= 5;
 
                             return (
                                 <button
                                     key={cat.id}
                                     onClick={() => setSelectedCategory(cat.id)}
                                     type="button"
-                                    className={`${isHiddenOnMobile ? "hidden sm:flex" : "flex"
-                                        } group relative flex-col items-center justify-between w-full sm:w-27.5 h-24 sm:h-25 md:w-30 md:h-27.5 p-2.5 sm:p-3 rounded-2xl transition-all duration-200 select-none cursor-pointer border ${isSelected
-                                            ? "bg-tag-blue-bg border-2 border-tag-green-text shadow-sm"
-                                            : "bg-section border-border-custom hover:bg-slate-100/80 hover:border-tag-green-text"
+                                    className={`shrink-0 group relative flex flex-col items-center justify-between w-24 sm:w-27.5 h-24 sm:h-25 md:w-30 md:h-27.5 p-2.5 sm:p-3 rounded-2xl transition-all duration-200 select-none cursor-pointer border ${isSelected
+                                        ? "bg-tag-blue-bg border-2 border-tag-green-text shadow-sm"
+                                        : "bg-section border-border-custom hover:bg-slate-100/80 hover:border-tag-green-text"
                                         }`}
                                 >
                                     <div className="flex-1 flex items-center justify-center">
@@ -61,7 +59,7 @@ export default function CategoryFilter(): React.ReactNode {
                                         key={otherCategory.id}
                                         onClick={() => setSelectedCategory(otherCategory.id)}
                                         type="button"
-                                        className={`flex group relative flex-col items-center justify-between w-full sm:w-27.5 h-24 sm:h-25 md:w-30 md:h-27.5 p-2.5 sm:p-3 rounded-2xl transition-all duration-200 select-none cursor-pointer border ${isSelected
+                                        className={`shrink-0 flex group relative flex-col items-center justify-between w-24 sm:w-27.5 h-24 sm:h-25 md:w-30 md:h-27.5 p-2.5 sm:p-3 rounded-2xl transition-all duration-200 select-none cursor-pointer border ${isSelected
                                             ? "bg-tag-blue-bg border-2 border-tag-green-text shadow-sm"
                                             : "bg-section border-border-custom hover:bg-slate-100/80 hover:border-tag-green-text"
                                             }`}
@@ -88,7 +86,6 @@ export default function CategoryFilter(): React.ReactNode {
                             })()}
                     </div>
                 </div>
-
             </SectionContainer>
         </section>
     );

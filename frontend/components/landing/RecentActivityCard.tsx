@@ -22,7 +22,7 @@ export default function RecentActivityCard(): React.ReactNode {
                 </button>
             </div>
 
-            <div className="bg-card rounded-xl border border-border-custom/60 divide-y divide-border-custom/60 overflow-hidden shadow-2xs pr-1">
+            <div className="bg-card rounded-xl border border-border-custom/60 divide-y divide-border-custom/60 overflow-hidden shadow-2xs pr-1 min-h-87">
                 {activities.map((item: ActivityItem) => {
                     const Icon = item.icon;
                     return (

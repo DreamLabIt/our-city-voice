@@ -11,8 +11,11 @@ import { posts, tabs } from "@/data/mock-data";
 export default function RecentPosts(): React.ReactNode {
     const [activeTab, setActiveTab] = useState<string>("Latest");
 
-    const filteredPosts =
-        activeTab === "Latest" ? posts : posts.filter((post) => post.category === activeTab);
+    const filteredPosts = (
+        activeTab === "Latest"
+            ? posts
+            : posts.filter((post) => post.category === activeTab)
+    ).slice(0, 4);
 
     return (
         <Card className="w-full p-5 rounded-2xl ">

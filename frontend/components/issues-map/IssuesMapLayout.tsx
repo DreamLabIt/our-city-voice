@@ -9,9 +9,6 @@ import {
     Layers,
     ExternalLink,
     AlertCircle,
-    CheckCircle2,
-    Clock,
-    XCircle,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import dynamic from "next/dynamic";
 import { posts } from "@/data/mock-data";
 import { toMapPins } from "@/lib/map";
+import { STATUS_META } from "@/lib/status";
 import type { IssueMapPin, ReportStatus } from "@/types";
 
 const IssueMap = dynamic(
@@ -38,36 +36,15 @@ const IssueMap = dynamic(
 );
 
 const getStatusBadge = (status: ReportStatus) => {
-    switch (status) {
-        case "Resolved":
-            return (
-                <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 gap-1 font-medium">
-                    <CheckCircle2 className="w-3 h-3" />
-                    Resolved
-                </Badge>
-            );
-        case "In Progress":
-            return (
-                <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 hover:bg-amber-500/20 gap-1 font-medium">
-                    <Clock className="w-3 h-3" />
-                    In Progress
-                </Badge>
-            );
-        case "Rejected":
-            return (
-                <Badge className="bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20 hover:bg-red-500/20 gap-1 font-medium">
-                    <XCircle className="w-3 h-3" />
-                    Rejected
-                </Badge>
-            );
-        default:
-            return (
-                <Badge className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 hover:bg-blue-500/20 gap-1 font-medium">
-                    <AlertCircle className="w-3 h-3" />
-                    Pending
-                </Badge>
-            );
-    }
+    const meta = STATUS_META[status];
+    const Icon = meta.icon;
+
+    return (
+        <Badge className={`gap-1 font-medium ${meta.badge}`}>
+            <Icon className="w-3 h-3" />
+            {status}
+        </Badge>
+    );
 };
 
 export default function IssuesMapLayout() {

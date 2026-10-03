@@ -28,7 +28,6 @@ import type {
     PostComment,
     PostItem,
     StatItem,
-    WardData,
     SearchSuggestion,
     StepItem,
     LocationItem,
@@ -1212,49 +1211,6 @@ export const reportWards = [
     "Ward 24 (Scarborough Guildwood)",
     "Ward 25 (Scarborough Rouge Park)",
 ];
-export const monthlyTrendData = [
-    { month: "Jan", reported: 1100, resolved: 980 },
-    { month: "Feb", reported: 1320, resolved: 1150 },
-    { month: "Mar", reported: 1250, resolved: 1100 },
-    { month: "Apr", reported: 1400, resolved: 1310 },
-    { month: "May", reported: 1650, resolved: 1520 },
-    { month: "Jun", reported: 1800, resolved: 1680 },
-    { month: "Jul", reported: 1550, resolved: 1420 },
-    { month: "Aug", reported: 1720, resolved: 1590 },
-    { month: "Sep", reported: 1910, resolved: 1750 },
-];
-
-export const categoryChartData = [
-    { name: "Roads & Potholes", value: 6478, color: "#3B82F6" },
-    { name: "Street Lighting", value: 4310, color: "#F59E0B" },
-    { name: "Waste Management", value: 2770, color: "#10B981" },
-    { name: "Drainage & Water", value: 1232, color: "#06B6D4" },
-    { name: "Parks & Spaces", value: 630, color: "#8B5CF6" },
-];
-
-export const departmentSLA = [
-    { dept: "Public Works Department", solved: 4820, target: 5000, rate: 96.4 },
-    { dept: "Electrical Safety Cell", solved: 3890, target: 4100, rate: 94.8 },
-    { dept: "Sanitation & Drainage", solved: 2650, target: 3000, rate: 88.3 },
-    { dept: "Water & Sewerage Board", solved: 1120, target: 1350, rate: 82.9 },
-];
-
-export const initialWardData: WardData[] = [
-    { id: "W20", ward: "Ward 20 (Scarborough Southwest)", total: 3420, resolved: 3120, pending: 300, avgTimeHours: 28, slaRate: 91.2 },
-    { id: "W21", ward: "Ward 21 (Scarborough Centre)", total: 4150, resolved: 3680, pending: 470, avgTimeHours: 36, slaRate: 88.6 },
-    { id: "W22", ward: "Ward 22 (Scarborough Agincourt)", total: 2890, resolved: 2410, pending: 480, avgTimeHours: 52, slaRate: 83.3 },
-    { id: "W23", ward: "Ward 23 (Scarborough North)", total: 3110, resolved: 2820, pending: 290, avgTimeHours: 32, slaRate: 90.6 },
-    { id: "W24", ward: "Ward 24 (Scarborough Guildwood)", total: 1850, resolved: 1550, pending: 300, avgTimeHours: 44, slaRate: 83.7 },
-];
-
-export const CHART_TOOLTIP_STYLE: React.CSSProperties = {
-    backgroundColor: "rgba(15, 23, 42, 0.9)",
-    borderColor: "rgba(255,255,255,0.15)",
-    borderRadius: "12px",
-    color: "#fff",
-    fontSize: "12px",
-};
-
 export const mockSuggestions: SearchSuggestion[] = [
     { id: "1", title: "Major pothole hazard at the Kennedy Station bus loop", category: "Roads", location: "Ward 20", type: "report" },
     { id: "2", title: "Broken LED street lights along Danforth Ave", category: "Streetlights & Signals", location: "Ward 19", type: "report" },
