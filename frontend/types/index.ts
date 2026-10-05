@@ -319,3 +319,9 @@ export type TopWardLocation = {
     reportsCount: number;
     samplePost: PostItem;
 };
+
+
+export interface ErrorPageProps {
+    error: Error & { digest?: string };
+    reset: () => void;
+}
