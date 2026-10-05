@@ -1,4 +1,5 @@
 import React from "react";
+import { Metadata } from "next";
 import {
     ShieldCheck,
     Lock,
@@ -8,25 +9,24 @@ import {
     Database,
     Clock,
     Scale,
-    HelpCircle,
-    ArrowRight
 } from "lucide-react";
 import PageHeader from "@/components/common/PageHeader";
 import SectionContainer from "@/components/common/SectionContainer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import type { HighlightItem, DataTypeRow } from "@/types";
 
-export const metadata = {
+
+export const metadata: Metadata = {
     title: "Privacy Policy | One City Voice",
     description: "Read our comprehensive Privacy Policy to understand how One City Voice protects your personal data, civic reports, and identity.",
 };
 
+
 export default function PrivacyPolicyPage(): React.ReactNode {
     const lastUpdated = "October 26, 2026";
 
-    const highlights = [
+    const highlights: HighlightItem[] = [
         {
             icon: ShieldCheck,
             title: "Data Encryption",
@@ -49,7 +49,7 @@ export default function PrivacyPolicyPage(): React.ReactNode {
         },
     ];
 
-    const dataTypes = [
+    const dataTypes: DataTypeRow[] = [
         {
             category: "Personal Identifiers",
             items: "Full Name, Email Address, Phone Number, Residential Ward, Account Password (Hashed)",
@@ -94,7 +94,7 @@ export default function PrivacyPolicyPage(): React.ReactNode {
                             Your Privacy & Community Trust are Our Top Priorities
                         </h2>
                         <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                            Welcome to <strong>One City Voice</strong>. We provide a bridge between citizens and municipal municipal departments to solve urban issues efficiently. This Privacy Policy details how we collect, store, share, and protect your personal data when you use our web platform, submit civic reports, or endorse issues.
+                            Welcome to <strong>One City Voice</strong>. We provide a bridge between citizens and municipal departments to solve urban issues efficiently. This Privacy Policy details how we collect, store, share, and protect your personal data when you use our web platform, submit civic reports, or endorse issues.
                         </p>
                     </div>
 
@@ -107,7 +107,7 @@ export default function PrivacyPolicyPage(): React.ReactNode {
                                     <Card key={idx} className="border border-border/80 bg-card shadow-xs hover:border-primary/40 transition-colors">
                                         <CardContent className="p-5 space-y-2.5">
                                             <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                                                <Icon className="w-5 h-5 stroke-2" />
+                                                <Icon className="w-5 h-5" strokeWidth={2} />
                                             </div>
                                             <h4 className="font-bold text-sm text-foreground">{item.title}</h4>
                                             <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
@@ -167,12 +167,11 @@ export default function PrivacyPolicyPage(): React.ReactNode {
                             defaultValue: ["clause-1"],
                             className: "w-full",
                         } as any)}>
-
-                            <AccordionItem value="clause-1 ">
+                            <AccordionItem value="clause-1">
                                 <AccordionTrigger className="text-sm font-bold text-foreground hover:no-underline">
                                     1. How Public Reporting Works vs Private Data
                                 </AccordionTrigger>
-                                <AccordionContent className="text-xs sm:text-sm text-muted-foreground leading-relaxed space-y-3 ">
+                                <AccordionContent className="text-xs sm:text-sm text-muted-foreground leading-relaxed space-y-3">
                                     <p>
                                         One City Voice is a public civic platform. When you post a report regarding infrastructure issues (e.g., potholes, flooding, streetlights), the following details are <strong>PUBLICLY VISIBLE</strong>:
                                     </p>
@@ -192,8 +191,8 @@ export default function PrivacyPolicyPage(): React.ReactNode {
                                 </AccordionContent>
                             </AccordionItem>
 
-                            <AccordionItem value="clause-2 ">
-                                <AccordionTrigger className="text-sm font-bold text-foreground hover:no-underline ">
+                            <AccordionItem value="clause-2">
+                                <AccordionTrigger className="text-sm font-bold text-foreground hover:no-underline">
                                     2. Sharing Data with Municipal Authorities & Contractors
                                 </AccordionTrigger>
                                 <AccordionContent className="text-xs sm:text-sm text-muted-foreground leading-relaxed space-y-2">
@@ -262,7 +261,6 @@ export default function PrivacyPolicyPage(): React.ReactNode {
                                     </ul>
                                 </AccordionContent>
                             </AccordionItem>
-
                         </Accordion>
                     </div>
 

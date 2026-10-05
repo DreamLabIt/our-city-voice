@@ -336,3 +336,16 @@ export interface ProhibitedActivity {
     title: string;
     desc: string;
 }
+
+
+export interface HighlightItem {
+    icon: React.ElementType;
+    title: string;
+    desc: string;
+}
+
+export interface DataTypeRow {
+    category: string;
+    items: string;
+    purpose: string;
+}
