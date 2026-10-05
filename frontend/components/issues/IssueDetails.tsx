@@ -140,7 +140,9 @@ export default function IssueDetails({
             await navigator.clipboard.writeText(window.location.href);
             toast.success("Link copied", { description: "Share it with your neighbours." });
         } catch {
-            toast.error("Could not copy the link", { description: "Copy it from the address bar instead." });
+            toast.error("Could not copy the link", {
+                description: "Copy it from the address bar instead.",
+            });
         }
     };
 
@@ -148,7 +150,7 @@ export default function IssueDetails({
         const isLiked = likedComments.includes(commentId);
 
         setLikedComments((prev) =>
-            isLiked ? prev.filter((id) => id !== commentId) : [...prev, commentId]
+            isLiked ? prev.filter((id) => id !== commentId) : [...prev, commentId],
         );
 
         const applyDelta = (items: PostComment[]): PostComment[] =>
@@ -183,7 +185,9 @@ export default function IssueDetails({
 
         setCommentList((prev) => [comment, ...prev]);
         setNewComment("");
-        toast.success("Comment posted", { description: "Your comment is now visible on this issue." });
+        toast.success("Comment posted", {
+            description: "Your comment is now visible on this issue.",
+        });
     };
 
     const handleAddReply = (parentId: string) => {
@@ -206,8 +210,10 @@ export default function IssueDetails({
 
         setCommentList((prev) =>
             prev.map((item) =>
-                item.id === parentId ? { ...item, replies: [...(item.replies ?? []), reply] } : item
-            )
+                item.id === parentId
+                    ? { ...item, replies: [...(item.replies ?? []), reply] }
+                    : item,
+            ),
         );
 
         setReplyBody("");
@@ -316,7 +322,10 @@ export default function IssueDetails({
                     <nav aria-label="Breadcrumb">
                         <ol className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-muted-foreground">
                             <li>
-                                <Link href="/" className="flex items-center gap-1 hover:text-primary transition-colors">
+                                <Link
+                                    href="/"
+                                    className="flex items-center gap-1 hover:text-primary transition-colors"
+                                >
                                     <Home className="w-4 h-4" /> Home
                                 </Link>
                             </li>
@@ -346,7 +355,7 @@ export default function IssueDetails({
                     <div className="lg:col-span-8 space-y-6">
                         {/* Media */}
                         <div className="bg-card border border-border-custom rounded-2xl overflow-hidden shadow-xs">
-                            <div className="relative w-full h-56 sm:h-80 md:h-100 bg-muted group/media">
+                            <div className="relative w-full h-56 sm:h-80 md:h-150 bg-muted group/media">
                                 {current.type === "video" ? (
                                     <>
                                         <video
@@ -420,7 +429,11 @@ export default function IssueDetails({
                                             }`}
                                         >
                                             <Image
-                                                src={item.type === "video" ? (item.poster ?? post.image) : item.src}
+                                                src={
+                                                    item.type === "video"
+                                                        ? (item.poster ?? post.image)
+                                                        : item.src
+                                                }
                                                 alt=""
                                                 fill
                                                 sizes="96px"
@@ -462,10 +475,12 @@ export default function IssueDetails({
 
                             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground font-medium">
                                 <span className="flex items-center gap-1.5">
-                                    <MapPin className="w-4 h-4 text-primary shrink-0" /> {post.location}
+                                    <MapPin className="w-4 h-4 text-primary shrink-0" />{" "}
+                                    {post.location}
                                 </span>
                                 <span className="flex items-center gap-1.5">
-                                    <User className="w-4 h-4 shrink-0" /> Reported by {post.reportedBy}
+                                    <User className="w-4 h-4 shrink-0" /> Reported by{" "}
+                                    {post.reportedBy}
                                 </span>
                             </div>
 
@@ -479,7 +494,9 @@ export default function IssueDetails({
                                             : "bg-section text-foreground border-border-custom hover:border-primary/50"
                                     }`}
                                 >
-                                    <ThumbsUp className={`w-4 h-4 ${hasLiked ? "fill-current" : ""}`} />
+                                    <ThumbsUp
+                                        className={`w-4 h-4 ${hasLiked ? "fill-current" : ""}`}
+                                    />
                                     <span>{likes} Support</span>
                                 </button>
 
@@ -510,7 +527,10 @@ export default function IssueDetails({
                             <h2 className="text-base font-bold text-foreground">Issue details</h2>
                             <div className="space-y-3">
                                 {post.details.map((paragraph, index) => (
-                                    <p key={index} className="text-sm text-foreground/90 leading-relaxed">
+                                    <p
+                                        key={index}
+                                        className="text-sm text-foreground/90 leading-relaxed"
+                                    >
                                         {paragraph}
                                     </p>
                                 ))}
@@ -535,12 +555,16 @@ export default function IssueDetails({
                                                 >
                                                     <CheckCircle2 className="w-4 h-4" />
                                                 </span>
-                                                {!isLast && <span className="w-px flex-1 bg-border-custom mt-1" />}
+                                                {!isLast && (
+                                                    <span className="w-px flex-1 bg-border-custom mt-1" />
+                                                )}
                                             </div>
 
                                             <div className="pb-1 space-y-1.5">
                                                 <div className="flex flex-wrap items-center gap-2">
-                                                    <h3 className="text-sm font-bold text-foreground">{update.title}</h3>
+                                                    <h3 className="text-sm font-bold text-foreground">
+                                                        {update.title}
+                                                    </h3>
                                                     <span
                                                         className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
                                                             statusStyles[update.status]
@@ -569,7 +593,8 @@ export default function IssueDetails({
                         >
                             <div className="flex items-center justify-between">
                                 <h2 className="text-base font-bold text-foreground">
-                                    Comments <span className="text-muted-foreground">({totalComments})</span>
+                                    Comments{" "}
+                                    <span className="text-muted-foreground">({totalComments})</span>
                                 </h2>
                             </div>
 
@@ -583,7 +608,8 @@ export default function IssueDetails({
                                 />
                                 <div className="flex items-center justify-between gap-3">
                                     <p className="text-[11px] text-muted-foreground">
-                                        Comments are public and visible to municipal staff following this issue.
+                                        Comments are public and visible to municipal staff following
+                                        this issue.
                                     </p>
                                     <button
                                         type="submit"
@@ -603,7 +629,8 @@ export default function IssueDetails({
                                     ))
                                 ) : (
                                     <p className="pt-5 text-sm text-muted-foreground">
-                                        No comments yet. Be the first to add what you know about this issue.
+                                        No comments yet. Be the first to add what you know about
+                                        this issue.
                                     </p>
                                 )}
                             </div>
@@ -620,7 +647,9 @@ export default function IssueDetails({
                                     <span className="flex items-center gap-1.5 text-muted-foreground font-semibold">
                                         <Hash className="w-3.5 h-3.5 text-primary" /> Tracking ID
                                     </span>
-                                    <span className="font-mono font-bold text-foreground">{post.code}</span>
+                                    <span className="font-mono font-bold text-foreground">
+                                        {post.code}
+                                    </span>
                                 </div>
 
                                 <div className="flex items-center justify-between gap-3 bg-card border border-border-custom rounded-xl px-3.5 py-2.5">
@@ -638,7 +667,8 @@ export default function IssueDetails({
 
                                 <div className="flex items-center justify-between gap-3 bg-card border border-border-custom rounded-xl px-3.5 py-2.5">
                                     <span className="flex items-center gap-1.5 text-muted-foreground font-semibold">
-                                        <AlertTriangle className="w-3.5 h-3.5 text-primary" /> Priority
+                                        <AlertTriangle className="w-3.5 h-3.5 text-primary" />{" "}
+                                        Priority
                                     </span>
                                     <span
                                         className={`font-extrabold px-2 py-0.5 rounded-md border ${
@@ -653,14 +683,19 @@ export default function IssueDetails({
                                     <span className="flex items-center gap-1.5 text-muted-foreground font-semibold">
                                         <Tag className="w-3.5 h-3.5 text-primary" /> Category
                                     </span>
-                                    <span className="font-bold text-foreground text-right">{post.tag}</span>
+                                    <span className="font-bold text-foreground text-right">
+                                        {post.tag}
+                                    </span>
                                 </div>
 
                                 <div className="flex items-center justify-between gap-3 bg-card border border-border-custom rounded-xl px-3.5 py-2.5">
                                     <span className="flex items-center gap-1.5 text-muted-foreground font-semibold">
-                                        <Building2 className="w-3.5 h-3.5 text-primary" /> Department
+                                        <Building2 className="w-3.5 h-3.5 text-primary" />{" "}
+                                        Department
                                     </span>
-                                    <span className="font-bold text-foreground text-right">{post.department}</span>
+                                    <span className="font-bold text-foreground text-right">
+                                        {post.department}
+                                    </span>
                                 </div>
 
                                 <div className="flex items-center justify-between gap-3 bg-card border border-border-custom rounded-xl px-3.5 py-2.5">
@@ -707,7 +742,9 @@ export default function IssueDetails({
 
                         {relatedPosts.length > 0 && (
                             <div className="bg-section border border-border-custom rounded-2xl p-5 space-y-3 shadow-xs">
-                                <h2 className="text-base font-bold text-foreground">Related issues</h2>
+                                <h2 className="text-base font-bold text-foreground">
+                                    Related issues
+                                </h2>
 
                                 <div className="space-y-2.5">
                                     {relatedPosts.map((related) => (
@@ -727,7 +764,9 @@ export default function IssueDetails({
                                             </div>
 
                                             <div className="min-w-0 space-y-1">
-                                                <p className="text-[11px] font-bold text-primary">{related.code}</p>
+                                                <p className="text-[11px] font-bold text-primary">
+                                                    {related.code}
+                                                </p>
                                                 <h3 className="text-xs font-bold text-foreground line-clamp-2 group-hover:text-primary transition-colors">
                                                     {related.title}
                                                 </h3>
