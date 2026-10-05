@@ -325,3 +325,14 @@ export interface ErrorPageProps {
     error: Error & { digest?: string };
     reset: () => void;
 }
+
+export interface RuleItem {
+    icon: React.ElementType;
+    title: string;
+    desc: string;
+}
+
+export interface ProhibitedActivity {
+    title: string;
+    desc: string;
+}
