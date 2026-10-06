@@ -11,13 +11,14 @@ interface DashboardLayoutProps {
 
 export default async function DashboardLayout({
     children,
-    isAdmin = false,
 }: DashboardLayoutProps) {
     const user = await getCurrentUser();
+    const isAdmin = user?.role === "super_admin";
 
     if (!user) {
         redirect("/login");
     }
+
 
     return (
         <DashboardClientLayout

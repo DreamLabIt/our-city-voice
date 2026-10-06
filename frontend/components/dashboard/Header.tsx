@@ -3,18 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-    Bell,
     Menu,
-    Sun,
-    Moon,
     User,
     LogOut,
     Settings,
     ShieldCheck,
     ChevronDown
 } from "lucide-react";
-import { useTheme } from "next-themes";
-import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
     DropdownMenu,
@@ -41,11 +36,19 @@ interface HeaderProps {
 export default function Header({
     isAdmin,
     user,
-    userAvatar = ""
 }: HeaderProps) {
-    const { theme, setTheme } = useTheme();
     const pathname = usePathname();
     const navItems: NavItem[] = isAdmin ? adminNavItems : userNavItems;
+    function initialsOf(name: string): string {
+        const letters = name
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase() ?? "")
+            .join("");
+
+        return letters || "?";
+    }
 
     return (
         <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-20 px-4 sm:px-6 flex items-center justify-between gap-4">
@@ -116,37 +119,21 @@ export default function Header({
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-xl h-9 w-9 text-muted-foreground hover:text-foreground"
-                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                >
-                    <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                    <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                    <span className="sr-only">Toggle theme</span>
-                </Button>
 
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-xl h-9 w-9 text-muted-foreground hover:text-foreground relative"
-                >
-                    <Bell className="w-4 h-4" />
-                    <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-destructive" />
-                </Button>
 
                 <DropdownMenu>
                     <DropdownMenuTrigger
                         className="group relative flex h-9 items-center gap-2 rounded-full pl-2 pr-1 outline-none hover:bg-muted sm:pr-3"
                     >
-                        <Avatar className="h-7 w-7">
-                            <AvatarImage src={userAvatar} alt={user.name} />
-                            <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
-                                {user.name.charAt(0)}
+                        <Avatar size="lg">
+                            {user.avatarUrl && (
+                                <AvatarImage src={user.avatarUrl} alt="" />
+                            )}
+
+                            <AvatarFallback className="bg-primary/10 font-semibold text-primary">
+                                {initialsOf(user.name)}
                             </AvatarFallback>
                         </Avatar>
-
                         <ChevronDown
                             className="hidden h-4 w-4 text-muted-foreground transition-transform duration-200 group-aria-expanded:rotate-180 sm:block" />
                     </DropdownMenuTrigger>
