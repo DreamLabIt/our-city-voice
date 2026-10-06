@@ -6,6 +6,7 @@ import { AlertCircle, CheckCircle2, Film, ImageIcon, Loader2, Upload, X } from "
 import { useUploads } from "@/hooks/use-uploads";
 import { formatBytes } from "@/lib/upload";
 import type { UploadKind, UploadedFile } from "@/types";
+import Image from "next/image";
 
 /**
  * The general file picker: drop zone, thumbnails, per-file progress.
@@ -92,13 +93,12 @@ export default function FileUpload({
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        className={`flex flex-col items-center justify-center gap-2 px-4 py-8 rounded-xl border border-dashed text-center transition-colors ${
-          disabled
+        className={`flex flex-col items-center justify-center gap-2 px-4 py-8 rounded-xl border border-dashed text-center transition-colors ${disabled
             ? "border-border bg-muted/20 cursor-not-allowed opacity-60"
             : isDragging
               ? "border-primary bg-primary/5 cursor-pointer"
               : "border-border bg-muted/30 hover:bg-muted/60 cursor-pointer"
-        }`}
+          }`}
       >
         <Upload className="w-5 h-5 text-muted-foreground" />
         <span className="text-xs text-muted-foreground">{hint}</span>
@@ -123,7 +123,7 @@ export default function FileUpload({
                   // A plain img, not next/image: this is a blob: URL from the
                   // local file and the image optimiser cannot fetch one.
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={slot.previewUrl} alt="" className="w-full h-full object-cover" />
+                  <Image src={slot.previewUrl} alt="" className="w-full h-full object-cover" />
                 ) : slot.uploaded?.resourceType === "video" ? (
                   <Film className="w-4 h-4 text-muted-foreground" />
                 ) : (

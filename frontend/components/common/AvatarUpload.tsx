@@ -5,6 +5,7 @@ import { AlertCircle, Loader2, Trash2, Upload, UserRound } from "lucide-react";
 
 import { useUploads } from "@/hooks/use-uploads";
 import type { UploadedFile } from "@/types";
+import Image from "next/image";
 
 /**
  * A single optional profile photo.
@@ -74,7 +75,7 @@ export default function AvatarUpload({
             // cannot fetch. The uploaded copy is never shown here, so there is
             // nothing for it to optimise anyway.
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={slot.previewUrl} alt="" className="w-full h-full object-cover" />
+            <Image src={slot.previewUrl} alt="" className="w-full h-full object-cover" />
           ) : (
             <UserRound className="w-5 h-5 text-muted-foreground" />
           )}
@@ -89,11 +90,10 @@ export default function AvatarUpload({
         <div className="min-w-0 flex-1">
           <label
             htmlFor={inputId}
-            className={`flex items-center justify-between gap-2 px-3.5 h-10 rounded-xl border border-dashed text-xs transition-colors ${
-              disabled
-                ? "border-border bg-muted/20 text-muted-foreground cursor-not-allowed opacity-60"
-                : "border-border bg-muted/30 hover:bg-muted/60 text-muted-foreground cursor-pointer"
-            }`}
+            className={`flex items-center justify-between gap-2 px-3.5 h-10 rounded-xl border border-dashed text-xs transition-colors ${disabled
+              ? "border-border bg-muted/20 text-muted-foreground cursor-not-allowed opacity-60"
+              : "border-border bg-muted/30 hover:bg-muted/60 text-muted-foreground cursor-pointer"
+              }`}
           >
             <span className="truncate">
               {slot ? slot.name : "Choose a photo..."}
