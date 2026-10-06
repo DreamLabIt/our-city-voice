@@ -3,13 +3,12 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronLeft, ChevronRight, ShieldCheck, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, PackageIcon, ShieldCheck, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { adminNavItems, userNavItems } from "@/config/dashboard-nav";
 import type { AuthUser, NavItem } from "@/types";
 import Image from "next/image";
-
 
 interface SidebarProps {
     isAdmin: boolean;
@@ -26,7 +25,7 @@ export default function Sidebar({ isAdmin, user, isCollapsed, setIsCollapsed }: 
         <aside
             className={cn(
                 "hidden md:flex flex-col border-r border-border bg-card transition-all duration-300 relative z-30 h-screen top-0",
-                isCollapsed ? "w-18" : "w-56"
+                isCollapsed ? "w-18" : "w-56",
             )}
         >
             <div className="h-19 flex items-center justify-start px-4 border-b border-border">
@@ -49,11 +48,13 @@ export default function Sidebar({ isAdmin, user, isCollapsed, setIsCollapsed }: 
                             <span className="text-[12px] text-muted-foreground font-medium flex items-center">
                                 {isAdmin ? (
                                     <>
-                                        <ShieldCheck className="w-3 h-3 text-primary" /> Admin Portal
+                                        <ShieldCheck className="w-3 h-3 text-primary" /> Admin
+                                        Portal
                                     </>
                                 ) : (
                                     <>
-                                        <User className="w-4 h-4 text-muted-foreground" /> Citizen Portal
+                                        <User className="w-4 h-4 text-muted-foreground" /> Citizen
+                                        Portal
                                     </>
                                 )}
                             </span>
@@ -64,7 +65,7 @@ export default function Sidebar({ isAdmin, user, isCollapsed, setIsCollapsed }: 
 
             <nav className="flex-1 py-4 px-3 space-y-1.5 overflow-y-auto">
                 {navItems.map((item) => {
-                    const Icon = item.icon;
+                    const Icon = item.icon ? item.icon : PackageIcon;
                     const isActive = pathname === item.href;
 
                     return (
@@ -75,21 +76,30 @@ export default function Sidebar({ isAdmin, user, isCollapsed, setIsCollapsed }: 
                                 "flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group relative",
                                 isActive
                                     ? "bg-primary text-primary-foreground shadow-xs"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
                             )}
                             title={isCollapsed ? item.name : undefined}
                         >
-                            <Icon className={cn("w-5 h-5 shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground")} />
+                            <Icon
+                                className={cn(
+                                    "w-5 h-5 shrink-0",
+                                    isActive
+                                        ? "text-primary-foreground"
+                                        : "text-muted-foreground group-hover:text-foreground",
+                                )}
+                            />
 
-                            {!isCollapsed && (
-                                <span className="truncate flex-1">{item.name}</span>
-                            )}
+                            {!isCollapsed && <span className="truncate flex-1">{item.name}</span>}
 
                             {!isCollapsed && item.badge && (
-                                <span className={cn(
-                                    "px-2 py-0.5 text-[10px] font-bold rounded-full",
-                                    isActive ? "bg-primary-foreground text-primary" : "bg-destructive/10 text-destructive"
-                                )}>
+                                <span
+                                    className={cn(
+                                        "px-2 py-0.5 text-[10px] font-bold rounded-full",
+                                        isActive
+                                            ? "bg-primary-foreground text-primary"
+                                            : "bg-destructive/10 text-destructive",
+                                    )}
+                                >
                                     {item.badge}
                                 </span>
                             )}
