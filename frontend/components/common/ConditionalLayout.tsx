@@ -22,7 +22,8 @@ export default function ConditionalLayout({
         pathname === "/register" ||
         pathname === "/forgot-password" ||
         pathname === "/dashboard/admin" ||
-        pathname === "/dashboard/user";
+        pathname === "/dashboard/user" ||
+        pathname === "/dashboard/profile";
 
     if (isChromeless) {
         return <>{children}</>;

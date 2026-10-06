@@ -148,8 +148,7 @@ export default function Header({
                         </Avatar>
 
                         <ChevronDown
-                            className="hidden h-4 w-4 text-muted-foreground transition-transform duration-200 group-aria-expanded:rotate-180 sm:block"
-                        />
+                            className="hidden h-4 w-4 text-muted-foreground transition-transform duration-200 group-aria-expanded:rotate-180 sm:block" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56 mt-2.5" align="end">
                         <DropdownMenuGroup>
@@ -178,16 +177,6 @@ export default function Header({
                         <DropdownMenuItem>
                             <Link
                                 href="/dashboard/profile"
-                                className="cursor-pointer text-xs flex items-center gap-2"
-                            >
-                                <User className="w-4 h-4" />
-                                Profile Settings
-                            </Link>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem>
-                            <Link
-                                href="/dashboard/settings"
                                 className="cursor-pointer text-xs flex items-center gap-2"
                             >
                                 <Settings className="w-4 h-4" />
