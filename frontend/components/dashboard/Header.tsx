@@ -27,20 +27,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { adminNavItems, userNavItems } from "@/config/dashboard-nav";
-import type { NavItem } from "@/types";
+import type { AuthUser, NavItem } from "@/types";
 import Image from "next/image";
 
 interface HeaderProps {
     isAdmin: boolean;
-    userName?: string;
-    userEmail?: string;
+    user: AuthUser;
+    name?: string;
+    email?: string;
     userAvatar?: string;
 }
 
 export default function Header({
     isAdmin,
-    userName = "Shourav Hasan",
-    userEmail = "shourav@example.com",
+    user,
     userAvatar = ""
 }: HeaderProps) {
     const { theme, setTheme } = useTheme();
@@ -141,9 +141,9 @@ export default function Header({
                         className="group relative flex h-9 items-center gap-2 rounded-full pl-2 pr-1 outline-none hover:bg-muted sm:pr-3"
                     >
                         <Avatar className="h-7 w-7">
-                            <AvatarImage src={userAvatar} alt={userName} />
+                            <AvatarImage src={userAvatar} alt={user.name} />
                             <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
-                                {userName.charAt(0)}
+                                {user.name.charAt(0)}
                             </AvatarFallback>
                         </Avatar>
 
@@ -156,11 +156,11 @@ export default function Header({
                             <DropdownMenuLabel className="font-normal">
                                 <div className="flex flex-col space-y-1">
                                     <p className="text-xs font-bold text-foreground leading-none">
-                                        {userName}
+                                        {user.name}
                                     </p>
 
                                     <p className="text-[11px] text-muted-foreground leading-none">
-                                        {userEmail}
+                                        {user.email}
                                     </p>
 
                                     {isAdmin && (

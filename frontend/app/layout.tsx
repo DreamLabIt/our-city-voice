@@ -27,7 +27,7 @@ export const metadata: Metadata = {
  * null without a round trip when there is no access cookie, so only signed-in
  * readers pay for it.
  */
-export default async function RootLayout({
+export default async function RootLayout({ 
   children,
 }: {
   children: React.ReactNode;

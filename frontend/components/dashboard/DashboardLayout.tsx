@@ -1,32 +1,31 @@
-"use client";
+import React from "react";
+import { redirect } from "next/navigation";
 
-import React, { useState } from "react";
-import AppSidebar from "./Sidebar";
-import TopHeader from "./Header";
+import { getCurrentUser } from "@/lib/session";
+import DashboardClientLayout from "./DashboardClientLayout";
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
     isAdmin?: boolean;
 }
 
-export default function DashboardLayout({ children, isAdmin = false }: DashboardLayoutProps) {
-    const [isCollapsed, setIsCollapsed] = useState(false);
+export default async function DashboardLayout({
+    children,
+    isAdmin = false,
+}: DashboardLayoutProps) {
+    const user = await getCurrentUser();
+
+    if (!user) {
+        redirect("/login");
+    }
 
     return (
-        <div className="min-h-screen flex bg-background text-foreground">
-            <AppSidebar
-                isAdmin={isAdmin}
-                isCollapsed={isCollapsed}
-                setIsCollapsed={setIsCollapsed}
-            />
-
-            <div className="flex-1 flex flex-col min-w-0">
-                <TopHeader isAdmin={isAdmin} />
-
-                <main className="flex-1 p-4 pl-6 w-full mx-auto space-y-6 overflow-y-auto">
-                    {children}
-                </main>
-            </div>
-        </div>
+        <DashboardClientLayout
+            user={user}
+            isAdmin={isAdmin}
+        >
+            {children}
+        </DashboardClientLayout>
     );
 }
+

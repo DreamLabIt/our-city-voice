@@ -7,17 +7,18 @@ import { ChevronLeft, ChevronRight, ShieldCheck, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { adminNavItems, userNavItems } from "@/config/dashboard-nav";
-import type { NavItem } from "@/types";
+import type { AuthUser, NavItem } from "@/types";
 import Image from "next/image";
 
 
 interface SidebarProps {
     isAdmin: boolean;
+    user: AuthUser;
     isCollapsed: boolean;
     setIsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export default function Sidebar({ isAdmin, isCollapsed, setIsCollapsed }: SidebarProps) {
+export default function Sidebar({ isAdmin, user, isCollapsed, setIsCollapsed }: SidebarProps) {
     const pathname = usePathname();
     const navItems: NavItem[] = isAdmin ? adminNavItems : userNavItems;
 
