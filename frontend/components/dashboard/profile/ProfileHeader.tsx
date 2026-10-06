@@ -7,6 +7,16 @@ import type { ProfileHeaderProps } from "@/types"
 
 export default function ProfileHeader({ user }: ProfileHeaderProps) {
     const isAdmin = user.role === "super_admin";
+    function initialsOf(name: string): string {
+        const letters = name
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase() ?? "")
+            .join("");
+
+        return letters || "?";
+    }
 
     return (
         <div className="relative rounded-2xl border border-border bg-card overflow-hidden shadow-xs">
@@ -20,8 +30,8 @@ export default function ProfileHeader({ user }: ProfileHeaderProps) {
                                 src={user.avatarUrl ?? undefined}
                                 alt={user.name}
                             />
-                            <AvatarFallback className="bg-primary text-primary-foreground font-black text-2xl">
-                                {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+                            <AvatarFallback className="bg-primary/90 font-semibold text-white text-3xl">
+                                {initialsOf(user.name)}
                             </AvatarFallback>
                         </Avatar>
 

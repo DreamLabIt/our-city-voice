@@ -14,7 +14,7 @@ export default function Header({ isAdmin, user }: HeaderProps) {
     const navItems: NavItem[] = isAdmin ? adminNavItems : userNavItems;
 
     return (
-        <header className="h-19 border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-20 px-4 sm:px-6 flex items-center justify-between gap-4">
+        <header className="h-19 border-b border-border bg-card/80 backdrop-blur-md z-20 px-4 sm:px-6 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 md:hidden">
                 <Sheet>
                     <SheetTrigger className="inline-flex items-center justify-center rounded-xl h-9 w-9 border border-input bg-background hover:bg-accent hover:text-accent-foreground">
