@@ -2,8 +2,11 @@ import { LucideIcon } from "lucide-react";
 
 // ── Navigation ──────────────────────────────────────────────
 export interface NavItem {
-    name: string;
+    name?: string;
     href: string;
+    title?: string;
+    icon: LucideIcon;
+    badge?: string;
 }
 
 // ── Page Header ─────────────────────────────────────────────

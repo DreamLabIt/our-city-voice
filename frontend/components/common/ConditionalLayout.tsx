@@ -20,7 +20,9 @@ export default function ConditionalLayout({
     const isChromeless =
         pathname === "/login" ||
         pathname === "/register" ||
-        pathname === "/forgot-password";
+        pathname === "/forgot-password" ||
+        pathname === "/dashboard/admin" ||
+        pathname === "/dashboard/user";
 
     if (isChromeless) {
         return <>{children}</>;
