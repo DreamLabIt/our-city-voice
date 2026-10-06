@@ -8,7 +8,20 @@ export const metadata = {
     description: "Sign in to access your account dashboard.",
 };
 
-export default function LoginPage() {
+/**
+ * `next` is read here rather than with useSearchParams inside LoginForm.
+ *
+ * useSearchParams in a client component forces the page to be either dynamic or
+ * wrapped in Suspense, and Next fails the build if it is neither. Reading it in
+ * the server component and passing it down avoids both.
+ */
+export default async function LoginPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ next?: string }>;
+}) {
+    const { next } = await searchParams;
+
     return (
         <section className="w-full min-h-screen relative flex flex-col lg:flex-row bg-background text-foreground overflow-hidden">
             <div className="w-full lg:w-[20%] xl:w-[44%] z-10 flex flex-col justify-center p-6 sm:p-10 lg:p-12 h-full min-h-screen bg-background">
@@ -34,7 +47,7 @@ export default function LoginPage() {
                     </div>
 
                     <div className="p-6 bg-card border border-border rounded-2xl shadow-sm space-y-4">
-                        <LoginForm />
+                        <LoginForm next={next} />
                     </div>
 
                     <p className="text-xs sm:text-sm text-muted-foreground font-medium text-center sm:text-left">

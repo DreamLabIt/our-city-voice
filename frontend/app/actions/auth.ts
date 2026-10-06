@@ -1,57 +1,93 @@
 "use server";
 
 import { redirect } from "next/navigation";
+
+import { apiFetch } from "@/lib/api";
+import { clientForwardHeaders } from "@/lib/client-headers";
+import type { SessionPayload } from "@/lib/session-cookies";
+import { clearSession, getRefreshToken, storeSession } from "@/lib/session";
 import type { FormState } from "@/types";
 
-export async function loginAction(
-    prevState: FormState,
-    formData: FormData
-): Promise<FormState> {
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
+/**
+ * Signing in and out.
+ *
+ * These run on the Next.js server, which is what lets the tokens go into
+ * httpOnly cookies: the browser posts a form here, this calls the API, and the
+ * credentials never pass through code the browser can read.
+ *
+ * The returned FormState is for failures only. Success ends in a redirect, which
+ * throws, so there is no success value to return.
+ */
 
-    if (!email || !password) {
-        return { error: "Email and password are required." };
-    }
-
-    try {
-        console.log("Logging in with:", email);
-
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        if (email !== "admin@example.com" || password !== "123456") {
-            return { error: "Invalid email or password." };
-        }
-    } catch (err) {
-        return { error: "Something went wrong. Please try again." };
-    }
-
-    redirect("/dashboard");
+/** Only local paths, so a crafted `next` cannot bounce somebody off-site. */
+function safeRedirect(value: FormDataEntryValue | null): string {
+  if (typeof value !== "string") return "/dashboard";
+  // Must start with a single slash. "//evil.example.com" is a protocol-relative
+  // URL that browsers happily treat as another origin.
+  return /^\/(?!\/)/.test(value) ? value : "/dashboard";
 }
 
-export async function forgotPasswordAction(
-    prevState: FormState,
-    formData: FormData
+export async function loginAction(
+  _prevState: FormState,
+  formData: FormData,
 ): Promise<FormState> {
-    const email = formData.get("email") as string;
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
 
-    if (!email || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
-        return {
-            error: "Please enter a valid email address.",
-        };
-    }
+  if (!email || !password) {
+    return { error: "Email and password are required." };
+  }
 
-    try {
+  const result = await apiFetch<SessionPayload>("/auth/login", {
+    method: "POST",
+    body: { email, password },
+    forward: await clientForwardHeaders(),
+  });
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+  if (!result.ok) {
+    return {
+      error: result.error.message,
+      ...(result.error.details ? { fieldErrors: result.error.details } : {}),
+    };
+  }
 
-        return {
-            success: true,
-        };
-    } catch (error) {
-        console.error("Forgot Password Error:", error);
-        return {
-            error: "Something went wrong. Please try again later.",
-        };
-    }
+  await storeSession(result.data);
+
+  // Outside any try/catch on purpose. redirect() signals by throwing, and a
+  // catch around it would swallow the navigation and leave the form spinning.
+  redirect(safeRedirect(formData.get("next")));
+}
+
+export async function logoutAction(): Promise<void> {
+  const refreshToken = await getRefreshToken();
+
+  // Revoke the row before dropping the cookie. The other order leaves a usable
+  // refresh token in the database with nothing left to tell us which one it was.
+  if (refreshToken) {
+    await apiFetch("/auth/logout", { method: "POST", body: { refreshToken } });
+  }
+
+  await clearSession();
+  redirect("/login");
+}
+
+/**
+ * Not implemented. Deliberately left alone for now: resetting a password needs a
+ * token table and an email sender, neither of which exists yet.
+ *
+ * It currently reports success without sending anything, which is a lie to the
+ * person using it. The page should say so, or the route should come down, before
+ * this ships anywhere real.
+ */
+export async function forgotPasswordAction(
+  _prevState: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const email = String(formData.get("email") ?? "");
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: "Please enter a valid email address." };
+  }
+
+  return { success: true };
 }

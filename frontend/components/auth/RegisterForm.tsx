@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { ControllerRenderProps, useForm } from "react-hook-form";
-import { registerAction } from "@/app/actions/register";
+import { AlertCircle, Loader2, Lock, Mail, User } from "lucide-react";
 
+import { registerAction } from "@/app/actions/register";
+import AvatarUpload from "@/components/common/AvatarUpload";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,13 +16,22 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { AlertCircle, Loader2, Lock, Mail, User, Upload, CheckCircle2 } from "lucide-react";
-import type { RegisterInputs } from "@/types";
+import type { RegisterInputs, UploadedFile } from "@/types";
+
+/** Matches the API's rule. See the note on passwordSchema in auth.controller.ts. */
+const MIN_PASSWORD_LENGTH = 8;
 
 export default function RegisterForm() {
     const [serverError, setServerError] = useState<string>("");
     const [isPending, startTransition] = useTransition();
-    const [fileName, setFileName] = useState<string>("");
+    /**
+     * The avatar is uploaded as soon as it is chosen, so what is held here is a
+     * finished Cloudinary URL. `null` while one is in flight, which is what
+     * disables the submit button below: submitting mid-upload would create the
+     * account without the photo the person just picked.
+     */
+    const [avatar, setAvatar] = useState<UploadedFile | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
 
     const form = useForm<RegisterInputs>({
         defaultValues: {
@@ -38,16 +49,20 @@ export default function RegisterForm() {
         formData.append("name", data.name);
         formData.append("email", data.email);
         formData.append("password", data.password);
-
-        if (data.avatar && data.avatar.length > 0) {
-            formData.append("avatar", data.avatar[0]);
-        }
+        if (avatar) formData.append("avatarUrl", avatar.url);
 
         startTransition(async () => {
             const res = await registerAction({ error: "" }, formData);
-            if (res?.error) {
-                setServerError(res.error);
+
+            // Only failures come back; success redirects to the dashboard.
+            if (res?.fieldErrors) {
+                for (const [field, messages] of Object.entries(res.fieldErrors)) {
+                    if (field === "name" || field === "email" || field === "password") {
+                        form.setError(field, { message: messages[0] });
+                    }
+                }
             }
+            if (res?.error) setServerError(res.error);
         });
     };
 
@@ -55,7 +70,10 @@ export default function RegisterForm() {
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 {serverError && (
-                    <div className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs sm:text-sm font-medium flex items-center gap-2">
+                    <div
+                        role="alert"
+                        className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs sm:text-sm font-medium flex items-center gap-2"
+                    >
                         <AlertCircle className="w-4 h-4 shrink-0" />
                         <span>{serverError}</span>
                     </div>
@@ -80,6 +98,7 @@ export default function RegisterForm() {
                                     <Input
                                         {...field}
                                         type="text"
+                                        autoComplete="name"
                                         placeholder="John Doe"
                                         className="pl-10 h-10 rounded-xl bg-background border-border text-xs sm:text-sm"
                                     />
@@ -109,6 +128,7 @@ export default function RegisterForm() {
                                     <Input
                                         {...field}
                                         type="email"
+                                        autoComplete="email"
                                         placeholder="name@example.com"
                                         className="pl-10 h-10 rounded-xl bg-background border-border text-xs sm:text-sm"
                                     />
@@ -125,8 +145,8 @@ export default function RegisterForm() {
                     rules={{
                         required: "Password is required",
                         minLength: {
-                            value: 6,
-                            message: "Password must be at least 6 characters",
+                            value: MIN_PASSWORD_LENGTH,
+                            message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
                         },
                     }}
                     render={({ field }: { field: ControllerRenderProps<RegisterInputs, "password"> }) => (
@@ -138,6 +158,7 @@ export default function RegisterForm() {
                                     <Input
                                         {...field}
                                         type="password"
+                                        autoComplete="new-password"
                                         placeholder="••••••••"
                                         className="pl-10 h-10 rounded-xl bg-background border-border text-xs sm:text-sm"
                                     />
@@ -148,63 +169,29 @@ export default function RegisterForm() {
                     )}
                 />
 
-                <FormField
-                    control={form.control}
-                    name="avatar"
-                    render={({ field: { onChange, ref, name } }: { field: ControllerRenderProps<RegisterInputs, "avatar"> }) => (
-                        <FormItem className="space-y-1.5">
-                            <FormLabel className="text-xs font-semibold">
-                                Profile Image (Optional)
-                            </FormLabel>
-                            <FormControl>
-                                <div className="relative flex items-center">
-                                    <input
-                                        type="file"
-                                        id="avatar"
-                                        name={name}
-                                        ref={ref}
-                                        accept="image/*"
-                                        className="hidden"
-                                        onChange={(e) => {
-                                            const files = e.target.files;
-                                            if (files && files.length > 0) {
-                                                setFileName(files[0].name);
-                                                onChange(files);
-                                            } else {
-                                                setFileName("");
-                                                onChange(null);
-                                            }
-                                        }}
-                                    />
-                                    <label
-                                        htmlFor="avatar"
-                                        className="w-full flex items-center justify-between px-3.5 h-10 rounded-xl border border-dashed border-border bg-muted/30 hover:bg-muted/60 text-xs text-muted-foreground cursor-pointer transition-colors"
-                                    >
-                                        <span className="truncate max-w-55">
-                                            {fileName ? fileName : "Choose profile photo..."}
-                                        </span>
-                                        {fileName ? (
-                                            <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
-                                        ) : (
-                                            <Upload className="w-4 h-4 text-muted-foreground shrink-0" />
-                                        )}
-                                    </label>
-                                </div>
-                            </FormControl>
-                            <FormMessage className="text-[11px]" />
-                        </FormItem>
-                    )}
+                <AvatarUpload
+                    disabled={isPending}
+                    onChange={(file) => {
+                        setAvatar(file);
+                        setIsUploading(false);
+                    }}
+                    onUploadingChange={setIsUploading}
                 />
 
                 <Button
                     type="submit"
-                    disabled={isPending}
+                    disabled={isPending || isUploading}
                     className="w-full h-10 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-sm mt-2"
                 >
                     {isPending ? (
                         <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             <span>Creating account...</span>
+                        </>
+                    ) : isUploading ? (
+                        <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            <span>Uploading photo...</span>
                         </>
                     ) : (
                         <span>Create Account</span>
