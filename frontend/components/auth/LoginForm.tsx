@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
+import { AlertCircle, Loader2, Lock, Mail } from "lucide-react";
+
 import { loginAction } from "@/app/actions/auth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,10 +16,18 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { AlertCircle, Loader2, Lock, Mail } from "lucide-react";
 import type { LoginInputs, FormState } from "@/types";
 
-export default function LoginForm() {
+export interface LoginFormProps {
+    /**
+     * Where to go after signing in. Comes from the ?next= that proxy.ts adds when
+     * it turns somebody away from a protected page, so they land where they were
+     * headed rather than always on the dashboard.
+     */
+    next?: string;
+}
+
+export default function LoginForm({ next }: LoginFormProps) {
     const [serverError, setServerError] = useState<string>("");
     const [isPending, startTransition] = useTransition();
 
@@ -34,13 +44,22 @@ export default function LoginForm() {
         const formData = new FormData();
         formData.append("email", data.email);
         formData.append("password", data.password);
+        if (next) formData.append("next", next);
 
         startTransition(async () => {
             const initialState: FormState = { error: "" };
             const res = await loginAction(initialState, formData);
-            if (res?.error) {
-                setServerError(res.error);
+
+            // Reached only on failure. A successful sign-in redirects, which
+            // never returns here.
+            if (res?.fieldErrors) {
+                for (const [field, messages] of Object.entries(res.fieldErrors)) {
+                    if (field === "email" || field === "password") {
+                        form.setError(field, { message: messages[0] });
+                    }
+                }
             }
+            if (res?.error) setServerError(res.error);
         });
     };
 
@@ -48,7 +67,10 @@ export default function LoginForm() {
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 {serverError && (
-                    <div className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs sm:text-sm font-medium flex items-center gap-2">
+                    <div
+                        role="alert"
+                        className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs sm:text-sm font-medium flex items-center gap-2"
+                    >
                         <AlertCircle className="w-4 h-4 shrink-0" />
                         <span>{serverError}</span>
                     </div>
@@ -75,6 +97,7 @@ export default function LoginForm() {
                                     <Input
                                         {...field}
                                         type="email"
+                                        autoComplete="email"
                                         placeholder="name@example.com"
                                         className="pl-10 h-10 sm:h-11 rounded-xl bg-background border-border text-xs sm:text-sm"
                                     />
@@ -90,10 +113,6 @@ export default function LoginForm() {
                     name="password"
                     rules={{
                         required: "Password is required",
-                        minLength: {
-                            value: 6,
-                            message: "Password must be at least 6 characters",
-                        },
                     }}
                     render={({ field }) => (
                         <FormItem className="space-y-2">
@@ -114,6 +133,7 @@ export default function LoginForm() {
                                     <Input
                                         {...field}
                                         type="password"
+                                        autoComplete="current-password"
                                         placeholder="••••••••"
                                         className="pl-10 h-10 sm:h-11 rounded-xl bg-background border-border text-xs sm:text-sm"
                                     />

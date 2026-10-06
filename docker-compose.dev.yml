@@ -56,6 +56,13 @@ services:
       # there is no localhost postgres to talk to.
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      # No default for JWT_SECRET: the backend's env schema rejects a missing
+      # one, so a stack that forgot it fails loudly at boot rather than signing
+      # tokens with a placeholder.
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required, see .env.example}
+      ACCESS_TOKEN_TTL_MINUTES: ${ACCESS_TOKEN_TTL_MINUTES:-15}
+      REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-30}
+      ALLOWED_MEDIA_HOSTS: ${ALLOWED_MEDIA_HOSTS:-res.cloudinary.com}
     ports:
       - "${BACKEND_PORT:-4000}:4000"
     volumes:
@@ -94,6 +101,12 @@ services:
       # Server-side: resolves inside the docker network.
       INTERNAL_API_URL: ${INTERNAL_API_URL:-http://backend:4000/api/v1}
       WATCHPACK_POLLING: "false"
+      # Server-side only. The browser gets a signature from /api/uploads/
+      # signature, never these values.
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      CLOUDINARY_FOLDER: ${CLOUDINARY_FOLDER:-ourcityvoice}
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     volumes:

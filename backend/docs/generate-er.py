@@ -54,14 +54,14 @@ SCHEMA = [
         ("",   "phone",             "text",        ""),
         ("",   "role",              "text",        "NOT NULL"),
         ("FK", "department_id",     "bigint",      "-> departments.id"),
-        ("",   "avatar_key",        "text",        ""),
+        ("",   "avatar_url",        "text",        ""),
         ("",   "email_verified_at", "timestamptz", ""),
         ("",   "created_at",        "timestamptz", "NOT NULL"),
         ("",   "updated_at",        "timestamptz", "NOT NULL"),
     ], notes=[
-        "CHECK role IN ('citizen','officer','admin')",
+        "CHECK role IN ('user','super_admin')",
         "UNIQUE INDEX on lower(email)  -- case-insensitive login",
-        "department_id is set only for officers",
+        "role is never settable from a request body; super admins are made by CLI",
         "never return password_hash from any endpoint",
     ]),
 

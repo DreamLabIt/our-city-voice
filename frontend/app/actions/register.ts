@@ -1,59 +1,60 @@
 "use server";
 
 import { redirect } from "next/navigation";
+
+import { apiFetch } from "@/lib/api";
+import { clientForwardHeaders } from "@/lib/client-headers";
+import type { SessionPayload } from "@/lib/session-cookies";
+import { storeSession } from "@/lib/session";
 import type { RegisterFormState } from "@/types";
 
+/**
+ * Creating an account.
+ *
+ * The avatar arrives as a URL, not a file. It is uploaded to Cloudinary from the
+ * browser while the rest of the form is still being filled in, so by the time
+ * this runs there is nothing to upload: see hooks/use-uploads.ts. That keeps
+ * image bytes out of the server action body, which has a 1MB default limit and
+ * would otherwise need raising for every action in the app.
+ *
+ * Registering signs you in. The API answers with the same session payload login
+ * does, so this ends on the home page with the navbar already showing an avatar,
+ * rather than on a sign-in form asking for what was just typed.
+ */
 export async function registerAction(
-    prevState: RegisterFormState,
-    formData: FormData
+  _prevState: RegisterFormState,
+  formData: FormData,
 ): Promise<RegisterFormState> {
-    const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-    const imageFile = formData.get("avatar") as File | null;
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const avatarUrl = String(formData.get("avatarUrl") ?? "").trim();
 
-    if (!name || !email || !password) {
-        return { error: "All required fields must be filled out." };
-    }
+  if (!name || !email || !password) {
+    return { error: "All required fields must be filled out." };
+  }
 
-    if (password.length < 6) {
-        return { error: "Password must be at least 6 characters long." };
-    }
+  const result = await apiFetch<SessionPayload>("/auth/register", {
+    method: "POST",
+    forward: await clientForwardHeaders(),
+    body: {
+      name,
+      email,
+      password,
+      // Omitted rather than sent empty: the API rejects "" as an invalid URL,
+      // and an absent avatar is the normal case.
+      ...(avatarUrl ? { avatarUrl } : {}),
+    },
+  });
 
-    let imageUrl = "";
+  if (!result.ok) {
+    return {
+      error: result.error.message,
+      ...(result.error.details ? { fieldErrors: result.error.details } : {}),
+    };
+  }
 
-    try {
-        if (imageFile && imageFile.size > 0) {
-            const uploadFormData = new FormData();
-            uploadFormData.append("file", imageFile);
-            uploadFormData.append(
-                "upload_preset",
-                process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "your_preset"
-            );
+  await storeSession(result.data);
 
-            const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-            if (cloudName) {
-                const cloudRes = await fetch(
-                    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-                    {
-                        method: "POST",
-                        body: uploadFormData,
-                    }
-                );
-                const cloudData = await cloudRes.json();
-                if (cloudData.secure_url) {
-                    imageUrl = cloudData.secure_url;
-                }
-            }
-        }
-
-        console.log("Registering User:", { name, email, password, imageUrl });
-
-        await new Promise((resolve) => setTimeout(resolve, 1200));
-
-    } catch (err) {
-        return { error: "Registration failed. Please try again." };
-    }
-
-    redirect("/login");
+  redirect("/");
 }

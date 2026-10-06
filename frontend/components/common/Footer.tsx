@@ -103,30 +103,26 @@ export default function Footer(): React.ReactNode {
                         </h3>
                         <ul className="space-y-2 text-sm text-muted-foreground">
                             <li>
-                                <Link href="#" className="hover:text-primary transition-colors">
+                                <Link href="/" className="hover:text-primary transition-colors">
                                     All Categories
                                 </Link>
                             </li>
                             <li>
-                                <Link href="#" className="hover:text-primary  transition-colors">
+                                <Link href="/reports" className="hover:text-primary  transition-colors">
                                     Recent Reports
                                 </Link>
                             </li>
                             <li>
-                                <Link href="#" className="hover:text-primary  transition-colors">
-                                    Community Map
+                                <Link href="/issues-map" className="hover:text-primary  transition-colors">
+                                    Issues Map
                                 </Link>
                             </li>
                             <li>
-                                <Link href="#" className="hover:text-primary transition-colors">
+                                <Link href="/statistics" className="hover:text-primary transition-colors">
                                     Activity Dashboard
                                 </Link>
                             </li>
-                            <li>
-                                <Link href="#" className="hover:text-primary transition-colors">
-                                    City Partners
-                                </Link>
-                            </li>
+
                         </ul>
                     </div>
 
@@ -186,11 +182,11 @@ export default function Footer(): React.ReactNode {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <Link href="#" className="hover:text-primary transition-colors">
+                        <Link href="/privacy-policy" className="hover:text-primary transition-colors">
                             Privacy Policy
                         </Link>
                         <span>•</span>
-                        <Link href="#" className="hover:text-primary transition-colors">
+                        <Link href="/terms-of-service" className="hover:text-primary transition-colors">
                             Terms of Service
                         </Link>
                     </div>

@@ -6,11 +6,21 @@ import { useState } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { navItems } from "@/data/mock-data";
-import type { NavItem } from "@/types";
+import type { AuthUser, NavItem } from "@/types";
 import SearchDialog from "../Dialog/SearchDialog";
 import SectionContainer from "./SectionContainer";
+import UserMenu from "./UserMenu";
 
-export default function Navbar(): React.ReactNode {
+export interface NavbarProps {
+    /**
+     * Read in the root layout, which is a server component, and passed down.
+     * The navbar runs in the browser and has no way to read an httpOnly cookie,
+     * which is the whole point of the cookie being httpOnly.
+     */
+    user: AuthUser | null;
+}
+
+export default function Navbar({ user }: NavbarProps): React.ReactNode {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
     const pathname = usePathname();
 
@@ -69,13 +79,20 @@ export default function Navbar(): React.ReactNode {
                     <div className="flex items-center gap-2 sm:gap-4">
                         <SearchDialog />
 
-                        <Link
-                            href="/login"
-                            className="hidden sm:flex items-center gap-2 bg-primary hover:bg-primary-hover text-white font-medium px-4 md:px-5 py-2.5 rounded-xl text-sm transition-all shadow-sm hover:shadow-md"
-                        >
-                            <User className="w-4 h-4 stroke-[2.5]" />
-                            <span>Login</span>
-                        </Link>
+                        {user ? (
+                            // Shown at every width, unlike the Login button
+                            // below. An avatar is small enough that the mobile
+                            // menu does not need a copy of it.
+                            <UserMenu user={user} />
+                        ) : (
+                            <Link
+                                href="/login"
+                                className="hidden sm:flex items-center gap-2 bg-primary hover:bg-primary-hover text-white font-medium px-4 md:px-5 py-2.5 rounded-xl text-sm transition-all shadow-sm hover:shadow-md"
+                            >
+                                <User className="w-4 h-4 stroke-[2.5]" />
+                                <span>Login</span>
+                            </Link>
+                        )}
 
                         <button
                             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -113,16 +130,18 @@ export default function Navbar(): React.ReactNode {
                             })}
                         </nav>
 
-                        <div className="pt-2 sm:hidden border-t border-border-custom">
-                            <Link
-                                href="/login"
-                                onClick={() => setIsMobileMenuOpen(false)}
-                                className="flex items-center justify-center gap-2 w-full bg-primary hover:bg-primary-hover text-white font-semibold px-5 py-3 rounded-xl text-base transition shadow-sm"
-                            >
-                                <User className="w-5 h-5 stroke-[2.5]" />
-                                <span>Login</span>
-                            </Link>
-                        </div>
+                        {!user && (
+                            <div className="pt-2 sm:hidden border-t border-border-custom">
+                                <Link
+                                    href="/login"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="flex items-center justify-center gap-2 w-full bg-primary hover:bg-primary-hover text-white font-semibold px-5 py-3 rounded-xl text-base transition shadow-sm"
+                                >
+                                    <User className="w-5 h-5 stroke-[2.5]" />
+                                    <span>Login</span>
+                                </Link>
+                            </div>
+                        )}
                     </div>
                 )}
 

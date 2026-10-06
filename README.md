@@ -129,6 +129,72 @@ readable because the Python is what you edit, not the 90KB of JSON.
 
 Migrations do not exist yet. They are the next thing to build.
 
+## Accounts and auth
+
+Two roles, `user` and `super_admin`. An earlier draft had three, which invented
+a tier nothing enforced: `officer` and `citizen` had identical permissions, so
+the only real boundary was admin or not. Being assigned a report is recorded on
+the report, not as a role.
+
+**Super admins are made by hand.** Nothing in the running API can create one.
+Registration cannot set a role at all, and changing a role already requires
+being a super admin, so the first one has to come from somewhere with shell
+access to the server:
+
+```bash
+./dev.sh sh backend
+pnpm admin:create                                       # prompts for everything
+pnpm admin:create --email you@example.com --name "You"  # prompts for the password
+pnpm admin:create --email you@example.com --promote     # promote an existing account
+```
+
+**Sessions are a short access token plus a long refresh token.** The access
+token is a signed JWT, is not checked against the database, and lives about
+fifteen minutes, which bounds how long a revoked account keeps working. The
+refresh token is opaque, stored as a sha256 hash in `refresh_tokens`, rotated on
+every use, and revocable. Reusing a rotated token ends every session for that
+account, because there is no way to tell the thief from the victim.
+
+Neither token is a cookie on the API. It answers JSON, and the Next.js server
+puts the values in its own httpOnly cookies, so the browser never holds a
+credential that JavaScript can read and there are no cross-site cookie rules to
+fight. `frontend/proxy.ts` is the one place a session gets refreshed; it is the
+only part of the app that runs before a page and can still write cookies.
+
+**Nothing is behind a login yet.** proxy.ts guards no routes; it runs on every
+page purely to refresh. It has to, because the access cookie lasts fifteen
+minutes and the refresh cookie lasts a month, and without it the navbar would
+quietly revert to a Login button for somebody who was still signed in. When
+there is a page worth protecting, the guard goes back in the same file.
+
+Signing in is visible in the navbar: the Login button is replaced by the
+account's avatar, or its initials when there is no photo, and the menu behind it
+has sign out.
+
+`JWT_SECRET` has no default. The backend refuses to start without one, because a
+signing key with a fallback ships to production as the fallback.
+
+## File uploads
+
+Images and video go from the browser straight to Cloudinary. The Next.js server
+only signs the request, so no file passes through it and there is no body size
+limit to raise for a 40MB video.
+
+Fill in the Cloudinary section of `.env` (dashboard, then Settings, API Keys).
+None of those variables are `NEXT_PUBLIC_`, so the secret is not compiled into
+the client bundle. Until they are set, the uploader answers 503 with a readable
+message and the rest of the app works.
+
+Two pieces, both reusable:
+
+- `components/common/FileUpload.tsx` for several files with thumbnails and
+  per-file progress, which is what report media will use
+- `components/common/AvatarUpload.tsx` for one profile photo
+
+Both sit on `hooks/use-uploads.ts`, which holds the queue and the progress.
+Uploading starts the moment a file is chosen, so submitting a form only sends a
+URL. The API refuses to store a URL on any host outside `ALLOWED_MEDIA_HOSTS`.
+
 ## Production
 
 The production stack adds nginx and removes every convenience that would be
@@ -184,7 +250,10 @@ inside the backend container, where `DATABASE_URL` already points at the
 ```
 
 Seeding gives you 36 users, 13 reports, 31 comments and 178 likes, built from
-`frontend/data/mock-data.ts`. Every account's password is `password123`.
+`frontend/data/mock-data.ts`. Every account's password is `password123`, and
+one of them, `platform.admin@ourcityvoice.test`, is a super admin. That is safe
+only because the seed truncates every table first, so it can never be pointed at
+a real database.
 
 When the frontend fixtures change, re-extract them:
 
