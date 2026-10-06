@@ -161,6 +161,16 @@ credential that JavaScript can read and there are no cross-site cookie rules to
 fight. `frontend/proxy.ts` is the one place a session gets refreshed; it is the
 only part of the app that runs before a page and can still write cookies.
 
+**Nothing is behind a login yet.** proxy.ts guards no routes; it runs on every
+page purely to refresh. It has to, because the access cookie lasts fifteen
+minutes and the refresh cookie lasts a month, and without it the navbar would
+quietly revert to a Login button for somebody who was still signed in. When
+there is a page worth protecting, the guard goes back in the same file.
+
+Signing in is visible in the navbar: the Login button is replaced by the
+account's avatar, or its initials when there is no photo, and the menu behind it
+has sign out.
+
 `JWT_SECRET` has no default. The backend refuses to start without one, because a
 signing key with a fallback ships to production as the fallback.
 

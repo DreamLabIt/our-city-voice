@@ -18,7 +18,8 @@ import type { RegisterFormState } from "@/types";
  * would otherwise need raising for every action in the app.
  *
  * Registering signs you in. The API answers with the same session payload login
- * does, which is why this ends on the dashboard rather than the login page.
+ * does, so this ends on the home page with the navbar already showing an avatar,
+ * rather than on a sign-in form asking for what was just typed.
  */
 export async function registerAction(
   _prevState: RegisterFormState,
@@ -55,5 +56,5 @@ export async function registerAction(
 
   await storeSession(result.data);
 
-  redirect("/dashboard");
+  redirect("/");
 }

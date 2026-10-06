@@ -8,48 +8,50 @@ import {
 } from "@/lib/session-cookies";
 
 /**
- * Route guarding, and the one place a session gets refreshed.
+ * Keeps the session alive, and keeps signed-in people off the auth pages.
  *
  * This is what used to be middleware.ts. Next 16 renamed the convention to
- * proxy.ts and the exported function to `proxy`; the API is otherwise the same,
- * and the old name now logs a deprecation warning on every boot.
+ * proxy.ts and the exported function to `proxy`; the API is otherwise the same.
  *
- * It is the only part of the app that runs before a page and can still write
- * cookies. A server component cannot, so if refreshing happened there the new
- * token would be used once and thrown away, and every single request would
- * refresh again.
+ * It guards nothing, because nothing is behind a login yet. What it does is
+ * refresh, and it is the only place that can: it is the only part of the app
+ * that runs before a page and can still write a cookie. A server component
+ * cannot, so refreshing there would mean using a new token once and throwing it
+ * away on every request.
  *
- * It runs on the routes in the matcher at the bottom and nowhere else. Running
- * it everywhere would put a fetch to the API in front of the landing page for
- * no benefit, since nothing public needs to know who is reading.
+ * It runs on every page rather than a short list, which is a change from when
+ * there was a dashboard to protect. The access cookie lasts about fifteen
+ * minutes and the refresh cookie lasts a month, so without this a reader who
+ * stayed on public pages would watch the navbar quietly revert to a Login button
+ * while they were still perfectly signed in.
+ *
+ * For an anonymous visitor this is two cookie reads and nothing else.
  */
 
-const LOGIN_PATH = "/login";
-const DASHBOARD_PATH = "/dashboard";
+const HOME_PATH = "/";
+/**
+ * Pages a signed-in person has no use for. Deliberately not /forgot-password:
+ * that is reachable while signed in, and bouncing somebody away from it is the
+ * sort of thing that is only noticed by whoever needed it.
+ */
+const AUTH_PATHS = new Set(["/login", "/register"]);
 
 /** Mirrors lib/api.ts, which cannot be imported here: it is not edge-safe. */
 const API_URL = process.env.INTERNAL_API_URL ?? "http://localhost:4000/api/v1";
 
-function redirectTo(path: string, request: NextRequest): NextResponse {
+function redirectHome(request: NextRequest): NextResponse {
   const url = request.nextUrl.clone();
-  url.pathname = path;
+  url.pathname = HOME_PATH;
   url.search = "";
   return NextResponse.redirect(url);
 }
 
-/** Sends them back where they were going once they have signed in. */
-function redirectToLogin(request: NextRequest): NextResponse {
-  const url = request.nextUrl.clone();
-  url.pathname = LOGIN_PATH;
-  url.search = "";
-  if (request.nextUrl.pathname !== DASHBOARD_PATH) {
-    url.searchParams.set("next", request.nextUrl.pathname);
-  }
+/** Carries on to the page, with both cookies dropped. */
+function continueSignedOut(request: NextRequest): NextResponse {
+  request.cookies.delete(ACCESS_COOKIE);
+  request.cookies.delete(REFRESH_COOKIE);
 
-  const response = NextResponse.redirect(url);
-  // Clear both, so a stale refresh token cannot bounce the browser between
-  // /login and /dashboard forever. Without this, the auth-page rule in proxy()
-  // would see a refresh cookie, send them to the dashboard, and land back here.
+  const response = NextResponse.next({ request });
   response.cookies.delete(ACCESS_COOKIE);
   response.cookies.delete(REFRESH_COOKIE);
   return response;
@@ -60,16 +62,17 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   const accessToken = request.cookies.get(ACCESS_COOKIE)?.value;
   const refreshToken = request.cookies.get(REFRESH_COOKIE)?.value;
 
-  const isAuthPage = pathname === LOGIN_PATH || pathname === "/register";
-
-  if (isAuthPage) {
-    // Presence only, no round trip. If the token turns out to be dead, the
-    // dashboard's own check below cleans up and sends them back.
-    return refreshToken ? redirectTo(DASHBOARD_PATH, request) : NextResponse.next();
+  if (!refreshToken) {
+    // Nothing to refresh from. An access cookie without a refresh cookie means
+    // a sign-out that half completed, so clear it rather than leaving a token
+    // that will look like a session until it expires.
+    return accessToken ? continueSignedOut(request) : NextResponse.next();
   }
 
+  // Signed in, and asking for a sign-in form.
+  if (AUTH_PATHS.has(pathname) && accessToken) return redirectHome(request);
+
   if (accessToken) return NextResponse.next();
-  if (!refreshToken) return redirectToLogin(request);
 
   // The access cookie has expired and been dropped by the browser, but the
   // longer-lived refresh cookie is still here. Trade it for a new pair.
@@ -94,22 +97,36 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
       cache: "no-store",
     });
 
-    if (!response.ok) return redirectToLogin(request);
+    // Revoked, expired, or replayed. Drop the cookies and show the page as it
+    // looks to anybody else, rather than bouncing somebody off a public page
+    // over an expired session.
+    if (!response.ok) return continueSignedOut(request);
     payload = (await response.json()) as SessionPayload;
   } catch {
-    // The API is down. Sending them to the login page is wrong (they are signed
-    // in) but it is the only honest option: the page behind this needs a token.
-    return redirectToLogin(request);
+    // The API is unreachable. Rendering signed-out is wrong but harmless here,
+    // and it is the only option: the page cannot be told who is reading.
+    return continueSignedOut(request);
+  }
+
+  if (AUTH_PATHS.has(pathname)) {
+    const response = redirectHome(request);
+    setSession(response, payload);
+    return response;
   }
 
   // Setting the cookie on the *request* as well as the response is what makes
   // the new token visible to the page being rendered right now. Without it the
-  // page still sees no access cookie, calls /auth/me without one, and renders as
-  // though nobody is signed in, even though the browser now holds a good token.
+  // layout still sees no access cookie, renders a Login button, and only the
+  // next navigation picks up the session.
   request.cookies.set(ACCESS_COOKIE, payload.accessToken);
   request.cookies.set(REFRESH_COOKIE, payload.refreshToken);
 
   const response = NextResponse.next({ request });
+  setSession(response, payload);
+  return response;
+}
+
+function setSession(response: NextResponse, payload: SessionPayload): void {
   response.cookies.set(
     ACCESS_COOKIE,
     payload.accessToken,
@@ -120,10 +137,17 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     payload.refreshToken,
     sessionCookieOptions(payload.refreshTokenExpiresAt),
   );
-
-  return response;
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/register"],
+  /**
+   * Every page, plus the upload signature route, which also reads the session.
+   *
+   * Excluded: Next's own build output and anything that looks like a static
+   * file. Running a cookie check and a possible API call in front of every image
+   * and font request would be pure overhead.
+   */
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpe?g|gif|svg|webp|avif|ico|mp4|webm|woff2?)$).*)",
+  ],
 };

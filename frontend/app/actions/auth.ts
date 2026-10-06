@@ -19,12 +19,17 @@ import type { FormState } from "@/types";
  * throws, so there is no success value to return.
  */
 
-/** Only local paths, so a crafted `next` cannot bounce somebody off-site. */
+/**
+ * Where to go after signing in. Home by default, since there is no
+ * signed-in-only page to land on yet.
+ *
+ * Only local paths are honoured, so a crafted `next` cannot bounce somebody
+ * off-site. It must start with a single slash: "//evil.example.com" is a
+ * protocol-relative URL that browsers happily treat as another origin.
+ */
 function safeRedirect(value: FormDataEntryValue | null): string {
-  if (typeof value !== "string") return "/dashboard";
-  // Must start with a single slash. "//evil.example.com" is a protocol-relative
-  // URL that browsers happily treat as another origin.
-  return /^\/(?!\/)/.test(value) ? value : "/dashboard";
+  if (typeof value !== "string") return "/";
+  return /^\/(?!\/)/.test(value) ? value : "/";
 }
 
 export async function loginAction(
@@ -68,7 +73,11 @@ export async function logoutAction(): Promise<void> {
   }
 
   await clearSession();
-  redirect("/login");
+
+  // Home, not /login. There are no signed-in-only pages yet, so somebody who
+  // signs out is not being turned away from anything and has no reason to be
+  // looking at a sign-in form.
+  redirect("/");
 }
 
 /**

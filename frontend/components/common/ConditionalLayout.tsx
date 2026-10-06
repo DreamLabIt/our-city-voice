@@ -3,28 +3,24 @@
 import { usePathname } from "next/navigation";
 import Navbar from "@/components/common/navbar";
 import Footer from "@/components/common/Footer";
+import type { AuthUser } from "@/types";
 
 export default function ConditionalLayout({
     children,
+    user,
 }: {
     children: React.ReactNode;
+    /** Passed straight to the navbar. See NavbarProps for why it comes from above. */
+    user: AuthUser | null;
 }) {
     const pathname = usePathname();
 
-    // Routes that bring their own chrome. The auth pages are full-bleed splits
-    // with their own branding, and the dashboard has its own header with the
-    // signed-in account in it; showing the public navbar on top of either gives
-    // two headers, and on the dashboard a "Login" button to somebody who is
-    // already signed in.
-    //
-    // A prefix match for the dashboard, so pages added underneath it are covered
-    // without anybody having to remember this file exists.
+    // The auth pages are full-bleed splits with their own branding, so the
+    // public navbar on top of one gives two headers.
     const isChromeless =
         pathname === "/login" ||
         pathname === "/register" ||
-        pathname === "/forgot-password" ||
-        pathname === "/dashboard" ||
-        pathname.startsWith("/dashboard/");
+        pathname === "/forgot-password";
 
     if (isChromeless) {
         return <>{children}</>;
@@ -32,7 +28,7 @@ export default function ConditionalLayout({
 
     return (
         <div className="min-h-screen flex flex-col">
-            <Navbar />
+            <Navbar user={user} />
 
             <main className="flex-1">
                 {children}
