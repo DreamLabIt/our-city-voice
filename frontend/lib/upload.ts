@@ -1,3 +1,4 @@
+import { UPLOAD_RULES } from "@/lib/upload-rules";
 import type { UploadKind, UploadedFile } from "@/types";
 
 /**
@@ -35,6 +36,30 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(bytes < 10 * 1024 * 1024 ? 1 : 0)} MB`;
+}
+
+/**
+ * The size and format check, run when a file is chosen rather than when it is
+ * sent. Returns a message fit to show somebody, or null when the file is fine.
+ *
+ * Needed as its own function because uploading happens on submit now. Left to
+ * uploadFile, a 60MB video would look accepted for as long as the person took to
+ * finish the form and only be refused once they pressed the button.
+ */
+export function checkFile(file: File, kind: UploadKind): string | null {
+  const rules = UPLOAD_RULES[kind];
+
+  if (file.size > rules.maxBytes) {
+    return `${file.name} is ${formatBytes(file.size)}. The limit is ${formatBytes(rules.maxBytes)}.`;
+  }
+
+  // Empty type means the browser could not work out what the file is. Cloudinary
+  // decides that one, since allowed_formats is signed.
+  if (file.type && !rules.accept.includes(file.type)) {
+    return `${file.name} is not a file type we can accept.`;
+  }
+
+  return null;
 }
 
 async function requestTicket(kind: UploadKind): Promise<UploadTicket> {
@@ -150,9 +175,10 @@ export async function uploadFile(
 ): Promise<UploadedFile> {
   const ticket = await requestTicket(kind);
 
-  // Checked here as well as by Cloudinary, which also enforces both. The point
-  // of the local check is the message: "that file is 62 MB, the limit is 50 MB"
-  // before a minute of uploading, rather than after it.
+  // Against the ticket, not UPLOAD_RULES, even though checkFile has usually run
+  // already. The ticket is the server's current answer; the table compiled into
+  // this bundle is whatever it said when the page was loaded, which an open tab
+  // and a deploy that tightened a limit can disagree about.
   if (file.size > ticket.constraints.maxBytes) {
     throw new UploadError(
       `${file.name} is ${formatBytes(file.size)}. The limit is ${formatBytes(

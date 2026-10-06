@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { UploadError, uploadFile } from "@/lib/upload";
+import { UploadError, checkFile, uploadFile } from "@/lib/upload";
+import { UPLOAD_RULES } from "@/lib/upload-rules";
 import type { UploadKind, UploadedFile } from "@/types";
 
 /**
@@ -12,31 +13,46 @@ import type { UploadKind, UploadedFile } from "@/types";
  * registration form and the media picker on the report form, which look nothing
  * alike. Everything visual lives in the components.
  *
- * Uploads start the moment a file is chosen rather than on submit. By the time
- * somebody presses the button there is already a URL to send, so the submit is
- * fast and a failed upload is reported next to the file that failed instead of
- * taking the whole form down with it.
+ * Nothing is sent until the form calls `upload()`. Choosing a file only puts it
+ * in the queue with a local preview. Uploading as soon as a file was chosen made
+ * the submit instant, but every abandoned form, every replaced photo and every
+ * press of the remove button left a file in Cloudinary that nothing would ever
+ * refer to or delete. The cost is a slower submit, which is at least visible:
+ * the form can show progress while it happens.
+ *
+ * Because `upload()` is what starts the work, the hook has to live in the form
+ * rather than in the picker, and the picker takes what this returns as a prop.
  *
  * The queue lives in a ref, with state mirroring it for rendering. That is the
- * unusual part and it is deliberate: every mutation here has a side effect
- * attached (revoking an object URL, aborting a request, telling the parent what
- * the finished set is), and side effects do not belong inside a setState updater,
- * which React may run during a render or run twice.
+ * unusual part and it is deliberate: `upload()` reads the finished set straight
+ * after the last file lands, and reading it from `slots` would read whatever was
+ * there when the promise was created. The ref is also what lets the mutations
+ * carry side effects (revoking an object URL, aborting a request) without
+ * putting them inside a setState updater, which React may run twice.
  */
 
-export type SlotStatus = "uploading" | "done" | "error";
+/**
+ * "rejected" and "error" look the same on screen and are not the same thing.
+ * A file the size or format check turned away will be turned away every time, so
+ * submitting again is pointless. An upload that failed on the way to Cloudinary
+ * usually succeeds on a second try, and refusing to retry it would strand
+ * somebody on a form they cannot submit until they remove a perfectly good photo.
+ */
+export type SlotStatus = "pending" | "uploading" | "done" | "error" | "rejected";
 
 export interface UploadSlot {
   id: string;
+  /** Held until submit, which is the whole point of this hook. */
+  file: File;
   name: string;
   size: number;
   status: SlotStatus;
-  /** 0 to 100. */
+  /** 0 to 100. Only moves while the status is "uploading". */
   progress: number;
   error?: string;
   /** Present once the upload finishes. This is what gets submitted. */
   uploaded?: UploadedFile;
-  /** A local object URL, so a preview appears before the upload finishes. */
+  /** A local object URL, so a preview appears without uploading anything. */
   previewUrl?: string;
   /** Cancels an upload in flight. */
   abort?: () => void;
@@ -47,8 +63,6 @@ export interface UseUploadsOptions {
   /** Replaces the single slot instead of appending when false. */
   multiple?: boolean;
   maxFiles?: number;
-  /** Called with every finished upload whenever the set of them changes. */
-  onChange?: (files: UploadedFile[]) => void;
 }
 
 export interface UseUploads {
@@ -56,15 +70,23 @@ export interface UseUploads {
   addFiles: (files: FileList | File[]) => void;
   remove: (id: string) => void;
   reset: () => void;
+  /**
+   * Uploads everything in the queue that is not already uploaded.
+   *
+   * Resolves with the finished files in queue order, or with null when anything
+   * failed, in which case the failure is on the slot it belongs to and the form
+   * should stop. Already-uploaded files are skipped, so retrying a submit that
+   * the API rejected does not send the same photo twice.
+   */
+  upload: () => Promise<UploadedFile[] | null>;
   isUploading: boolean;
+  /** Across the whole queue, weighted by file size. */
+  progress: number;
   /** For problems with the batch rather than with one file, such as too many. */
   batchError: string | null;
-}
-
-function finished(slots: UploadSlot[]): UploadedFile[] {
-  return slots
-    .map((slot) => slot.uploaded)
-    .filter((uploaded): uploaded is UploadedFile => uploaded !== undefined);
+  /** From UPLOAD_RULES, for the file input. */
+  accept: string;
+  multiple: boolean;
 }
 
 /** Frees an object URL and stops an upload. Safe to call on any slot. */
@@ -82,54 +104,16 @@ export function useUploads(options: UseUploadsOptions): UseUploads {
   /** The queue. `slots` is a copy of this, kept only so React re-renders. */
   const queue = useRef<UploadSlot[]>([]);
 
-  // A ref, because an upload finishing reads this from inside a promise created
-  // on an earlier render. Reading the prop directly there would call whichever
-  // version of onChange existed when the upload started.
-  const onChangeRef = useRef(options.onChange);
-  useEffect(() => {
-    onChangeRef.current = options.onChange;
-  }, [options.onChange]);
-
-  const commit = useCallback((next: UploadSlot[], announce: boolean) => {
+  const commit = useCallback((next: UploadSlot[]) => {
     queue.current = next;
     setSlots(next);
-    if (announce) onChangeRef.current?.(finished(next));
   }, []);
 
   const patch = useCallback(
-    (id: string, changes: Partial<UploadSlot>, announce = false) => {
-      commit(
-        queue.current.map((slot) => (slot.id === id ? { ...slot, ...changes } : slot)),
-        announce,
-      );
+    (id: string, changes: Partial<UploadSlot>) => {
+      commit(queue.current.map((slot) => (slot.id === id ? { ...slot, ...changes } : slot)));
     },
     [commit],
-  );
-
-  const start = useCallback(
-    (id: string, file: File) => {
-      const controller = new AbortController();
-      patch(id, { abort: () => controller.abort() });
-
-      uploadFile(file, kind, {
-        signal: controller.signal,
-        onProgress: (progress) => patch(id, { progress }),
-      })
-        .then((uploaded) => {
-          patch(id, { status: "done", progress: 100, uploaded, abort: undefined }, true);
-        })
-        .catch((error: unknown) => {
-          patch(id, {
-            status: "error",
-            abort: undefined,
-            error:
-              error instanceof UploadError
-                ? error.message
-                : "Something went wrong uploading that file.",
-          });
-        });
-    },
-    [kind, patch],
   );
 
   const addFiles = useCallback(
@@ -138,7 +122,8 @@ export function useUploads(options: UseUploadsOptions): UseUploads {
       if (files.length === 0) return;
 
       // Single-file mode replaces rather than refusing, which is what somebody
-      // picking a different profile photo expects.
+      // picking a different profile photo expects. Nothing has been uploaded at
+      // this point, so the one being dropped costs nothing.
       const kept = multiple ? queue.current : [];
       if (!multiple) queue.current.forEach(discard);
 
@@ -152,28 +137,75 @@ export function useUploads(options: UseUploadsOptions): UseUploads {
       );
       if (accepted.length === 0) return;
 
-      const created = accepted.map((file) => ({
-        file,
-        slot: {
+      const created = accepted.map((file) => {
+        // A file that is too big or the wrong type still gets a slot, in the
+        // error state. The alternative is one banner for the whole batch, which
+        // does not say which of four files was the problem.
+        const problem = checkFile(file, kind);
+
+        return {
           id: crypto.randomUUID(),
+          file,
           name: file.name,
           size: file.size,
-          status: "uploading" as const,
+          status: problem ? ("rejected" as const) : ("pending" as const),
           progress: 0,
+          ...(problem ? { error: problem } : {}),
           // Video gets an icon instead. Rendering a <video> for a thumbnail
-          // means decoding the whole file the person is still uploading.
+          // means decoding a file that may be 50MB.
           ...(file.type.startsWith("image/") ? { previewUrl: URL.createObjectURL(file) } : {}),
-        } satisfies UploadSlot,
-      }));
+        } satisfies UploadSlot;
+      });
 
-      // Announced, because replacing a finished file in single mode has already
-      // changed what the parent holds even though nothing has uploaded yet.
-      commit([...kept, ...created.map((entry) => entry.slot)], true);
-
-      for (const entry of created) start(entry.slot.id, entry.file);
+      commit([...kept, ...created]);
     },
-    [commit, maxFiles, multiple, start],
+    [commit, kind, maxFiles, multiple],
   );
+
+  const upload = useCallback(async (): Promise<UploadedFile[] | null> => {
+    // Nothing is sent while a file is sitting there rejected, because it would
+    // mean creating the account without the photo they chose and not saying so.
+    if (queue.current.some((slot) => slot.status === "rejected")) return null;
+
+    const targets = queue.current.filter((slot) => !slot.uploaded);
+
+    // One at a time, stopping at the first failure. Parallel would finish sooner,
+    // but this way the progress bar means something and a submit that cannot
+    // succeed leaves fewer files behind in Cloudinary than it otherwise would.
+    for (const target of targets) {
+      const controller = new AbortController();
+      patch(target.id, {
+        status: "uploading",
+        progress: 0,
+        error: undefined,
+        abort: () => controller.abort(),
+      });
+
+      try {
+        const uploaded = await uploadFile(target.file, kind, {
+          signal: controller.signal,
+          onProgress: (progress) => patch(target.id, { progress }),
+        });
+        patch(target.id, { status: "done", progress: 100, uploaded, abort: undefined });
+      } catch (error) {
+        patch(target.id, {
+          status: "error",
+          abort: undefined,
+          error:
+            error instanceof UploadError
+              ? error.message
+              : "Something went wrong uploading that file.",
+        });
+        return null;
+      }
+    }
+
+    // Read off the ref, which patch has kept current, rather than off `slots`,
+    // which is a render behind.
+    return queue.current
+      .map((slot) => slot.uploaded)
+      .filter((uploaded): uploaded is UploadedFile => uploaded !== undefined);
+  }, [kind, patch]);
 
   const remove = useCallback(
     (id: string) => {
@@ -182,10 +214,7 @@ export function useUploads(options: UseUploadsOptions): UseUploads {
 
       discard(target);
       setBatchError(null);
-      commit(
-        queue.current.filter((slot) => slot.id !== id),
-        true,
-      );
+      commit(queue.current.filter((slot) => slot.id !== id));
     },
     [commit],
   );
@@ -193,11 +222,11 @@ export function useUploads(options: UseUploadsOptions): UseUploads {
   const reset = useCallback(() => {
     queue.current.forEach(discard);
     setBatchError(null);
-    commit([], true);
+    commit([]);
   }, [commit]);
 
   // Object URLs are held by the browser until revoked, so leaving the page mid
-  // upload would leak every preview and keep every request alive.
+  // submit would leak every preview and keep the request alive.
   useEffect(
     () => () => {
       queue.current.forEach(discard);
@@ -205,12 +234,29 @@ export function useUploads(options: UseUploadsOptions): UseUploads {
     [],
   );
 
+  // Weighted by size, because one 40MB video among three small photos makes an
+  // average of the four percentages read as almost done when it is not.
+  const totalBytes = slots.reduce((sum, slot) => sum + slot.size, 0);
+  const progress =
+    totalBytes === 0
+      ? 0
+      : Math.round(
+          slots.reduce(
+            (sum, slot) => sum + slot.size * (slot.uploaded ? 100 : slot.progress),
+            0,
+          ) / totalBytes,
+        );
+
   return {
     slots,
     addFiles,
     remove,
     reset,
+    upload,
     isUploading: slots.some((slot) => slot.status === "uploading"),
+    progress,
     batchError,
+    accept: UPLOAD_RULES[kind].accept.join(","),
+    multiple,
   };
 }

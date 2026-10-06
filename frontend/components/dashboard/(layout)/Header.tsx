@@ -5,24 +5,16 @@ import { usePathname } from "next/navigation";
 import { Menu, User, ShieldCheck, PackageIcon } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { adminNavItems, userNavItems } from "@/config/dashboard-nav";
-import type { AuthUser, NavItem } from "@/types";
+import type { HeaderProps, NavItem } from "@/types";
 import Image from "next/image";
-import UserMenu from "../common/UserMenu";
-
-interface HeaderProps {
-    isAdmin: boolean;
-    user: AuthUser;
-    name?: string;
-    email?: string;
-    userAvatar?: string;
-}
+import UserMenu from "../../common/UserMenu";
 
 export default function Header({ isAdmin, user }: HeaderProps) {
     const pathname = usePathname();
     const navItems: NavItem[] = isAdmin ? adminNavItems : userNavItems;
 
     return (
-        <header className="h-19 border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-20 px-4 sm:px-6 flex items-center justify-between gap-4">
+        <header className="h-19 border-b border-border bg-card/80 backdrop-blur-md z-20 px-4 sm:px-6 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 md:hidden">
                 <Sheet>
                     <SheetTrigger className="inline-flex items-center justify-center rounded-xl h-9 w-9 border border-input bg-background hover:bg-accent hover:text-accent-foreground">
@@ -69,11 +61,10 @@ export default function Header({ isAdmin, user }: HeaderProps) {
                                     <Link
                                         key={item.href}
                                         href={item.href}
-                                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold ${
-                                            isActive
-                                                ? "bg-primary text-primary-foreground"
-                                                : "text-muted-foreground hover:bg-muted"
-                                        }`}
+                                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold ${isActive
+                                            ? "bg-primary text-primary-foreground"
+                                            : "text-muted-foreground hover:bg-muted"
+                                            }`}
                                     >
                                         {item.icon && <Icon className="w-4 h-4" />}
                                         <span>{item.name}</span>

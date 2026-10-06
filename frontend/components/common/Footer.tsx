@@ -2,13 +2,7 @@
 
 import React, { FormEvent } from "react";
 import Link from "next/link";
-import {
-    MapPin,
-    Mail,
-    Phone,
-    Send,
-    Code2,
-} from "lucide-react";
+import { MapPin, Mail, Phone, Send, Code2 } from "lucide-react";
 import Image from "next/image";
 import SectionContainer from "./SectionContainer";
 
@@ -19,17 +13,10 @@ export default function Footer(): React.ReactNode {
 
     return (
         <footer className="w-full bg-card border-t border-border-custom text-foreground pt-12 pb-6">
-
             <SectionContainer>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
-
                     <div className="lg:col-span-2 space-y-4 mb-8">
-
-                        <Link
-                            href="/"
-                            className="flex items-center gap-3 group shrink-0 -ml-3.5"
-                        >
+                        <Link href="/" className="flex items-center gap-3 group shrink-0 -ml-3.5">
                             <div className="relative flex items-center justify-center">
                                 <Image
                                     src="/logo.png"
@@ -47,13 +34,16 @@ export default function Footer(): React.ReactNode {
                                     <span className="text-primary">Voice</span>
                                 </div>
                                 <p className="text-[11px] sm:text-[14px] font-semibold text-muted-foreground tracking-wide mt-1">
-                                    Report &nbsp;&nbsp;·&nbsp;&nbsp;Share&nbsp;&nbsp;·&nbsp;&nbsp;Improve&nbsp;&nbsp;·&nbsp;&nbsp;Together
+                                    Report
+                                    &nbsp;&nbsp;·&nbsp;&nbsp;Share&nbsp;&nbsp;·&nbsp;&nbsp;Improve&nbsp;&nbsp;·&nbsp;&nbsp;Together
                                 </p>
                             </div>
                         </Link>
 
                         <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
-                            Empowering communities to report, track, and resolve local infrastructure issues together. Make your neighborhood safer and better today.
+                            Empowering communities to report, track, and resolve local
+                            infrastructure issues together. Make your neighborhood safer and better
+                            today.
                         </p>
                         <div className="flex items-center gap-3 pt-2">
                             <Link
@@ -79,7 +69,10 @@ export default function Footer(): React.ReactNode {
                                 className="w-9 h-9 rounded-full bg-section hover:bg-primary hover:text-white text-foreground/80 flex items-center justify-center transition-colors border border-border-custom"
                                 aria-label="Instagram"
                             >
-                                <svg className="w-4 h-4 fill-none stroke-current stroke-2 stroke-round" viewBox="0 0 24 24">
+                                <svg
+                                    className="w-4 h-4 fill-none stroke-current stroke-2 stroke-round"
+                                    viewBox="0 0 24 24"
+                                >
                                     <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
                                     <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
                                     <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
@@ -108,21 +101,29 @@ export default function Footer(): React.ReactNode {
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/reports" className="hover:text-primary  transition-colors">
+                                <Link
+                                    href="/reports"
+                                    className="hover:text-primary  transition-colors"
+                                >
                                     Recent Reports
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/issues-map" className="hover:text-primary  transition-colors">
+                                <Link
+                                    href="/issues-map"
+                                    className="hover:text-primary  transition-colors"
+                                >
                                     Issues Map
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/statistics" className="hover:text-primary transition-colors">
+                                <Link
+                                    href="/statistics"
+                                    className="hover:text-primary transition-colors"
+                                >
                                     Activity Dashboard
                                 </Link>
                             </li>
-
                         </ul>
                     </div>
 
@@ -153,7 +154,7 @@ export default function Footer(): React.ReactNode {
                         <p className="text-xs text-muted-foreground leading-relaxed">
                             Subscribe to receive monthly civic reports and infrastructure updates.
                         </p>
-                        <form onSubmit={handleSubscribe} className="space-y-2">
+                        <form onSubmit={handleSubscribe} className="space-y-2 mb-4 md:mb-0">
                             <div className="relative">
                                 <input
                                     type="email"
@@ -170,7 +171,6 @@ export default function Footer(): React.ReactNode {
                             </div>
                         </form>
                     </div>
-
                 </div>
 
                 <div className="border-t border-border-custom/60 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-foreground">
@@ -182,16 +182,21 @@ export default function Footer(): React.ReactNode {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <Link href="/privacy-policy" className="hover:text-primary transition-colors">
+                        <Link
+                            href="/privacy-policy"
+                            className="hover:text-primary transition-colors"
+                        >
                             Privacy Policy
                         </Link>
                         <span>•</span>
-                        <Link href="/terms-of-service" className="hover:text-primary transition-colors">
+                        <Link
+                            href="/terms-of-service"
+                            className="hover:text-primary transition-colors"
+                        >
                             Terms of Service
                         </Link>
                     </div>
                 </div>
-
             </SectionContainer>
         </footer>
     );

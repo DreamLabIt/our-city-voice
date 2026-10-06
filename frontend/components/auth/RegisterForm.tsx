@@ -16,7 +16,8 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import type { RegisterInputs, UploadedFile } from "@/types";
+import { useUploads } from "@/hooks/use-uploads";
+import type { RegisterInputs } from "@/types";
 
 /** Matches the API's rule. See the note on passwordSchema in auth.controller.ts. */
 const MIN_PASSWORD_LENGTH = 8;
@@ -24,14 +25,13 @@ const MIN_PASSWORD_LENGTH = 8;
 export default function RegisterForm() {
     const [serverError, setServerError] = useState<string>("");
     const [isPending, startTransition] = useTransition();
+
     /**
-     * The avatar is uploaded as soon as it is chosen, so what is held here is a
-     * finished Cloudinary URL. `null` while one is in flight, which is what
-     * disables the submit button below: submitting mid-upload would create the
-     * account without the photo the person just picked.
+     * Holds the chosen photo locally and does not send it until this form asks.
+     * Choosing one and then closing the tab therefore leaves nothing behind in
+     * Cloudinary, which is why the hook lives here and not inside AvatarUpload.
      */
-    const [avatar, setAvatar] = useState<UploadedFile | null>(null);
-    const [isUploading, setIsUploading] = useState(false);
+    const uploads = useUploads({ kind: "avatar" });
 
     const form = useForm<RegisterInputs>({
         defaultValues: {
@@ -42,19 +42,35 @@ export default function RegisterForm() {
         },
     });
 
-    const onSubmit = (data: RegisterInputs) => {
+    const onSubmit = async (data: RegisterInputs) => {
         setServerError("");
+
+        // The photo goes to Cloudinary now, not when it was chosen. Deliberately
+        // outside the transition: progress updates marked as transition work can
+        // be deferred, and a progress bar that lags is worse than none.
+        const uploaded = await uploads.upload();
+
+        if (uploaded === null) {
+            // Which file and why is already shown under the picker, so this only
+            // has to say that the account was not created.
+            setServerError(
+                "Your photo could not be uploaded. Remove it or choose another, then try again.",
+            );
+            return;
+        }
 
         const formData = new FormData();
         formData.append("name", data.name);
         formData.append("email", data.email);
         formData.append("password", data.password);
-        if (avatar) formData.append("avatarUrl", avatar.url);
+        if (uploaded[0]) formData.append("avatarUrl", uploaded[0].url);
 
         startTransition(async () => {
             const res = await registerAction({ error: "" }, formData);
 
-            // Only failures come back; success redirects to the dashboard.
+            // Only failures come back; success redirects away. The upload is not
+            // repeated if they fix the field and submit again: upload() skips
+            // anything already sent.
             if (res?.fieldErrors) {
                 for (const [field, messages] of Object.entries(res.fieldErrors)) {
                     if (field === "name" || field === "email" || field === "password") {
@@ -65,6 +81,14 @@ export default function RegisterForm() {
             if (res?.error) setServerError(res.error);
         });
     };
+
+    /**
+     * isSubmitting as well as the two obvious flags. It is what covers the gap
+     * between the press and the first "uploading" render, which is otherwise a
+     * window where the button is still live and a second click would upload the
+     * photo twice.
+     */
+    const isBusy = form.formState.isSubmitting || uploads.isUploading || isPending;
 
     return (
         <Form {...form}>
@@ -169,29 +193,24 @@ export default function RegisterForm() {
                     )}
                 />
 
-                <AvatarUpload
-                    disabled={isPending}
-                    onChange={(file) => {
-                        setAvatar(file);
-                        setIsUploading(false);
-                    }}
-                    onUploadingChange={setIsUploading}
-                />
+                <AvatarUpload uploads={uploads} disabled={isBusy} />
 
                 <Button
                     type="submit"
-                    disabled={isPending || isUploading}
+                    disabled={isBusy}
                     className="w-full h-10 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-sm mt-2"
                 >
-                    {isPending ? (
+                    {uploads.isUploading ? (
+                        <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            <span className="tabular-nums">
+                                Uploading photo... {uploads.progress}%
+                            </span>
+                        </>
+                    ) : isPending ? (
                         <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             <span>Creating account...</span>
-                        </>
-                    ) : isUploading ? (
-                        <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            <span>Uploading photo...</span>
                         </>
                     ) : (
                         <span>Create Account</span>

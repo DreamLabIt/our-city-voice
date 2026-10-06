@@ -395,3 +395,57 @@ export interface DataTypeRow {
     items: string;
     purpose: string;
 }
+
+
+export interface HeaderProps {
+    isAdmin: boolean;
+    user: AuthUser;
+    name?: string;
+    email?: string;
+    userAvatar?: string;
+}
+
+export interface SidebarProps {
+    isAdmin: boolean;
+    user: AuthUser;
+    isCollapsed: boolean;
+    setIsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+
+export interface DashboardLayoutProps {
+    children: React.ReactNode;
+    isAdmin?: boolean;
+}
+
+export interface DashboardClientLayoutProps {
+    children: React.ReactNode;
+    user: AuthUser;
+    isAdmin?: boolean;
+}
+
+export interface UserProfileData {
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    role: "super_admin" | "user";
+    avatarUrl?: string | null;
+    joinedDate?: string;
+    location?: string;
+    bio?: string;
+}
+
+export interface ProfileHeaderProps {
+    user: UserProfileData;
+}
+
+
+export interface FilterValues {
+    category: string;
+    municipality: string;
+    ward: string;
+    road: string;
+    postalCode: string;
+    address: string;
+}

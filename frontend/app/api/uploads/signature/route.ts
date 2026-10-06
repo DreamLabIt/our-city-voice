@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
 
-import {
-  CloudinaryNotConfiguredError,
-  UPLOAD_RULES,
-  createUploadTicket,
-} from "@/lib/cloudinary";
+import { CloudinaryNotConfiguredError, createUploadTicket } from "@/lib/cloudinary";
 import { clientKey, consume } from "@/lib/rate-limit";
 import { getCurrentUser } from "@/lib/session";
+import { UPLOAD_RULES } from "@/lib/upload-rules";
 import type { UploadKind } from "@/types";
 
 /**

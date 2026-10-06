@@ -1,10 +1,20 @@
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import ProfileHeader from "@/components/dashboard/profile/ProfileHeader";
+import ProfileForm from "@/components/dashboard/profile/ProfileForm";
+import DashboardLayout from "@/components/dashboard/(layout)/DashboardLayout";
+import { getCurrentUser } from "@/lib/session";
 
-export default function UserDashboardPage() {
+export default async function ProfilePage() {
+    const user = await getCurrentUser();
+
+    if (!user) {
+        return null;
+    }
+
     return (
         <DashboardLayout>
-            <div className="space-y-4">
-                <h1 className="text-2xl font-black tracking-tight">Welcome</h1>
+            <div className="space-y-6">
+                <ProfileHeader user={user} />
+                <ProfileForm user={user} />
             </div>
         </DashboardLayout>
     );

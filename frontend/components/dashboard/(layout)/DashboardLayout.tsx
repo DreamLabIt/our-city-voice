@@ -1,13 +1,7 @@
-import React from "react";
 import { redirect } from "next/navigation";
-
 import { getCurrentUser } from "@/lib/session";
 import DashboardClientLayout from "./DashboardClientLayout";
-
-interface DashboardLayoutProps {
-    children: React.ReactNode;
-    isAdmin?: boolean;
-}
+import type { DashboardLayoutProps } from "@/types";
 
 export default async function DashboardLayout({
     children,

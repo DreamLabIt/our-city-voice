@@ -1,16 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-
+import { useState } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
-import type { AuthUser } from "@/types";
-
-interface DashboardClientLayoutProps {
-    children: React.ReactNode;
-    user: AuthUser;
-    isAdmin?: boolean;
-}
+import type { DashboardClientLayoutProps } from "@/types";
 
 export default function DashboardClientLayout({
     children,
@@ -20,7 +13,7 @@ export default function DashboardClientLayout({
     const [isCollapsed, setIsCollapsed] = useState(false);
 
     return (
-        <div className="flex min-h-screen bg-background text-foreground">
+        <div className="flex h-screen overflow-hidden bg-background text-foreground">
             <Sidebar
                 isAdmin={isAdmin}
                 user={user}
@@ -28,17 +21,16 @@ export default function DashboardClientLayout({
                 setIsCollapsed={setIsCollapsed}
             />
 
-            <div className="flex min-w-0 flex-1 flex-col">
+            <div className="min-w-0 flex-1 overflow-y-auto">
                 <Header
                     isAdmin={isAdmin}
                     user={user}
                 />
 
-                <main className="w-full flex-1 space-y-6 overflow-y-auto p-4 pl-6">
+                <main className="w-full space-y-6 p-4 pl-6">
                     {children}
                 </main>
             </div>
         </div>
     );
 }
-
