@@ -1,16 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-
+import { useState } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
-import type { AuthUser } from "@/types";
-
-interface DashboardClientLayoutProps {
-    children: React.ReactNode;
-    user: AuthUser;
-    isAdmin?: boolean;
-}
+import type { DashboardClientLayoutProps } from "@/types";
 
 export default function DashboardClientLayout({
     children,
