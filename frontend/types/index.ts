@@ -291,6 +291,45 @@ export interface IssueMapPin {
     updatedAt: string;
 }
 
+// ── Accounts ──────────────────────────────────────────────
+// Two roles, mirroring the user_role enum. A third tier was dropped because
+// nothing enforced it: see the comment on the enum in schema.prisma.
+export type UserRole = "user" | "super_admin";
+
+/** What GET /auth/me returns. Never includes anything password-shaped. */
+export interface AuthUser {
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    role: UserRole;
+    avatarUrl: string | null;
+    departmentId: string | null;
+    emailVerifiedAt: string | null;
+    createdAt: string;
+}
+
+// ── Uploads ───────────────────────────────────────────────
+// Which set of rules a signature request is asking for. The server owns the
+// folder, size cap and format list behind each name; see lib/cloudinary.ts.
+export type UploadKind = "avatar" | "report-media";
+
+/** A finished upload. The `url` is what gets stored in the database. */
+export interface UploadedFile {
+    url: string;
+    /** Cloudinary's own identifier, kept so a file can be deleted later. */
+    publicId: string;
+    resourceType: "image" | "video";
+    format: string;
+    bytes: number;
+    width: number | null;
+    height: number | null;
+    /** Video only. */
+    durationSeconds: number | null;
+    originalFilename: string | null;
+}
+
+// ── Auth forms ────────────────────────────────────────────
 export type LoginInputs = {
     email: string;
     password: string;
@@ -300,18 +339,25 @@ export type RegisterInputs = {
     name: string;
     email: string;
     password: string;
-    avatar?: FileList | null;
+    /**
+     * The finished upload, not the file. The image reaches Cloudinary before the
+     * form is submitted, so what the server action receives is a URL string.
+     */
+    avatar?: UploadedFile | null;
 };
 
 export type FormState = {
     error?: string;
+    /**
+     * field -> messages, straight from the API's validation envelope, so a
+     * server-side rule lands on the input it belongs to rather than in a banner.
+     */
+    fieldErrors?: Record<string, string[]>;
     success?: boolean;
 };
 
-export type RegisterFormState = {
-    error?: string;
-    success?: boolean;
-};
+/** Registration has nothing extra to report. Kept as a name, not a shape. */
+export type RegisterFormState = FormState;
 
 
 export type TopWardLocation = {
