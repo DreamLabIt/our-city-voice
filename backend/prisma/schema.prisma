@@ -49,10 +49,20 @@ datasource db {
 // migration line; removing one is not. These four sets are stable enough for
 // that to be the right trade.
 
+// Two roles, deliberately. An earlier draft had citizen/officer/admin, which
+// invented an authorisation tier nothing enforced: "officer" and "citizen" had
+// identical permissions, so the only real boundary was admin or not.
+//
+// `super_admin` accounts are created by hand with `pnpm admin:create`, never
+// through registration, and only a super admin can change anybody's role. That
+// keeps privilege escalation off the public surface entirely: there is no code
+// path where a request body can set this column.
+//
+// Post.assignedOfficerId still points at a user. Being assigned work is a fact
+// about a report, not a permission, so it needs no role of its own.
 enum UserRole {
-  citizen
-  officer
-  admin
+  user
+  super_admin
 
   @@map("user_role")
 }
@@ -90,9 +100,13 @@ model User {
   email         String    @unique
   passwordHash  String    @map("password_hash")
   phone         String?
-  role          UserRole  @default(citizen)
+  role          UserRole  @default(user)
   departmentId  BigInt?   @map("department_id")
-  avatarKey     String?   @map("avatar_key")
+  // A full Cloudinary secure_url, not a bucket key. Media.storageKey keeps the
+  // key-plus-build-the-URL approach because we control those uploads end to
+  // end; an avatar is one immutable image whose URL is the only thing any
+  // caller wants, so storing it saves every read from reassembling it.
+  avatarUrl     String?   @map("avatar_url")
   emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)

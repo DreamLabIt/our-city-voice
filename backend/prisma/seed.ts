@@ -158,13 +158,31 @@ const PRIORITY: Record<string, PostPriority> = {
   Critical: "critical",
 };
 
-/** The frontend's comment roles collapse onto three account roles. */
-const ROLE_FROM_COMMENTER: Record<string, UserRole> = {
-  Resident: "citizen",
-  "Local Business": "citizen",
-  "Field Inspector": "officer",
-  "Municipal Officer": "officer",
-  "Ward Councillor": "officer",
+/**
+ * Seed-only roles.
+ *
+ * The database has two roles, `user` and `super_admin`. These three are a
+ * property of the fixtures rather than of an account: the seed needs to know
+ * which people are residents, because residents are who it picks from when
+ * authoring comments and likes. Giving a councillor a like on their own ward's
+ * report would be odd, and nothing in the schema would stop it.
+ */
+type SeedRole = "resident" | "staff" | "admin";
+
+/** Seed role to the role the column actually holds. See schema.prisma. */
+const DB_ROLE: Record<SeedRole, UserRole> = {
+  resident: "user",
+  staff: "user",
+  admin: "super_admin",
+};
+
+/** The frontend's commenter labels, mapped onto the seed roles above. */
+const ROLE_FROM_COMMENTER: Record<string, SeedRole> = {
+  Resident: "resident",
+  "Local Business": "resident",
+  "Field Inspector": "staff",
+  "Municipal Officer": "staff",
+  "Ward Councillor": "staff",
 };
 
 /**
@@ -389,43 +407,48 @@ async function main(): Promise<void> {
   // Everyone shares one password so you can log in as any of them while
   // building auth. The hash is computed once; scrypt is deliberately slow and
   // hashing 40 times would dominate the seed's runtime.
+  //
+  // That includes "Platform Admin", who is seeded as a super_admin with the
+  // same known password. Safe only because this file is development-only: it
+  // opens by truncating every table, so it can never be pointed at anything
+  // real. A super admin for a deployed database is made with `pnpm admin:create`.
   const sharedHash = await hashPassword("password123");
   const takenEmails = new Set<string>();
 
   interface UserSeed {
     name: string;
-    role: UserRole;
+    role: SeedRole;
     department?: string;
   }
   const userSeeds = new Map<string, UserSeed>();
 
-  const addUser = (name: string, role: UserRole, department?: string): void => {
+  const addUser = (name: string, role: SeedRole, department?: string): void => {
     const trimmed = name.trim();
     if (!trimmed || trimmed === "Unassigned") return;
     const existing = userSeeds.get(trimmed);
-    // Officer beats citizen if the same person appears in both roles.
-    if (existing && existing.role !== "citizen") return;
+    // Staff beats resident if the same person appears in both roles.
+    if (existing && existing.role !== "resident") return;
     userSeeds.set(trimmed, { name: trimmed, role, ...(department ? { department } : {}) });
   };
 
   addUser("Platform Admin", "admin");
   for (const post of fixtures.posts) {
-    addUser(post.reportedBy, "citizen");
-    if (post.assignedOfficer) addUser(post.assignedOfficer, "officer", post.department);
+    addUser(post.reportedBy, "resident");
+    if (post.assignedOfficer) addUser(post.assignedOfficer, "staff", post.department);
     for (const update of post.updates) {
       // Some actors are department names or desks rather than people. Those
       // become a null actor on the history row instead of a fake account.
       if (!DEPARTMENTS.includes(update.actor) && update.actor !== "Intake Desk") {
-        addUser(update.actor, "citizen");
+        addUser(update.actor, "resident");
       }
     }
   }
   for (const report of fixtures.initialReports) {
-    if (report.assignedOfficer) addUser(report.assignedOfficer, "officer", report.department);
+    if (report.assignedOfficer) addUser(report.assignedOfficer, "staff", report.department);
   }
   const collectComments = (list: MockComment[]): void => {
     for (const comment of list) {
-      addUser(comment.author, ROLE_FROM_COMMENTER[comment.role] ?? "citizen");
+      addUser(comment.author, ROLE_FROM_COMMENTER[comment.role] ?? "resident");
       if (comment.replies) collectComments(comment.replies);
     }
   };
@@ -436,13 +459,19 @@ async function main(): Promise<void> {
       name: u.name,
       email: emailFor(u.name, takenEmails),
       passwordHash: sharedHash,
-      role: u.role,
+      role: DB_ROLE[u.role],
       departmentId: u.department ? (departments.get(u.department) ?? null) : null,
     })),
   });
   const users = new Map((await prisma.user.findMany()).map((u) => [u.name, u.id]));
-  const citizenIds = (await prisma.user.findMany({ where: { role: "citizen" }, select: { id: true } }))
-    .map((u) => u.id);
+  // Residents, for authoring comments and spreading likes around. This used to
+  // be a `where: { role: "citizen" }` query, which no longer has an answer: the
+  // column holds `user` for everybody but the admin now, so the resident
+  // distinction only exists in the fixtures.
+  const residentIds = [...userSeeds.values()]
+    .filter((u) => u.role === "resident")
+    .map((u) => users.get(u.name))
+    .filter((id): id is bigint => id !== undefined);
   console.log(`  users              ${users.size}`);
 
   // ── posts ─────────────────────────────────────────────────────────
@@ -528,8 +557,8 @@ async function main(): Promise<void> {
     const createdAt = parseDate(report.date);
     const slug = CATEGORY_SLUG.get(report.category) ?? "other";
     const status = STATUS[report.status] ?? "pending";
-    // This fixture set has no reporter, so reports are spread across citizens.
-    const authorId = citizenIds[Math.floor(rng() * citizenIds.length)]!;
+    // This fixture set has no reporter, so reports are spread across residents.
+    const authorId = residentIds[Math.floor(rng() * residentIds.length)]!;
 
     const created = await prisma.post.create({
       data: {
@@ -613,7 +642,7 @@ async function main(): Promise<void> {
     commentCount += 1;
 
     // Real like rows, not a counter. likeCount is recomputed from these below.
-    const likers = [...citizenIds].sort(() => rng() - 0.5).slice(0, Math.min(comment.likes, citizenIds.length));
+    const likers = [...residentIds].sort(() => rng() - 0.5).slice(0, Math.min(comment.likes, residentIds.length));
     if (likers.length > 0) {
       await prisma.commentLike.createMany({
         data: likers.map((userId) => ({ commentId: created.id, userId })),
@@ -638,7 +667,7 @@ async function main(): Promise<void> {
   let likeCount = 0;
   for (const post of fixtures.posts) {
     const postId = postIdByFixtureId.get(post.id)!;
-    const likers = [...citizenIds].sort(() => rng() - 0.5).slice(0, Math.min(post.likes, citizenIds.length));
+    const likers = [...residentIds].sort(() => rng() - 0.5).slice(0, Math.min(post.likes, residentIds.length));
     if (likers.length === 0) continue;
     await prisma.postLike.createMany({
       data: likers.map((userId) => ({ postId, userId })),
@@ -648,7 +677,7 @@ async function main(): Promise<void> {
   for (const report of fixtures.initialReports) {
     const post = await prisma.post.findUnique({ where: { trackingCode: report.trackingId } });
     if (!post) continue;
-    const likers = [...citizenIds].sort(() => rng() - 0.5).slice(0, Math.min(report.upvotes, citizenIds.length));
+    const likers = [...residentIds].sort(() => rng() - 0.5).slice(0, Math.min(report.upvotes, residentIds.length));
     if (likers.length === 0) continue;
     await prisma.postLike.createMany({
       data: likers.map((userId) => ({ postId: post.id, userId })),
