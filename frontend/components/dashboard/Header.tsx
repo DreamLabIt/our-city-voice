@@ -2,11 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-    Menu,
-    User,
-    ShieldCheck,
-} from "lucide-react";
+import { Menu, User, ShieldCheck, PackageIcon } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { adminNavItems, userNavItems } from "@/config/dashboard-nav";
 import type { AuthUser, NavItem } from "@/types";
@@ -21,10 +17,7 @@ interface HeaderProps {
     userAvatar?: string;
 }
 
-export default function Header({
-    isAdmin,
-    user,
-}: HeaderProps) {
+export default function Header({ isAdmin, user }: HeaderProps) {
     const pathname = usePathname();
     const navItems: NavItem[] = isAdmin ? adminNavItems : userNavItems;
 
@@ -55,11 +48,13 @@ export default function Header({
                                     <span className="text-[12px] text-muted-foreground font-medium flex items-center">
                                         {isAdmin ? (
                                             <>
-                                                <ShieldCheck className="w-3 h-3 text-primary " /> Admin Portal
+                                                <ShieldCheck className="w-3 h-3 text-primary " />{" "}
+                                                Admin Portal
                                             </>
                                         ) : (
                                             <>
-                                                <User className="w-4 h-4 text-muted-foreground" /> Citizen Portal
+                                                <User className="w-4 h-4 text-muted-foreground" />{" "}
+                                                Citizen Portal
                                             </>
                                         )}
                                     </span>
@@ -68,16 +63,19 @@ export default function Header({
                         </div>
                         <nav className="p-4 space-y-1.5">
                             {navItems.map((item) => {
-                                const Icon = item.icon;
+                                const Icon = item.icon ? item.icon : PackageIcon;
                                 const isActive = pathname === item.href;
                                 return (
                                     <Link
                                         key={item.href}
                                         href={item.href}
-                                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-                                            }`}
+                                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold ${
+                                            isActive
+                                                ? "bg-primary text-primary-foreground"
+                                                : "text-muted-foreground hover:bg-muted"
+                                        }`}
                                     >
-                                        <Icon className="w-4 h-4" />
+                                        {item.icon && <Icon className="w-4 h-4" />}
                                         <span>{item.name}</span>
                                     </Link>
                                 );
@@ -93,11 +91,12 @@ export default function Header({
             <div className="hidden md:flex items-center gap-2 text-xs font-semibold text-muted-foreground">
                 <span>Dashboard</span>
                 <span>/</span>
-                <span className="text-foreground capitalize">{isAdmin ? "Admin Access" : "Citizen User"}</span>
+                <span className="text-foreground capitalize">
+                    {isAdmin ? "Admin Access" : "Citizen User"}
+                </span>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
-
                 <UserMenu user={user} />
             </div>
         </header>

@@ -5,7 +5,7 @@ export interface NavItem {
     name?: string;
     href: string;
     title?: string;
-    icon: LucideIcon;
+    icon?: LucideIcon;
     badge?: string;
 }
 
@@ -362,13 +362,11 @@ export type FormState = {
 /** Registration has nothing extra to report. Kept as a name, not a shape. */
 export type RegisterFormState = FormState;
 
-
 export type TopWardLocation = {
     ward: string;
     reportsCount: number;
     samplePost: PostItem;
 };
-
 
 export interface ErrorPageProps {
     error: Error & { digest?: string };
@@ -385,7 +383,6 @@ export interface ProhibitedActivity {
     title: string;
     desc: string;
 }
-
 
 export interface HighlightItem {
     icon: React.ElementType;
