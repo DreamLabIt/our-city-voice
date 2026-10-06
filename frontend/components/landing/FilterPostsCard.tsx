@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import { useState } from "react";
 import {
     Filter,
     LayoutGrid,
@@ -9,105 +9,281 @@ import {
     Road,
     MapPin,
     Home,
-    ChevronDown,
 } from "lucide-react";
 
-export default function FilterPostsCard(): React.ReactNode {
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import type { FilterValues } from "@/types"
+
+const initialFilters: FilterValues = {
+    category: "",
+    municipality: "",
+    ward: "",
+    road: "",
+    postalCode: "",
+    address: "",
+};
+
+export default function FilterPostsCard() {
+    const [filters, setFilters] = useState<FilterValues>(initialFilters);
+
+    const updateFilter = <K extends keyof FilterValues>(
+        key: K,
+        value: FilterValues[K],
+    ) => {
+        setFilters((prev) => ({
+            ...prev,
+            [key]: value,
+        }));
+    };
+
+    const handleReset = () => {
+        setFilters(initialFilters);
+    };
+
+    const handleApplyFilters = () => {
+        console.log("Applied filters:", filters);
+    };
+
     return (
-        <div className="w-full bg-section rounded-2xl border border-border-custom p-4 shadow-xs space-y-3">
+        <div className="w-full space-y-3 rounded-2xl border border-border-custom bg-section p-4 shadow-xs">
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-foreground font-bold text-base">
-                    <Filter className="w-5 h-5 text-primary fill-primary" />
+                <div className="flex items-center gap-2 text-base font-bold text-foreground">
+                    <Filter className="h-5 w-5 fill-primary text-primary" />
                     <span>Filter Posts</span>
                 </div>
-                <button
+
+                <Button
                     type="button"
-                    className="text-md font-semibold text-primary hover:underline cursor-pointer pr-2"
+                    variant="ghost"
+                    onClick={handleReset}
+                    className="h-auto p-0 pr-2 text-sm font-semibold text-primary hover:bg-transparent hover:text-primary hover:underline"
                 >
                     Reset
-                </button>
+                </Button>
             </div>
 
-            <div className="space-y-2">
-                <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/70 pointer-events-none">
-                        <LayoutGrid className="w-4 h-4" />
+            <div className="space-y-3">
+                <div className="space-y-1.5">
+                    <Label
+                        htmlFor="category"
+                        className="sr-only"
+                    >
+                        Category
+                    </Label>
+
+                    <div className="relative">
+                        <LayoutGrid className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-foreground/70" />
+
+                        <Select
+                            value={filters.category}
+                            onValueChange={(value) =>
+                                updateFilter("category", value ?? "")
+                            }
+                        >
+                            <SelectTrigger
+                                id="category"
+                                className="h-10 w-full rounded border-border-custom/90 bg-card pl-11 pr-3 text-xs font-medium text-foreground/80 shadow-2xs focus:ring-1 focus:ring-primary"
+                            >
+                                <SelectValue placeholder="Select Category" />
+                            </SelectTrigger>
+
+                            <SelectContent>
+                                <SelectItem value="roads">
+                                    Roads
+                                </SelectItem>
+
+                                <SelectItem value="water">
+                                    Water & Sewer
+                                </SelectItem>
+
+                                <SelectItem value="flooding">
+                                    Stormwater & Flooding
+                                </SelectItem>
+
+                                <SelectItem value="sidewalks">
+                                    Sidewalks
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
-                    <select className="w-full pl-12 pr-8 py-2.5 bg-card border border-border-custom/90 rounded text-xs font-medium text-foreground/80 focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer shadow-2xs">
-                        <option value="">Select Category</option>
-                        <option value="roads">Roads</option>
-                        <option value="water">Water & Sewer</option>
-                        <option value="flooding">Stormwater & Flooding</option>
-                        <option value="sidewalks">Sidewalks</option>
-                    </select>
-                    <ChevronDown className="w-3.5 h-3.5 text-foreground/70 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
 
-                <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/70 pointer-events-none">
-                        <Building2 className="w-4 h-4" />
+                <div className="space-y-1.5">
+                    <Label
+                        htmlFor="municipality"
+                        className="sr-only"
+                    >
+                        City / Municipality
+                    </Label>
+
+                    <div className="relative">
+                        <Building2 className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-foreground/70" />
+
+                        <Select
+                            value={filters.municipality}
+                            onValueChange={(value) =>
+                                updateFilter("municipality", value ?? "")
+                            }
+                        >
+                            <SelectTrigger
+                                id="municipality"
+                                className="h-10 w-full rounded border-border-custom/90 bg-card pl-11 pr-3 text-xs font-medium text-foreground/80 shadow-2xs focus:ring-1 focus:ring-primary"
+                            >
+                                <SelectValue placeholder="Select City / Municipality" />
+                            </SelectTrigger>
+
+                            <SelectContent>
+                                <SelectItem value="toronto">
+                                    Toronto
+                                </SelectItem>
+
+                                <SelectItem value="scarborough">
+                                    Scarborough
+                                </SelectItem>
+
+                                <SelectItem value="north-york">
+                                    North York
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
-                    <select className="w-full pl-12 pr-8 py-2.5 bg-card border border-border-custom/90 rounded text-xs font-medium text-foreground/80 focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer shadow-2xs">
-                        <option value="">Select City / Municipality</option>
-                        <option value="toronto">Toronto</option>
-                        <option value="scarborough">Scarborough</option>
-                        <option value="north-york">North York</option>
-                    </select>
-                    <ChevronDown className="w-3.5 h-3.5 text-foreground/70 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
 
-                <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/70 pointer-events-none">
-                        <Map className="w-4 h-4" />
+                <div className="space-y-1.5">
+                    <Label
+                        htmlFor="ward"
+                        className="sr-only"
+                    >
+                        Ward
+                    </Label>
+
+                    <div className="relative">
+                        <Map className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-foreground/70" />
+
+                        <Select
+                            value={filters.ward}
+                            onValueChange={(value) =>
+                                updateFilter("ward", value ?? "")
+                            }
+                        >
+                            <SelectTrigger
+                                id="ward"
+                                className="h-10 w-full rounded border-border-custom/90 bg-card pl-11 pr-3 text-xs font-medium text-foreground/80 shadow-2xs focus:ring-1 focus:ring-primary"
+                            >
+                                <SelectValue placeholder="Select Ward" />
+                            </SelectTrigger>
+
+                            <SelectContent>
+                                <SelectItem value="1">
+                                    Ward 1
+                                </SelectItem>
+
+                                <SelectItem value="2">
+                                    Ward 2
+                                </SelectItem>
+
+                                <SelectItem value="3">
+                                    Ward 3
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
-                    <select className="w-full pl-12 pr-8 py-2.5 bg-card border border-border-custom/90 rounded text-xs font-medium text-foreground/80 focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer shadow-2xs">
-                        <option value="">Select Ward</option>
-                        <option value="1">Ward 1</option>
-                        <option value="2">Ward 2</option>
-                        <option value="3">Ward 3</option>
-                    </select>
-                    <ChevronDown className="w-3.5 h-3.5 text-foreground/70 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
 
-                <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/70 pointer-events-none">
-                        <Road className="w-4 h-4" />
+                <div className="space-y-1.5">
+                    <Label
+                        htmlFor="road"
+                        className="sr-only"
+                    >
+                        Road / Street Name
+                    </Label>
+
+                    <div className="relative">
+                        <Road className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-foreground/70" />
+
+                        <Input
+                            id="road"
+                            name="road"
+                            type="text"
+                            value={filters.road}
+                            onChange={(event) =>
+                                updateFilter("road", event.target.value)
+                            }
+                            placeholder="Road / Street Name"
+                            className="h-10 rounded border-border-custom/90 bg-card pl-11 text-xs font-medium text-foreground shadow-2xs placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary"
+                        />
                     </div>
-                    <input
-                        type="text"
-                        placeholder="Road / Street Name"
-                        className="w-full pl-12 pr-3 py-2.5 bg-card border border-border-custom/90 rounded text-xs font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
-                    />
                 </div>
 
-                <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/70 pointer-events-none">
-                        <MapPin className="w-4 h-4" />
+                <div className="space-y-1.5">
+                    <Label
+                        htmlFor="postal-code"
+                        className="sr-only"
+                    >
+                        Postal Code
+                    </Label>
+
+                    <div className="relative">
+                        <MapPin className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-foreground/70" />
+
+                        <Input
+                            id="postal-code"
+                            name="postalCode"
+                            type="text"
+                            value={filters.postalCode}
+                            onChange={(event) =>
+                                updateFilter(
+                                    "postalCode",
+                                    event.target.value,
+                                )
+                            }
+                            placeholder="Postal Code"
+                            className="h-10 rounded border-border-custom/90 bg-card pl-11 text-xs font-medium text-foreground shadow-2xs placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary"
+                        />
                     </div>
-                    <input
-                        type="text"
-                        placeholder="Postal Code"
-                        className="w-full pl-12 pr-3 py-2.5 bg-card border border-border-custom/90 rounded text-xs font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
-                    />
                 </div>
 
-                <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/70 pointer-events-none">
-                        <Home className="w-4 h-4" />
+                <div className="space-y-1.5">
+                    <Label
+                        htmlFor="address"
+                        className="sr-only"
+                    >
+                        Address / Property
+                    </Label>
+
+                    <div className="relative">
+                        <Home className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-foreground/70" />
+
+                        <Input
+                            id="address"
+                            name="address"
+                            type="text"
+                            value={filters.address}
+                            onChange={(event) =>
+                                updateFilter("address", event.target.value)
+                            }
+                            placeholder="Address / Property"
+                            className="h-10 rounded border-border-custom/90 bg-card pl-11 text-xs font-medium text-foreground shadow-2xs placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary"
+                        />
                     </div>
-                    <input
-                        type="text"
-                        placeholder="Address / Property"
-                        className="w-full pl-12 pr-3 py-2.5 bg-card border border-border-custom/90 rounded text-xs font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
-                    />
                 </div>
 
-                <button
+                <Button
                     type="button"
-                    className="w-full bg-primary hover:bg-primary-hover active:scale-[0.99] text-white font-semibold py-2.5 rounded-sm text-xs transition-all cursor-pointer shadow-sm mt-1"
+                    onClick={handleApplyFilters}
+                    className="mt-1 h-10 w-full rounded-sm bg-primary text-xs font-semibold text-white shadow-sm transition-all hover:bg-primary-hover active:scale-[0.99]"
                 >
                     Apply Filters
-                </button>
+                </Button>
             </div>
         </div>
     );

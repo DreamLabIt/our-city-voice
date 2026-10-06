@@ -73,16 +73,24 @@ export default function ReportFilters({
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-border/60">
                 <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                    <label
+                        htmlFor="category-select"
+                        className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1"
+                    >
                         <Tag className="w-3 h-3 text-primary" /> Category
                     </label>
+
                     <Select
                         value={selectedCategory}
                         onValueChange={(value) => setSelectedCategory(value ?? "")}
                     >
-                        <SelectTrigger className="bg-background border-border rounded-md w-full py-5 text-xs font-semibold">
+                        <SelectTrigger
+                            id="category-select"
+                            className="bg-background border-border rounded-md w-full py-5 text-xs font-semibold"
+                        >
                             <SelectValue placeholder="Select Category" />
                         </SelectTrigger>
+
                         <SelectContent>
                             {categories.map((cat) => (
                                 <SelectItem key={cat} value={cat} className="text-xs">
@@ -94,16 +102,24 @@ export default function ReportFilters({
                 </div>
 
                 <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                    <label
+                        htmlFor="status-select"
+                        className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1"
+                    >
                         <Filter className="w-3 h-3 text-primary" /> Status
                     </label>
+
                     <Select
                         value={selectedStatus}
                         onValueChange={(value) => setSelectedStatus(value ?? "")}
                     >
-                        <SelectTrigger className="bg-background border-border rounded-md w-full py-5  text-xs font-semibold">
+                        <SelectTrigger
+                            id="status-select"
+                            className="bg-background border-border rounded-md w-full py-5 text-xs font-semibold"
+                        >
                             <SelectValue placeholder="Select Status" />
                         </SelectTrigger>
+
                         <SelectContent>
                             {statuses.map((st) => (
                                 <SelectItem key={st} value={st} className="text-xs">
@@ -115,16 +131,24 @@ export default function ReportFilters({
                 </div>
 
                 <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                    <label
+                        htmlFor="ward-select"
+                        className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1"
+                    >
                         <Building2 className="w-3 h-3 text-primary" /> Ward / Region
                     </label>
+
                     <Select
                         value={selectedWard}
                         onValueChange={(value) => setSelectedWard(value ?? "")}
                     >
-                        <SelectTrigger className="bg-background border-border rounded-md w-full py-5  text-xs font-semibold">
+                        <SelectTrigger
+                            id="ward-select"
+                            className="bg-background border-border rounded-md w-full py-5 text-xs font-semibold"
+                        >
                             <SelectValue placeholder="Select Ward" />
                         </SelectTrigger>
+
                         <SelectContent>
                             {wards.map((w) => (
                                 <SelectItem key={w} value={w} className="text-xs">
