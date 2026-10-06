@@ -1,11 +1,21 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { ChevronDown, LayoutDashboard, Loader2, LogOut } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+    ChevronDown,
+    LayoutDashboard,
+    Loader2,
+    LogOut,
+    User,
+} from "lucide-react";
 
 import { logoutAction } from "@/app/actions/auth";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+    Avatar,
+    AvatarFallback,
+    AvatarImage,
+} from "@/components/ui/avatar";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -28,7 +38,11 @@ function initialsOf(name: string): string {
 
 export default function UserMenu({ user }: { user: AuthUser }) {
     const router = useRouter();
+    const pathname = usePathname();
+
     const [isPending, startTransition] = useTransition();
+
+    const isDashboard = pathname.startsWith("/dashboard");
 
     return (
         <DropdownMenu>
@@ -51,7 +65,10 @@ export default function UserMenu({ user }: { user: AuthUser }) {
                 />
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-56 mt-2.75">
+            <DropdownMenuContent
+                align="end"
+                className="mt-2.75 w-56"
+            >
                 <div className="px-1.5 py-1">
                     <p className="truncate text-sm font-semibold text-foreground">
                         {user.name}
@@ -64,17 +81,26 @@ export default function UserMenu({ user }: { user: AuthUser }) {
 
                 <DropdownMenuSeparator />
 
+                {!isDashboard && (
+                    <DropdownMenuItem
+                        onClick={() =>
+                            router.push(
+                                user.role === "super_admin"
+                                    ? "/dashboard/admin"
+                                    : "/dashboard/user"
+                            )
+                        }
+                    >
+                        <LayoutDashboard className="h-4 w-4" />
+                        Dashboard
+                    </DropdownMenuItem>
+                )}
+
                 <DropdownMenuItem
-                    onClick={() =>
-                        router.push(
-                            user.role === "super_admin"
-                                ? "/dashboard/admin"
-                                : "/dashboard/user"
-                        )
-                    }
+                    onClick={() => router.push("/dashboard/profile")}
                 >
-                    <LayoutDashboard className="h-4 w-4" />
-                    Dashboard
+                    <User className="h-4 w-4" />
+                    Profile
                 </DropdownMenuItem>
 
                 <DropdownMenuSeparator />
@@ -82,7 +108,9 @@ export default function UserMenu({ user }: { user: AuthUser }) {
                 <DropdownMenuItem
                     variant="destructive"
                     disabled={isPending}
-                    onClick={() => startTransition(() => logoutAction())}
+                    onClick={() =>
+                        startTransition(() => logoutAction())
+                    }
                 >
                     {isPending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -96,3 +124,4 @@ export default function UserMenu({ user }: { user: AuthUser }) {
         </DropdownMenu>
     );
 }
+

@@ -5,25 +5,13 @@ import { usePathname } from "next/navigation";
 import {
     Menu,
     User,
-    LogOut,
-    Settings,
     ShieldCheck,
-    ChevronDown
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuGroup,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { adminNavItems, userNavItems } from "@/config/dashboard-nav";
 import type { AuthUser, NavItem } from "@/types";
 import Image from "next/image";
+import UserMenu from "../common/UserMenu";
 
 interface HeaderProps {
     isAdmin: boolean;
@@ -39,19 +27,9 @@ export default function Header({
 }: HeaderProps) {
     const pathname = usePathname();
     const navItems: NavItem[] = isAdmin ? adminNavItems : userNavItems;
-    function initialsOf(name: string): string {
-        const letters = name
-            .split(/\s+/)
-            .filter(Boolean)
-            .slice(0, 2)
-            .map((part) => part[0]?.toUpperCase() ?? "")
-            .join("");
-
-        return letters || "?";
-    }
 
     return (
-        <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-20 px-4 sm:px-6 flex items-center justify-between gap-4">
+        <header className="h-19 border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-20 px-4 sm:px-6 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 md:hidden">
                 <Sheet>
                     <SheetTrigger className="inline-flex items-center justify-center rounded-xl h-9 w-9 border border-input bg-background hover:bg-accent hover:text-accent-foreground">
@@ -120,65 +98,7 @@ export default function Header({
 
             <div className="flex items-center gap-2 sm:gap-3">
 
-
-                <DropdownMenu>
-                    <DropdownMenuTrigger
-                        className="group relative flex h-9 items-center gap-2 rounded-full pl-2 pr-1 outline-none hover:bg-muted sm:pr-3"
-                    >
-                        <Avatar size="lg">
-                            {user.avatarUrl && (
-                                <AvatarImage src={user.avatarUrl} alt="" />
-                            )}
-
-                            <AvatarFallback className="bg-primary/10 font-semibold text-primary">
-                                {initialsOf(user.name)}
-                            </AvatarFallback>
-                        </Avatar>
-                        <ChevronDown
-                            className="hidden h-4 w-4 text-muted-foreground transition-transform duration-200 group-aria-expanded:rotate-180 sm:block" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56 mt-2.5" align="end">
-                        <DropdownMenuGroup>
-                            <DropdownMenuLabel className="font-normal">
-                                <div className="flex flex-col space-y-1">
-                                    <p className="text-xs font-bold text-foreground leading-none">
-                                        {user.name}
-                                    </p>
-
-                                    <p className="text-[11px] text-muted-foreground leading-none">
-                                        {user.email}
-                                    </p>
-
-                                    {isAdmin && (
-                                        <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full w-fit">
-                                            <ShieldCheck className="w-3 h-3" />
-                                            System Admin
-                                        </span>
-                                    )}
-                                </div>
-                            </DropdownMenuLabel>
-                        </DropdownMenuGroup>
-
-                        <DropdownMenuSeparator />
-
-                        <DropdownMenuItem>
-                            <Link
-                                href="/dashboard/profile"
-                                className="cursor-pointer text-xs flex items-center gap-2"
-                            >
-                                <Settings className="w-4 h-4" />
-                                Account
-                            </Link>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuSeparator />
-
-                        <DropdownMenuItem className="text-destructive cursor-pointer text-xs flex items-center gap-2 font-semibold">
-                            <LogOut className="w-4 h-4" />
-                            Logout
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <UserMenu user={user} />
             </div>
         </header>
     );

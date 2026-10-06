@@ -29,7 +29,7 @@ export default function Sidebar({ isAdmin, user, isCollapsed, setIsCollapsed }: 
                 isCollapsed ? "w-18" : "w-56"
             )}
         >
-            <div className="h-16 flex items-center justify-start px-4 border-b border-border">
+            <div className="h-19 flex items-center justify-start px-4 border-b border-border">
                 <Link href="/" className="flex items-start gap-2 overflow-hidden">
                     <div className="relative flex items-center justify-center">
                         <Image
