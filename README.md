@@ -191,9 +191,14 @@ Two pieces, both reusable:
   per-file progress, which is what report media will use
 - `components/common/AvatarUpload.tsx` for one profile photo
 
-Both sit on `hooks/use-uploads.ts`, which holds the queue and the progress.
-Uploading starts the moment a file is chosen, so submitting a form only sends a
-URL. The API refuses to store a URL on any host outside `ALLOWED_MEDIA_HOSTS`.
+Both sit on `hooks/use-uploads.ts`, which holds the queue and the progress. The
+form owns the hook and the picker takes it as a prop, because **nothing is
+uploaded until the form is submitted**. Choosing a file only shows a local
+preview; the submit handler calls `upload()`, waits, and sends the URL it gets
+back. Uploading on selection made the submit instant but left a file in
+Cloudinary every time somebody abandoned the form, swapped their photo or
+pressed remove, and nothing in the database ever referred to those. The API
+refuses to store a URL on any host outside `ALLOWED_MEDIA_HOSTS`.
 
 ## Production
 

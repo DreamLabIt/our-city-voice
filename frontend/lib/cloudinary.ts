@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 
+import { UPLOAD_RULES } from "@/lib/upload-rules";
 import type { UploadKind } from "@/types";
 
 /**
@@ -19,54 +20,10 @@ import type { UploadKind } from "@/types";
  * move an upload somewhere else or widen what it may send without invalidating
  * it. Cloudinary also rejects a signature whose timestamp is more than an hour
  * old, so one cannot be hoarded.
+ *
+ * What a kind is allowed to be lives in lib/upload-rules.ts, which the browser
+ * reads as well.
  */
-
-interface KindRules {
-  /** Appended to CLOUDINARY_FOLDER, so everything stays under one root. */
-  subfolder: string;
-  /** image, or auto when the kind accepts both images and video. */
-  resourceType: "image" | "auto";
-  /** Signed, and enforced by Cloudinary rather than by us. */
-  allowedFormats: string[];
-  /** Checked in the browser before uploading, for a useful message. */
-  maxBytes: number;
-  /** For the file input's accept attribute and the pre-upload check. */
-  accept: string[];
-  /** Whether a signed-in account is required to ask for a signature. */
-  requiresSession: boolean;
-}
-
-const MB = 1024 * 1024;
-
-export const UPLOAD_RULES: Record<UploadKind, KindRules> = {
-  // Requested during registration, before any account exists, so this one
-  // cannot require a session. It is the looser of the two for that reason:
-  // small, images only.
-  avatar: {
-    subfolder: "avatars",
-    resourceType: "image",
-    allowedFormats: ["jpg", "jpeg", "png", "webp", "avif"],
-    maxBytes: 5 * MB,
-    accept: ["image/jpeg", "image/png", "image/webp", "image/avif"],
-    requiresSession: false,
-  },
-  "report-media": {
-    subfolder: "reports",
-    resourceType: "auto",
-    allowedFormats: ["jpg", "jpeg", "png", "webp", "avif", "mp4", "webm", "mov"],
-    maxBytes: 50 * MB,
-    accept: [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "image/avif",
-      "video/mp4",
-      "video/webm",
-      "video/quicktime",
-    ],
-    requiresSession: true,
-  },
-};
 
 interface CloudinaryConfig {
   cloudName: string;

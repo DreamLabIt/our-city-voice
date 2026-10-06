@@ -11,11 +11,11 @@ import type { RegisterFormState } from "@/types";
 /**
  * Creating an account.
  *
- * The avatar arrives as a URL, not a file. It is uploaded to Cloudinary from the
- * browser while the rest of the form is still being filled in, so by the time
- * this runs there is nothing to upload: see hooks/use-uploads.ts. That keeps
- * image bytes out of the server action body, which has a 1MB default limit and
- * would otherwise need raising for every action in the app.
+ * The avatar arrives as a URL, not a file. The browser sends it to Cloudinary
+ * itself, as the first step of submitting this form, and passes on the URL it got
+ * back: see hooks/use-uploads.ts. That keeps image bytes out of the server action
+ * body, which has a 1MB default limit and would otherwise need raising for every
+ * action in the app.
  *
  * Registering signs you in. The API answers with the same session payload login
  * does, so this ends on the home page with the navbar already showing an avatar,
