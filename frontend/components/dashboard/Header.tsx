@@ -10,7 +10,8 @@ import {
     User,
     LogOut,
     Settings,
-    ShieldCheck
+    ShieldCheck,
+    ChevronDown
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { adminNavItems, userNavItems } from "@/config/dashboard-nav";
 import type { NavItem } from "@/types";
+import Image from "next/image";
 
 interface HeaderProps {
     isAdmin: boolean;
@@ -50,17 +52,38 @@ export default function Header({
             <div className="flex items-center gap-3 md:hidden">
                 <Sheet>
                     <SheetTrigger className="inline-flex items-center justify-center rounded-xl h-9 w-9 border border-input bg-background hover:bg-accent hover:text-accent-foreground">
-                        <Menu className="w-5 h-5" />
+                        <Menu className="w-4 h-4" />
                     </SheetTrigger>
                     <SheetContent side="left" className="w-72 p-0">
-                        <div className="p-4 border-b border-border flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-black text-base">
-                                O
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="font-bold text-sm">OurCityVoice</span>
-                                <span className="text-xs text-muted-foreground">{isAdmin ? "Admin Console" : "User Portal"}</span>
-                            </div>
+                        <div className="h-18 flex items-center justify-start px-4 pt-2 border-b border-border">
+                            <Link href="/" className="flex items-center gap-2 overflow-hidden">
+                                <div className="relative flex items-center justify-center">
+                                    <Image
+                                        src="/logo.png"
+                                        alt="OurCityVoice Logo"
+                                        width={180}
+                                        height={45}
+                                        className="h-12 w-auto object-contain"
+                                        priority
+                                    />
+                                </div>
+                                <div className="flex flex-col truncate gap-">
+                                    <span className="font-extrabold text-md text-foreground tracking-tight leading-tight">
+                                        OurCity<span className="text-primary">Voice</span>
+                                    </span>
+                                    <span className="text-[12px] text-muted-foreground font-medium flex items-center">
+                                        {isAdmin ? (
+                                            <>
+                                                <ShieldCheck className="w-3 h-3 text-primary " /> Admin Portal
+                                            </>
+                                        ) : (
+                                            <>
+                                                <User className="w-4 h-4 text-muted-foreground" /> Citizen Portal
+                                            </>
+                                        )}
+                                    </span>
+                                </div>
+                            </Link>
                         </div>
                         <nav className="p-4 space-y-1.5">
                             {navItems.map((item) => {
@@ -74,14 +97,16 @@ export default function Header({
                                             }`}
                                     >
                                         <Icon className="w-4 h-4" />
-                                        <span>{item.title}</span>
+                                        <span>{item.name}</span>
                                     </Link>
                                 );
                             })}
                         </nav>
                     </SheetContent>
                 </Sheet>
-                <span className="font-extrabold text-sm sm:text-base tracking-tight">OurCityVoice</span>
+                <span className="font-extrabold text-md text-foreground tracking-tight leading-tight">
+                    OurCity<span className="text-primary">Voice</span>
+                </span>
             </div>
 
             <div className="hidden md:flex items-center gap-2 text-xs font-semibold text-muted-foreground">
@@ -113,20 +138,20 @@ export default function Header({
 
                 <DropdownMenu>
                     <DropdownMenuTrigger
-                        className="relative h-9 rounded-full pl-2 pr-1 sm:pr-3 flex items-center gap-2 hover:bg-muted outline-none"
+                        className="group relative flex h-9 items-center gap-2 rounded-full pl-2 pr-1 outline-none hover:bg-muted sm:pr-3"
                     >
                         <Avatar className="h-7 w-7">
                             <AvatarImage src={userAvatar} alt={userName} />
-                            <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                            <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
                                 {userName.charAt(0)}
                             </AvatarFallback>
                         </Avatar>
 
-                        <span className="hidden sm:inline-block text-xs font-bold text-foreground max-w-25 truncate">
-                            {userName}
-                        </span>
+                        <ChevronDown
+                            className="hidden h-4 w-4 text-muted-foreground transition-transform duration-200 group-aria-expanded:rotate-180 sm:block"
+                        />
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="end">
+                    <DropdownMenuContent className="w-56 mt-2.5" align="end">
                         <DropdownMenuGroup>
                             <DropdownMenuLabel className="font-normal">
                                 <div className="flex flex-col space-y-1">

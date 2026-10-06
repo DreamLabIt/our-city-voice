@@ -34,7 +34,7 @@ export default function UserMenu({ user }: { user: AuthUser }) {
         <DropdownMenu>
             <DropdownMenuTrigger
                 aria-label={`Account menu for ${user.name}`}
-                className="flex items-center gap-1.5 rounded-xl p-1 pr-2 transition-colors hover:bg-section focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="group flex items-center gap-1.5 rounded-xl p-1 pr-2 transition-colors hover:bg-section"
             >
                 <Avatar size="lg">
                     {user.avatarUrl && (
@@ -46,10 +46,12 @@ export default function UserMenu({ user }: { user: AuthUser }) {
                     </AvatarFallback>
                 </Avatar>
 
-                <ChevronDown className="hidden h-4 w-4 text-muted-foreground sm:block" />
+                <ChevronDown
+                    className="hidden h-4 w-4 text-muted-foreground transition-transform duration-200 group-aria-expanded:rotate-180 sm:block"
+                />
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56 mt-2.75">
                 <div className="px-1.5 py-1">
                     <p className="truncate text-sm font-semibold text-foreground">
                         {user.name}

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { adminNavItems, userNavItems } from "@/config/dashboard-nav";
 import type { NavItem } from "@/types";
+import Image from "next/image";
 
 
 interface SidebarProps {
@@ -27,8 +28,18 @@ export default function Sidebar({ isAdmin, isCollapsed, setIsCollapsed }: Sideba
                 isCollapsed ? "w-18" : "w-56"
             )}
         >
-            <div className="h-16 flex items-center justify-center px-4 border-b border-border">
-                <Link href="/" className="flex items-center gap-3 overflow-hidden">
+            <div className="h-16 flex items-center justify-start px-4 border-b border-border">
+                <Link href="/" className="flex items-start gap-2 overflow-hidden">
+                    <div className="relative flex items-center justify-center">
+                        <Image
+                            src="/logo.png"
+                            alt="OurCityVoice Logo"
+                            width={180}
+                            height={45}
+                            className="h-12 w-auto object-contain"
+                            priority
+                        />
+                    </div>
                     {!isCollapsed && (
                         <div className="flex flex-col truncate gap-1">
                             <span className="font-extrabold text-md text-foreground tracking-tight leading-tight">
