@@ -423,3 +423,19 @@ export interface DashboardClientLayoutProps {
     user: AuthUser;
     isAdmin?: boolean;
 }
+
+export interface UserProfileData {
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    role: "super_admin" | "user";
+    avatarUrl?: string | null;
+    joinedDate?: string;
+    location?: string;
+    bio?: string;
+}
+
+export interface ProfileHeaderProps {
+    user: UserProfileData;
+}

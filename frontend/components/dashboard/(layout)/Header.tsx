@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { adminNavItems, userNavItems } from "@/config/dashboard-nav";
 import type { HeaderProps, NavItem } from "@/types";
 import Image from "next/image";
-import UserMenu from "../common/UserMenu";
+import UserMenu from "../../common/UserMenu";
 
 export default function Header({ isAdmin, user }: HeaderProps) {
     const pathname = usePathname();
