@@ -20,7 +20,7 @@ export default function ProfileForm({ user }: ProfileFormProps) {
         name: user.name || "",
         email: user.email || "",
         phone: user.phone || "",
-        location: user.location || "Jamalpur, Bangladesh",
+        location: user.location || "",
         bio: user.bio || "",
     });
 

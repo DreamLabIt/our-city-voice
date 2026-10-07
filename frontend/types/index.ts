@@ -414,8 +414,9 @@ export interface SidebarProps {
 
 
 export interface DashboardLayoutProps {
-    children: React.ReactNode;
+    children?: React.ReactNode;
     isAdmin?: boolean;
+    user?: AuthUser;
 }
 
 export interface DashboardClientLayoutProps {

@@ -11,7 +11,7 @@ export default async function ProfilePage() {
     }
 
     return (
-        <DashboardLayout>
+        <DashboardLayout user={user} >
             <div className="space-y-6">
                 <ProfileHeader user={user} />
                 <ProfileForm user={user} />

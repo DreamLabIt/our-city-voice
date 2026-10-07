@@ -1,19 +1,15 @@
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/session";
 import DashboardClientLayout from "./DashboardClientLayout";
 import type { DashboardLayoutProps } from "@/types";
 
 export default async function DashboardLayout({
     children,
+    user,
+    isAdmin = false,
 }: DashboardLayoutProps) {
-    const user = await getCurrentUser();
-    const isAdmin = user?.role === "super_admin";
 
     if (!user) {
-        redirect("/login");
+        return null;
     }
-
-
     return (
         <DashboardClientLayout
             user={user}
@@ -23,4 +19,3 @@ export default async function DashboardLayout({
         </DashboardClientLayout>
     );
 }
-

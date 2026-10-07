@@ -10,20 +10,15 @@ export default function ConditionalLayout({
     user,
 }: {
     children: React.ReactNode;
-    /** Passed straight to the navbar. See NavbarProps for why it comes from above. */
     user: AuthUser | null;
 }) {
     const pathname = usePathname();
 
-    // The auth pages are full-bleed splits with their own branding, so the
-    // public navbar on top of one gives two headers.
     const isChromeless =
         pathname === "/login" ||
         pathname === "/register" ||
         pathname === "/forgot-password" ||
-        pathname === "/dashboard/admin" ||
-        pathname === "/dashboard/user" ||
-        pathname === "/dashboard/profile";
+        pathname.startsWith("/dashboard");
 
     if (isChromeless) {
         return <>{children}</>;
