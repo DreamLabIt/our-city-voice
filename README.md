@@ -174,15 +174,14 @@ has sign out.
 `JWT_SECRET` has no default. The backend refuses to start without one, because a
 signing key with a fallback ships to production as the fallback.
 
-**Reading and editing your own account** is `GET` and `PATCH /api/v1/me`.
-**Reading reports** is `GET /api/v1/posts` for the filtered feed,
-`GET /api/v1/posts/filters` behind the dropdowns, `GET /api/v1/posts/:code` for
-one report with its gallery and status timeline, and
-`GET /api/v1/posts/:code/comments` for the discussion. `api-doc.md` documents all
-six: field rules, every error body, why changing an email address asks for a
-password while resubmitting the same one does not, which filters a dashboard may
-use that the public feed may not, and why the detail endpoint is the only read
-that writes. The frontend is not wired up to any of them yet.
+**The API is documented in [`api-docs/`](api-docs/)**, one file per endpoint,
+with `api-docs/README.md` as the index. Six endpoints so far: your own account
+(`GET` and `PATCH /api/v1/me`), the filtered report feed (`GET /api/v1/posts`),
+the filter dropdown options (`/posts/filters`), one report with its gallery and
+status timeline (`/posts/:code`), and its comments (`/posts/:code/comments`).
+Shared rules live in `conventions.md`, response shapes in `objects.md`, failures
+in `errors.md`, and `not-implemented.md` is the honest list of what does not exist
+yet. The frontend is not wired up to any of it.
 
 ## File uploads
 
