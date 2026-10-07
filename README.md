@@ -175,9 +175,14 @@ has sign out.
 signing key with a fallback ships to production as the fallback.
 
 **Reading and editing your own account** is `GET` and `PATCH /api/v1/me`.
-`api-doc.md` documents both, with the field rules, every error body, and why
-changing an email address asks for a password while resubmitting the same one
-does not. The frontend is not wired up to either yet.
+**Reading reports** is `GET /api/v1/posts` for the filtered feed,
+`GET /api/v1/posts/filters` behind the dropdowns, `GET /api/v1/posts/:code` for
+one report with its gallery and status timeline, and
+`GET /api/v1/posts/:code/comments` for the discussion. `api-doc.md` documents all
+six: field rules, every error body, why changing an email address asks for a
+password while resubmitting the same one does not, which filters a dashboard may
+use that the public feed may not, and why the detail endpoint is the only read
+that writes. The frontend is not wired up to any of them yet.
 
 ## File uploads
 
