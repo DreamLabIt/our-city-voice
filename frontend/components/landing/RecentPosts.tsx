@@ -38,9 +38,18 @@ export default function RecentPosts(): React.ReactNode {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-2 mb-6">
-                {filteredPosts.map((post) => (
-                    <PostCard key={post.id} post={post} />
-                ))}
+                {/* testing parpas */}
+                {filteredPosts.length > 10 ? (
+                    filteredPosts.map((post) => (
+                        <PostCard key={post.id} post={post} />
+                    ))
+                ) : (
+                    <div className="col-span-full flex min-h-108 items-center justify-center rounded-2xl border border-border-custom bg-section">
+                        <p className="text-sm text-muted-foreground">
+                            No Data Available
+                        </p>
+                    </div>
+                )}
             </div>
         </Card>
     );
