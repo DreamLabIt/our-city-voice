@@ -3,10 +3,12 @@ import { isIP } from "node:net";
 
 import { env } from "../config/env.js";
 import { prisma } from "../db/prisma.js";
+import { normaliseEmail } from "../lib/email.js";
 import { AppError } from "../lib/errors.js";
 import { signAccessToken } from "../lib/jwt.js";
 import { hashPassword, verifyPassword } from "../lib/password.js";
 import { logger } from "../lib/logger.js";
+import { isUniqueViolation } from "../lib/prisma-errors.js";
 import {
   PUBLIC_USER_SELECT,
   toPublicUser,
@@ -64,11 +66,6 @@ export interface LoginInput {
  * which is how a leaked password list gets matched against your user base.
  */
 const INVALID_CREDENTIALS = "Invalid email or password";
-
-/** Emails are compared and stored lowercase; the database enforces it too. */
-function normaliseEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
 
 /**
  * `ip_address` is a Postgres inet column, so a value that is not an IP makes
@@ -163,14 +160,6 @@ export async function register(
   }
 
   return issueSession(user, context);
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    (error as { code?: unknown }).code === "P2002"
-  );
 }
 
 export async function login(input: LoginInput, context: SessionContext): Promise<AuthResult> {

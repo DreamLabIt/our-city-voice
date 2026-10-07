@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import { authRouter } from "./auth.routes.js";
 import { healthRouter } from "./health.routes.js";
+import { profileRouter } from "./profile.routes.js";
 import { userRouter } from "./user.routes.js";
 
 /**
@@ -13,6 +14,9 @@ export const apiRouter: Router = Router();
 
 apiRouter.use("/health", healthRouter);
 apiRouter.use("/auth", authRouter);
+// The caller's own account. Signed in is the only requirement; see the note in
+// profile.routes.ts for why this is not /users/me.
+apiRouter.use("/me", profileRouter);
 // Every route in here is super admin only; the guard is inside user.routes.ts.
 apiRouter.use("/users", userRouter);
 

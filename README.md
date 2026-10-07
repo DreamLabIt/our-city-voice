@@ -174,6 +174,11 @@ has sign out.
 `JWT_SECRET` has no default. The backend refuses to start without one, because a
 signing key with a fallback ships to production as the fallback.
 
+**Reading and editing your own account** is `GET` and `PATCH /api/v1/me`.
+`api-doc.md` documents both, with the field rules, every error body, and why
+changing an email address asks for a password while resubmitting the same one
+does not. The frontend is not wired up to either yet.
+
 ## File uploads
 
 Images and video go from the browser straight to Cloudinary. The Next.js server
