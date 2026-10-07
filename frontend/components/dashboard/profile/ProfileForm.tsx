@@ -7,8 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Save, Loader2, User, Phone, Mail, MapPin } from "lucide-react";
-import type { UserProfileData } from "@/types"
-
+import type { UserProfileData } from "@/types";
 
 interface ProfileFormProps {
     user: UserProfileData;
@@ -33,7 +32,7 @@ export default function ProfileForm({ user }: ProfileFormProps) {
         }));
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.SubmitEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
 
@@ -59,7 +58,10 @@ export default function ProfileForm({ user }: ProfileFormProps) {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                            <Label htmlFor="name" className="text-xs font-bold flex items-center gap-1.5">
+                            <Label
+                                htmlFor="name"
+                                className="text-xs font-bold flex items-center gap-1.5"
+                            >
                                 <User className="w-3.5 h-3.5 text-muted-foreground" /> Full Name
                             </Label>
                             <Input
@@ -74,7 +76,10 @@ export default function ProfileForm({ user }: ProfileFormProps) {
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label htmlFor="email" className="text-xs font-bold flex items-center gap-1.5">
+                            <Label
+                                htmlFor="email"
+                                className="text-xs font-bold flex items-center gap-1.5"
+                            >
                                 <Mail className="w-3.5 h-3.5 text-muted-foreground" /> Email Address
                             </Label>
                             <Input
@@ -87,7 +92,10 @@ export default function ProfileForm({ user }: ProfileFormProps) {
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label htmlFor="phone" className="text-xs font-bold flex items-center gap-1.5">
+                            <Label
+                                htmlFor="phone"
+                                className="text-xs font-bold flex items-center gap-1.5"
+                            >
                                 <Phone className="w-3.5 h-3.5 text-muted-foreground" /> Phone Number
                             </Label>
                             <Input
@@ -101,8 +109,12 @@ export default function ProfileForm({ user }: ProfileFormProps) {
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label htmlFor="location" className="text-xs font-bold flex items-center gap-1.5">
-                                <MapPin className="w-3.5 h-3.5 text-muted-foreground" /> Location / City
+                            <Label
+                                htmlFor="location"
+                                className="text-xs font-bold flex items-center gap-1.5"
+                            >
+                                <MapPin className="w-3.5 h-3.5 text-muted-foreground" /> Location /
+                                City
                             </Label>
                             <Input
                                 id="location"
@@ -116,7 +128,9 @@ export default function ProfileForm({ user }: ProfileFormProps) {
                     </div>
 
                     <div className="space-y-1.5">
-                        <Label htmlFor="bio" className="text-xs font-bold">Bio</Label>
+                        <Label htmlFor="bio" className="text-xs font-bold">
+                            Bio
+                        </Label>
                         <Textarea
                             id="bio"
                             name="bio"
