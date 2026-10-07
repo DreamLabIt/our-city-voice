@@ -6,6 +6,16 @@ import ReportFilters from "@/components/issues/reports/ReportFilters";
 import PostCard from "@/components/landing/PostCard";
 import { getReports, getReportFilters } from "@/app/actions/report";
 
+import {
+    Pagination,
+    PaginationContent,
+    PaginationItem,
+    PaginationLink,
+    PaginationNext,
+    PaginationPrevious,
+    PaginationEllipsis,
+} from "@/components/ui/pagination";
+
 import type { GetReportsParams, Report } from "@/types/report";
 
 interface PageProps {
@@ -39,10 +49,12 @@ export default async function ReportsPage({
     const selectedCategory = params.category || "All";
     const selectedStatus = params.status || "All";
     const selectedWard = params.ward || "All";
-    const page = getValidPage(params.page);
+    const currentPage = getValidPage(params.page);
+    const limit = 12;
+
     const queryParams: GetReportsParams = {
-        page,
-        limit: 12,
+        page: currentPage,
+        limit,
         search: searchQuery || undefined,
         category: selectedCategory !== "All" ? selectedCategory : undefined,
         status:
@@ -71,6 +83,9 @@ export default async function ReportsPage({
     const reports: Report[] = reportsData.posts || [];
     const totalReports = reportsData.total || 0;
 
+    const totalPages =
+        reportsData.pageCount || Math.ceil(totalReports / limit) || 1;
+
     const categories = [
         "All",
         ...(filtersData.categories?.map((category) => category.name) || []),
@@ -92,8 +107,46 @@ export default async function ReportsPage({
         selectedWard !== "All" ||
         Boolean(searchQuery);
 
+    const createPageUrl = (pageNumber: number) => {
+        const query = new URLSearchParams();
+        if (searchQuery) query.set("search", searchQuery);
+        if (selectedCategory !== "All") query.set("category", selectedCategory);
+        if (selectedStatus !== "All") query.set("status", selectedStatus);
+        if (selectedWard !== "All") query.set("ward", selectedWard);
+        query.set("page", pageNumber.toString());
 
-    console.log(reportsData)
+        return `/reports?${query.toString()}`;
+    };
+
+    const getPageNumbers = () => {
+        const pages: (number | "ellipsis")[] = [];
+        const maxVisible = 5;
+
+        if (totalPages <= maxVisible) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            pages.push(1);
+
+            if (currentPage > 3) {
+                pages.push("ellipsis");
+            }
+
+            const start = Math.max(2, currentPage - 1);
+            const end = Math.min(totalPages - 1, currentPage + 1);
+
+            for (let i = start; i <= end; i++) {
+                pages.push(i);
+            }
+
+            if (currentPage < totalPages - 2) {
+                pages.push("ellipsis");
+            }
+
+            pages.push(totalPages);
+        }
+
+        return pages;
+    };
 
     return (
         <section className="w-full min-h-screen bg-background text-foreground">
@@ -140,14 +193,69 @@ export default async function ReportsPage({
                     </div>
 
                     {reports.length > 0 ? (
-                        <div className="mb-6 grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {reports.map((report) => (
-                                <PostCard
-                                    key={report.id}
-                                    post={report}
-                                />
-                            ))}
-                        </div>
+                        <>
+                            <div className="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                {reports.map((report) => (
+                                    <PostCard key={report.id} post={report} />
+                                ))}
+                            </div>
+
+                            {totalPages > 1 && (
+                                <div className="pt-6 pb-2">
+                                    <Pagination>
+                                        <PaginationContent>
+                                            <PaginationItem>
+                                                <PaginationPrevious
+                                                    href={createPageUrl(
+                                                        Math.max(1, currentPage - 1)
+                                                    )}
+                                                    aria-disabled={currentPage <= 1}
+                                                    className={
+                                                        currentPage <= 1
+                                                            ? "pointer-events-none opacity-50"
+                                                            : ""
+                                                    }
+                                                />
+                                            </PaginationItem>
+
+                                            {getPageNumbers().map((p, idx) => (
+                                                <PaginationItem key={idx}>
+                                                    {p === "ellipsis" ? (
+                                                        <PaginationEllipsis />
+                                                    ) : (
+                                                        <PaginationLink
+                                                            href={createPageUrl(p)}
+                                                            isActive={currentPage === p}
+                                                        >
+                                                            {p}
+                                                        </PaginationLink>
+                                                    )}
+                                                </PaginationItem>
+                                            ))}
+
+                                            <PaginationItem>
+                                                <PaginationNext
+                                                    href={createPageUrl(
+                                                        Math.min(
+                                                            totalPages,
+                                                            currentPage + 1
+                                                        )
+                                                    )}
+                                                    aria-disabled={
+                                                        currentPage >= totalPages
+                                                    }
+                                                    className={
+                                                        currentPage >= totalPages
+                                                            ? "pointer-events-none opacity-50"
+                                                            : ""
+                                                    }
+                                                />
+                                            </PaginationItem>
+                                        </PaginationContent>
+                                    </Pagination>
+                                </div>
+                            )}
+                        </>
                     ) : (
                         <div className="space-y-3 rounded-2xl border border-border bg-card p-8 text-center sm:p-12">
                             <AlertCircle className="mx-auto h-10 w-10 text-muted-foreground" />
@@ -157,9 +265,7 @@ export default async function ReportsPage({
                             </h3>
 
                             <p className="mx-auto max-w-md text-xs text-muted-foreground">
-                                We couldn't find any reports matching your
-                                search query or selected filters. Try clearing
-                                your filters.
+                                We couldn't find any reports matching your search query or selected filters. Try clearing your filters.
                             </p>
                         </div>
                     )}
