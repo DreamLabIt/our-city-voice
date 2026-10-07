@@ -1,5 +1,3 @@
-"use client";
-
 import SectionContainer from "../common/SectionContainer";
 import CommunityActivity from "./CommunityActivity";
 import FilterPostsCard from "./FilterPostsCard";
