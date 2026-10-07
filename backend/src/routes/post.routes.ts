@@ -29,3 +29,14 @@ postRouter.get("/filters", postController.filters);
 
 /** GET /api/v1/posts?page=&limit=&sort=&search=&category=&ward=&status=&priority=&mine= */
 postRouter.get("/", postController.list);
+
+/**
+ * GET /api/v1/posts/:code - one report, with its gallery and status timeline.
+ *
+ * `:code` is a tracking code, and a numeric id is accepted too. Declared after
+ * /filters so that literal path cannot be read as a code.
+ */
+postRouter.get("/:code", postController.detail);
+
+/** GET /api/v1/posts/:code/comments?page=&limit= */
+postRouter.get("/:code/comments", postController.comments);

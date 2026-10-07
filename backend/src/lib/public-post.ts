@@ -207,3 +207,107 @@ export function toPublicPost(post: PostRow, likedByMe = false): PublicPost {
     updatedAt: post.updatedAt.toISOString(),
   };
 }
+
+
+// ── detail ──────────────────────────────────────────────────────────
+
+/** One attachment, for the gallery on a detail page. */
+export interface PublicMediaItem {
+  type: MediaType;
+  url: string;
+  /** A poster frame for video. Null for images, and for video without one. */
+  thumbnailUrl: string | null;
+  durationSecs: number | null;
+}
+
+/**
+ * One step in a report's life, from post_status_history.
+ *
+ * `fromStatus` is null on the first entry, where the report was created rather
+ * than moved. `actor` is null when the step was automated, when the actor's
+ * account has since been deleted, or when naming them would identify the author
+ * of an anonymous report.
+ */
+export interface PublicTimelineEntry {
+  id: string;
+  fromStatus: PostStatus | null;
+  toStatus: PostStatus;
+  title: string;
+  note: string | null;
+  actor: { id: string; name: string } | null;
+  createdAt: string;
+}
+
+/**
+ * A single report, for its own page.
+ *
+ * A superset of PublicPost rather than a different shape, so a card and a detail
+ * header can read the same fields and the frontend's two types can extend one
+ * another instead of being kept in step by hand.
+ */
+export interface PublicPostDetail extends PublicPost {
+  media: PublicPost["media"] & { gallery: PublicMediaItem[] };
+  timeline: PublicTimelineEntry[];
+}
+
+/**
+ * The list select plus the two things a detail page needs and a card does not:
+ * every attachment in order, and the full status history.
+ *
+ * Unbounded on purpose. A report has a handful of attachments and a handful of
+ * status changes; comments are the part that grows without limit, and those have
+ * their own paginated endpoint rather than being embedded here.
+ */
+export const PUBLIC_POST_DETAIL_SELECT = {
+  ...PUBLIC_POST_SELECT,
+  statusHistory: {
+    select: {
+      id: true,
+      fromStatus: true,
+      toStatus: true,
+      title: true,
+      note: true,
+      actor: { select: { id: true, name: true } },
+      createdAt: true,
+    },
+    // Oldest first: this is read top to bottom as a story.
+    orderBy: { createdAt: "asc" },
+  },
+} satisfies Prisma.PostSelect;
+
+export type PostDetailRow = Prisma.PostGetPayload<{
+  select: typeof PUBLIC_POST_DETAIL_SELECT;
+}>;
+
+export function toPublicPostDetail(post: PostDetailRow, likedByMe = false): PublicPostDetail {
+  const base = toPublicPost(post, likedByMe);
+
+  return {
+    ...base,
+    media: {
+      ...base.media,
+      gallery: post.media.map((item) => ({
+        type: item.type,
+        url: mediaUrl(item.storageKey),
+        thumbnailUrl: item.thumbnailKey ? mediaUrl(item.thumbnailKey) : null,
+        durationSecs: item.durationSecs,
+      })),
+    },
+    timeline: post.statusHistory.map((entry) => ({
+      id: entry.id.toString(),
+      fromStatus: entry.fromStatus,
+      toStatus: entry.toStatus,
+      title: entry.title,
+      note: entry.note,
+      // The first entry's actor is almost always the author, so on an anonymous
+      // report naming them would undo the anonymity that toPublicPost just
+      // protected. Any other actor is staff acting in an official capacity and
+      // is named.
+      actor:
+        entry.actor && !(post.isAnonymous && entry.actor.id === post.author.id)
+          ? { id: entry.actor.id.toString(), name: entry.actor.name }
+          : null,
+      createdAt: entry.createdAt.toISOString(),
+    })),
+  };
+}
