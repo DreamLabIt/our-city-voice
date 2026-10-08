@@ -284,3 +284,12 @@ export interface RecentActivityCardProps {
     activities: Report[];
 }
 
+export interface ExploreTopLocationsProps {
+    recentPosts: Report[];
+}
+
+export interface TopWardLocation {
+    ward: string;
+    reportsCount: number;
+    samplePost: Report;
+}
