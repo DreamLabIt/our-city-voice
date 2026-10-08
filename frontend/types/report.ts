@@ -1,3 +1,5 @@
+import { exportTraceState } from "next/dist/trace";
+
 export type ReportStatus =
     | "pending"
     | "in_progress"
@@ -261,3 +263,24 @@ export interface FilterValues {
 export interface FilterPostsCardClientProps {
     initialOptions: FilterOption;
 }
+
+export interface HomeLayoutProps {
+    recentPosts: Report[];
+    categoryTabs: string[];
+    filterOptions: FilterOption;
+    recentActivities: Report[];
+}
+
+export interface RecentPostsProps {
+    initialPosts: Report[];
+    tabs: string[];
+}
+
+export interface FilterPostsCardProps {
+    options: FilterOption;
+}
+
+export interface RecentActivityCardProps {
+    activities: Report[];
+}
+

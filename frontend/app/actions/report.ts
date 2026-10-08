@@ -4,19 +4,14 @@ import { revalidatePath } from "next/cache";
 import { apiFetch, type ApiResult } from "@/lib/api";
 import { clientForwardHeaders } from "@/lib/client-headers";
 import { getAccessToken } from "@/lib/session";
-import type { ReportListResponse, ReportFiltersResponse, ReportDetailResponse, ReportCommentsResponse, GetReportsParams, GetReportCommentsParams } from "@/types/report"
-
-export type ReportStatus =
-    | "pending"
-    | "in_progress"
-    | "resolved"
-    | "rejected";
-
-export type Priority =
-    | "low"
-    | "medium"
-    | "high"
-    | "critical";
+import type {
+    ReportListResponse,
+    ReportFiltersResponse,
+    ReportDetailResponse,
+    ReportCommentsResponse,
+    GetReportsParams,
+    GetReportCommentsParams,
+} from "@/types/report";
 
 function appendQueryParam(
     params: URLSearchParams,
@@ -72,10 +67,7 @@ function buildReportQuery(params: GetReportsParams = {}) {
     }
 
     if (params.includeDeleted !== undefined) {
-        query.set(
-            "includeDeleted",
-            String(params.includeDeleted)
-        );
+        query.set("includeDeleted", String(params.includeDeleted));
     }
 
     return query;
@@ -175,7 +167,8 @@ export async function getReportComments(
     const headers = await clientForwardHeaders();
 
     const res = await apiFetch<ReportCommentsResponse>(
-        `/posts/${encodeURIComponent(code)}/comments${queryString ? `?${queryString}` : ""}`,
+        `/posts/${encodeURIComponent(code)}/comments${queryString ? `?${queryString}` : ""
+        }`,
         {
             token,
             forward: headers,
