@@ -28,6 +28,24 @@ export interface Department {
     name: string;
 }
 
+export interface ReportItem {
+    id: string;
+    title?: string;
+    trackingId?: string;
+    code?: string;
+    status?: string;
+    category?: string | { name?: string; label?: string;[key: string]: any };
+    createdAt?: string;
+    updatedAt?: string;
+    type?: "post" | "comment" | string;
+    [key: string]: any;
+}
+
+export interface RecentActivityCardClientProps {
+    initialReports: ReportItem[];
+}
+
+
 export interface Author {
     id: string;
     name: string;
