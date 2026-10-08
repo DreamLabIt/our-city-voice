@@ -1,145 +1,155 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useActionState, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Save, Loader2, User, Phone, Mail, MapPin } from "lucide-react";
-import type { UserProfileData } from "@/types"
-
+import { Save, Loader2, User, Phone, Mail, Lock, CheckCircle2, AlertCircle } from "lucide-react";
+import type { AuthUser, FormState } from "@/types";
+import { updateProfileAction } from "@/app/actions/profile";
 
 interface ProfileFormProps {
-    user: UserProfileData;
-    onUpdate?: (updatedData: Partial<UserProfileData>) => Promise<void>;
+    user: AuthUser;
 }
 
 export default function ProfileForm({ user }: ProfileFormProps) {
-    const [formData, setFormData] = useState({
-        name: user.name || "",
-        email: user.email || "",
-        phone: user.phone || "",
-        location: user.location || "Jamalpur, Bangladesh",
-        bio: user.bio || "",
-    });
+    const [state, formAction, isPending] = useActionState<FormState, FormData>(
+        updateProfileAction,
+        {}
+    );
 
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [emailValue, setEmailValue] = useState(user?.email ?? "");
+    const [showPasswordInput, setShowPasswordInput] = useState(false);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setFormData((prev) => ({
-            ...prev,
-            [e.target.name]: e.target.value,
-        }));
-    };
+    const isEmailChanged = emailValue.trim().toLowerCase() !== (user?.email ?? "").toLowerCase();
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-
-        try {
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-            console.log("Updated Data:", formData);
-        } catch (error) {
-            console.error("Failed to update profile", error);
-        } finally {
-            setIsSubmitting(false);
+    useEffect(() => {
+        if (state.fieldErrors?.currentPassword) {
+            setShowPasswordInput(true);
         }
-    };
+    }, [state.fieldErrors]);
 
     return (
         <Card className="rounded-2xl border-border shadow-xs">
             <CardHeader className="border-b border-border">
                 <CardTitle className="text-base font-extrabold">Personal Details</CardTitle>
                 <CardDescription className="text-xs">
-                    Update your account information and public profile contact details.
+                    Update your account details and contact information.
                 </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {state.error && (
+                    <div className="mb-4 flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+                        <AlertCircle className="h-4 w-4 shrink-0" />
+                        <span>{state.error}</span>
+                    </div>
+                )}
+
+                {state.success && (
+                    <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 className="h-4 w-4 shrink-0" />
+                        <span>Profile updated successfully!</span>
+                    </div>
+                )}
+
+                <form action={formAction} className="space-y-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="space-y-1.5">
-                            <Label htmlFor="name" className="text-xs font-bold flex items-center gap-1.5">
-                                <User className="w-3.5 h-3.5 text-muted-foreground" /> Full Name
+                            <Label htmlFor="name" className="flex items-center gap-1.5 text-xs font-bold">
+                                <User className="h-3.5 w-3.5 text-muted-foreground" /> Full Name
                             </Label>
                             <Input
                                 id="name"
                                 name="name"
-                                value={formData.name}
-                                onChange={handleChange}
+                                key={user?.name}
+                                defaultValue={user?.name ?? ""}
                                 placeholder="Enter your full name"
-                                className="rounded-xl text-xs h-10"
+                                className="h-10 rounded-xl text-xs"
                                 required
                             />
+                            {state.fieldErrors?.name && (
+                                <p className="text-[11px] font-medium text-destructive">
+                                    {state.fieldErrors.name[0]}
+                                </p>
+                            )}
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label htmlFor="email" className="text-xs font-bold flex items-center gap-1.5">
-                                <Mail className="w-3.5 h-3.5 text-muted-foreground" /> Email Address
+                            <Label htmlFor="email" className="flex items-center gap-1.5 text-xs font-bold">
+                                <Mail className="h-3.5 w-3.5 text-muted-foreground" /> Email Address
                             </Label>
                             <Input
                                 id="email"
                                 name="email"
-                                value={formData.email}
-                                disabled
-                                className="rounded-xl text-xs h-10 bg-muted/50 cursor-not-allowed"
+                                type="email"
+                                value={emailValue}
+                                onChange={(e) => setEmailValue(e.target.value)}
+                                placeholder="Enter your email address"
+                                className="h-10 rounded-xl text-xs"
+                                required
                             />
+                            {state.fieldErrors?.email && (
+                                <p className="text-[11px] font-medium text-destructive">
+                                    {state.fieldErrors.email[0]}
+                                </p>
+                            )}
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label htmlFor="phone" className="text-xs font-bold flex items-center gap-1.5">
-                                <Phone className="w-3.5 h-3.5 text-muted-foreground" /> Phone Number
+                            <Label htmlFor="phone" className="flex items-center gap-1.5 text-xs font-bold">
+                                <Phone className="h-3.5 w-3.5 text-muted-foreground" /> Phone Number
                             </Label>
                             <Input
                                 id="phone"
                                 name="phone"
-                                value={formData.phone}
-                                onChange={handleChange}
+                                key={user?.phone}
+                                defaultValue={user?.phone ?? ""}
                                 placeholder="+880 1XXXX-XXXXXX"
-                                className="rounded-xl text-xs h-10"
+                                className="h-10 rounded-xl text-xs"
                             />
+                            {state.fieldErrors?.phone && (
+                                <p className="text-[11px] font-medium text-destructive">
+                                    {state.fieldErrors.phone[0]}
+                                </p>
+                            )}
                         </div>
 
-                        <div className="space-y-1.5">
-                            <Label htmlFor="location" className="text-xs font-bold flex items-center gap-1.5">
-                                <MapPin className="w-3.5 h-3.5 text-muted-foreground" /> Location / City
-                            </Label>
-                            <Input
-                                id="location"
-                                name="location"
-                                value={formData.location}
-                                onChange={handleChange}
-                                placeholder="City or Region"
-                                className="rounded-xl text-xs h-10"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                        <Label htmlFor="bio" className="text-xs font-bold">Bio</Label>
-                        <Textarea
-                            id="bio"
-                            name="bio"
-                            value={formData.bio}
-                            onChange={handleChange}
-                            placeholder="Write a brief description about yourself..."
-                            className="rounded-xl text-xs min-h-22.5 resize-none"
-                        />
+                        {(isEmailChanged || showPasswordInput) && (
+                            <div className="space-y-1.5">
+                                <Label htmlFor="currentPassword" className="flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400">
+                                    <Lock className="h-3.5 w-3.5" /> Current Password Required
+                                </Label>
+                                <Input
+                                    id="currentPassword"
+                                    name="currentPassword"
+                                    type="password"
+                                    placeholder="Enter password to confirm email change"
+                                    className="h-10 rounded-xl border-amber-500/50 text-xs focus-visible:ring-amber-500"
+                                    required={isEmailChanged}
+                                />
+                                {state.fieldErrors?.currentPassword && (
+                                    <p className="text-[11px] font-medium text-destructive">
+                                        {state.fieldErrors.currentPassword[0]}
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex justify-end pt-2">
                         <Button
                             type="submit"
-                            disabled={isSubmitting}
-                            className="rounded-xl text-xs font-bold gap-2 px-5 h-9"
+                            disabled={isPending}
+                            className="h-9 gap-2 rounded-xl px-5 text-xs font-bold"
                         >
-                            {isSubmitting ? (
+                            {isPending ? (
                                 <>
-                                    <Loader2 className="w-4 h-4 animate-spin" /> Saving...
+                                    <Loader2 className="h-4 w-4 animate-spin" /> Saving...
                                 </>
                             ) : (
                                 <>
-                                    <Save className="w-4 h-4" /> Save Changes
+                                    <Save className="h-4 w-4" /> Save Changes
                                 </>
                             )}
                         </Button>

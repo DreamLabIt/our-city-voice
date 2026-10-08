@@ -14,6 +14,8 @@ export default function DashboardClientLayout({
 
     return (
         <div className="flex h-screen overflow-hidden bg-background text-foreground">
+
+
             <Sidebar
                 isAdmin={isAdmin}
                 user={user}
@@ -22,6 +24,7 @@ export default function DashboardClientLayout({
             />
 
             <div className="min-w-0 flex-1 overflow-y-auto">
+
                 <Header
                     isAdmin={isAdmin}
                     user={user}

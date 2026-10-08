@@ -1,12 +1,16 @@
-"use client";
-
 import SectionContainer from "../common/SectionContainer";
 import CommunityActivity from "./CommunityActivity";
 import FilterPostsCard from "./FilterPostsCard";
 import RecentActivityCard from "./RecentActivityCard";
 import RecentPosts from "./RecentPosts";
+import type { HomeLayoutProps } from "@/types/report";
 
-export default function HomeLayout() {
+export default function HomeLayout({
+    recentPosts,
+    categoryTabs,
+    filterOptions,
+    recentActivities,
+}: HomeLayoutProps) {
     return (
         <section className="w-full py-6 sm:py-8">
             <SectionContainer>
@@ -16,13 +20,13 @@ export default function HomeLayout() {
                             <CommunityActivity />
                         </div>
                         <div className="w-full">
-                            <RecentPosts />
+                            <RecentPosts initialPosts={recentPosts} tabs={categoryTabs} />
                         </div>
                     </div>
 
                     <div className="lg:col-span-4 xl:col-span-3 space-y-4">
-                        <FilterPostsCard />
-                        <RecentActivityCard />
+                        <FilterPostsCard options={filterOptions} />
+                        <RecentActivityCard activities={recentActivities} />
                     </div>
                 </div>
             </SectionContainer>

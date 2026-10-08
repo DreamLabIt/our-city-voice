@@ -84,11 +84,7 @@ export default function UserMenu({ user }: { user: AuthUser }) {
                 {!isDashboard && (
                     <DropdownMenuItem
                         onClick={() =>
-                            router.push(
-                                user.role === "super_admin"
-                                    ? "/dashboard/admin"
-                                    : "/dashboard/user"
-                            )
+                            router.push("/dashboard")
                         }
                     >
                         <LayoutDashboard className="h-4 w-4" />

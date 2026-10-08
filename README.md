@@ -174,6 +174,15 @@ has sign out.
 `JWT_SECRET` has no default. The backend refuses to start without one, because a
 signing key with a fallback ships to production as the fallback.
 
+**The API is documented in [`api-docs/`](api-docs/)**, one file per endpoint,
+with `api-docs/README.md` as the index. Six endpoints so far: your own account
+(`GET` and `PATCH /api/v1/me`), the filtered report feed (`GET /api/v1/posts`),
+the filter dropdown options (`/posts/filters`), one report with its gallery and
+status timeline (`/posts/:code`), and its comments (`/posts/:code/comments`).
+Shared rules live in `conventions.md`, response shapes in `objects.md`, failures
+in `errors.md`, and `not-implemented.md` is the honest list of what does not exist
+yet. The frontend is not wired up to any of it.
+
 ## File uploads
 
 Images and video go from the browser straight to Cloudinary. The Next.js server

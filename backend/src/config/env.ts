@@ -72,6 +72,18 @@ const EnvSchema = z.object({
   ALLOWED_MEDIA_HOSTS: z.string().default("res.cloudinary.com"),
 
   /**
+   * Prefix for a media row's storage_key when that key is not already a URL.
+   *
+   * media.storage_key holds a bucket key, so the URL is built at read time and
+   * the bucket or CDN in front of it can change without rewriting every row.
+   * Two kinds of value never get a prefix: an absolute URL, and a root-relative
+   * path, which is what the seed fixtures hold so the frontend's own files in
+   * public/ render without an upload ever happening. Empty default, because in
+   * development everything is one of those two.
+   */
+  MEDIA_BASE_URL: z.string().default(""),
+
+  /**
    * Failed sign-in attempts allowed per IP per window, before the endpoint
    * starts answering 429. Generous enough that a person mistyping their
    * password never notices, tight enough that guessing is not free.

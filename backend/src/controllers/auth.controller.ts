@@ -4,6 +4,7 @@ import { z } from "zod";
 import { AppError } from "../lib/errors.js";
 import { mediaUrlSchema } from "../lib/media-url.js";
 import { parseBody } from "../lib/validate.js";
+import { emailSchema, nameSchema, phoneSchema } from "../lib/user-fields.js";
 import * as authService from "../services/auth.service.js";
 
 /**
@@ -14,15 +15,6 @@ import * as authService from "../services/auth.service.js";
  * concern. The service takes an already-validated object and does not care
  * whether it came from a form, a CLI script or a test.
  */
-
-const emailSchema = z
-  .string()
-  .trim()
-  .min(1, "Email address is required")
-  // Longer than any real address. Without a cap, a megabyte of @ signs becomes
-  // a free way to make the server work.
-  .max(254, "Email address is too long")
-  .pipe(z.email("Enter a valid email address"));
 
 /**
  * Eight, not six.
@@ -41,14 +33,10 @@ const passwordSchema = z
   .max(200, "Password must be 200 characters or fewer");
 
 const RegisterSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(2, "Please enter your full name")
-    .max(120, "Name is too long"),
+  name: nameSchema,
   email: emailSchema,
   password: passwordSchema,
-  phone: z.string().trim().max(32, "Phone number is too long").optional(),
+  phone: phoneSchema.optional(),
   avatarUrl: mediaUrlSchema.optional(),
   // No `role`. Leaving it out of the schema is what makes "role": "super_admin"
   // in a signup body do nothing at all rather than something that depends on

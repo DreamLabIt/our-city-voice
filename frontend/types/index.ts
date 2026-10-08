@@ -414,8 +414,9 @@ export interface SidebarProps {
 
 
 export interface DashboardLayoutProps {
-    children: React.ReactNode;
+    children?: React.ReactNode;
     isAdmin?: boolean;
+    user?: AuthUser;
 }
 
 export interface DashboardClientLayoutProps {
@@ -438,14 +439,4 @@ export interface UserProfileData {
 
 export interface ProfileHeaderProps {
     user: UserProfileData;
-}
-
-
-export interface FilterValues {
-    category: string;
-    municipality: string;
-    ward: string;
-    road: string;
-    postalCode: string;
-    address: string;
 }

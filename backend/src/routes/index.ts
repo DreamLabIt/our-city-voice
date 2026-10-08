@@ -2,6 +2,8 @@ import { Router } from "express";
 
 import { authRouter } from "./auth.routes.js";
 import { healthRouter } from "./health.routes.js";
+import { postRouter } from "./post.routes.js";
+import { profileRouter } from "./profile.routes.js";
 import { userRouter } from "./user.routes.js";
 
 /**
@@ -13,11 +15,15 @@ export const apiRouter: Router = Router();
 
 apiRouter.use("/health", healthRouter);
 apiRouter.use("/auth", authRouter);
+// The caller's own account. Signed in is the only requirement; see the note in
+// profile.routes.ts for why this is not /users/me.
+apiRouter.use("/me", profileRouter);
+// Public, with more on offer to a signed-in caller. See post.routes.ts.
+apiRouter.use("/posts", postRouter);
 // Every route in here is super admin only; the guard is inside user.routes.ts.
 apiRouter.use("/users", userRouter);
 
 // Coming next:
-// apiRouter.use("/posts", postsRouter);
 // apiRouter.use("/categories", categoriesRouter);
 // apiRouter.use("/wards", wardsRouter);
 // apiRouter.use("/stats", statsRouter);
