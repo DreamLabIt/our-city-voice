@@ -293,3 +293,34 @@ export interface TopWardLocation {
     reportsCount: number;
     samplePost: Report;
 }
+
+export interface PageProps {
+    searchParams: Promise<{
+        search?: string;
+        category?: string;
+        status?: string;
+        ward?: string;
+        page?: string;
+    }>;
+}
+
+
+export interface WardOption {
+    code: string;
+    name: string;
+}
+
+export interface CategoryOption {
+    slug: string;
+    name: string;
+}
+
+export interface ReportFiltersProps {
+    searchQuery: string;
+    selectedCategory: string;
+    selectedStatus: string;
+    selectedWard: string;
+    categories: (string | CategoryOption)[];
+    statuses: string[];
+    wards: (string | WardOption)[];
+}

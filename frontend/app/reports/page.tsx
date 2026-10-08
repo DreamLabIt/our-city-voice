@@ -16,17 +16,12 @@ import {
     PaginationEllipsis,
 } from "@/components/ui/pagination";
 
-import type { GetReportsParams, Report } from "@/types/report";
-
-interface PageProps {
-    searchParams: Promise<{
-        search?: string;
-        category?: string;
-        status?: string;
-        ward?: string;
-        page?: string;
-    }>;
-}
+import type {
+    GetReportsParams,
+    Report,
+    ReportFiltersResponse,
+    PageProps
+} from "@/types/report";
 
 function getValidPage(value?: string): number {
     const page = Number(value);
@@ -56,12 +51,18 @@ export default async function ReportsPage({
         page: currentPage,
         limit,
         search: searchQuery || undefined,
-        category: selectedCategory !== "All" ? selectedCategory : undefined,
+        category:
+            selectedCategory !== "All"
+                ? selectedCategory
+                : undefined,
         status:
             selectedStatus !== "All"
                 ? (selectedStatus as GetReportsParams["status"])
                 : undefined,
-        ward: selectedWard !== "All" ? selectedWard : undefined,
+        ward:
+            selectedWard !== "All"
+                ? selectedWard
+                : undefined,
     };
 
     const [reportsData, filtersData] = await Promise.all([
@@ -69,26 +70,36 @@ export default async function ReportsPage({
             posts: [],
             total: 0,
             page: 1,
-            limit: 12,
+            limit,
             pageCount: 0,
         })),
-        getReportFilters().catch(() => ({
-            categories: [],
-            wards: [],
-            statuses: [],
-            priorities: [],
-        })),
+        getReportFilters().catch(
+            (): ReportFiltersResponse => ({
+                categories: [],
+                wards: [],
+                statuses: [],
+                priorities: [],
+            })
+        ),
     ]);
 
     const reports: Report[] = reportsData.posts || [];
     const totalReports = reportsData.total || 0;
 
     const totalPages =
-        reportsData.pageCount || Math.ceil(totalReports / limit) || 1;
+        reportsData.pageCount ||
+        Math.ceil(totalReports / limit) ||
+        1;
 
     const categories = [
-        "All",
-        ...(filtersData.categories?.map((category) => category.name) || []),
+        {
+            slug: "All",
+            name: "All Categories",
+        },
+        ...(filtersData.categories?.map((category) => ({
+            slug: category.value,
+            name: category.name,
+        })) || []),
     ];
 
     const statuses = [
@@ -97,8 +108,14 @@ export default async function ReportsPage({
     ];
 
     const wards = [
-        "All",
-        ...(filtersData.wards?.map((ward) => ward.name) || []),
+        {
+            code: "All",
+            name: "All Wards",
+        },
+        ...(filtersData.wards?.map((ward) => ({
+            code: ward.value,
+            name: ward.name,
+        })) || []),
     ];
 
     const hasActiveFilters =
@@ -109,10 +126,23 @@ export default async function ReportsPage({
 
     const createPageUrl = (pageNumber: number) => {
         const query = new URLSearchParams();
-        if (searchQuery) query.set("search", searchQuery);
-        if (selectedCategory !== "All") query.set("category", selectedCategory);
-        if (selectedStatus !== "All") query.set("status", selectedStatus);
-        if (selectedWard !== "All") query.set("ward", selectedWard);
+
+        if (searchQuery) {
+            query.set("search", searchQuery);
+        }
+
+        if (selectedCategory !== "All") {
+            query.set("category", selectedCategory);
+        }
+
+        if (selectedStatus !== "All") {
+            query.set("status", selectedStatus);
+        }
+
+        if (selectedWard !== "All") {
+            query.set("ward", selectedWard);
+        }
+
         query.set("page", pageNumber.toString());
 
         return `/reports?${query.toString()}`;
@@ -123,7 +153,9 @@ export default async function ReportsPage({
         const maxVisible = 5;
 
         if (totalPages <= maxVisible) {
-            for (let i = 1; i <= totalPages; i++) pages.push(i);
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i);
+            }
         } else {
             pages.push(1);
 
@@ -132,7 +164,10 @@ export default async function ReportsPage({
             }
 
             const start = Math.max(2, currentPage - 1);
-            const end = Math.min(totalPages - 1, currentPage + 1);
+            const end = Math.min(
+                totalPages - 1,
+                currentPage + 1
+            );
 
             for (let i = start; i <= end; i++) {
                 pages.push(i);
@@ -196,7 +231,10 @@ export default async function ReportsPage({
                         <>
                             <div className="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                                 {reports.map((report) => (
-                                    <PostCard key={report.id} post={report} />
+                                    <PostCard
+                                        key={report.id}
+                                        post={report}
+                                    />
                                 ))}
                             </div>
 
@@ -207,9 +245,14 @@ export default async function ReportsPage({
                                             <PaginationItem>
                                                 <PaginationPrevious
                                                     href={createPageUrl(
-                                                        Math.max(1, currentPage - 1)
+                                                        Math.max(
+                                                            1,
+                                                            currentPage - 1
+                                                        )
                                                     )}
-                                                    aria-disabled={currentPage <= 1}
+                                                    aria-disabled={
+                                                        currentPage <= 1
+                                                    }
                                                     className={
                                                         currentPage <= 1
                                                             ? "pointer-events-none opacity-50"
@@ -218,20 +261,30 @@ export default async function ReportsPage({
                                                 />
                                             </PaginationItem>
 
-                                            {getPageNumbers().map((p, idx) => (
-                                                <PaginationItem key={idx}>
-                                                    {p === "ellipsis" ? (
-                                                        <PaginationEllipsis />
-                                                    ) : (
-                                                        <PaginationLink
-                                                            href={createPageUrl(p)}
-                                                            isActive={currentPage === p}
-                                                        >
-                                                            {p}
-                                                        </PaginationLink>
-                                                    )}
-                                                </PaginationItem>
-                                            ))}
+                                            {getPageNumbers().map(
+                                                (page, index) => (
+                                                    <PaginationItem
+                                                        key={`${page}-${index}`}
+                                                    >
+                                                        {page ===
+                                                            "ellipsis" ? (
+                                                            <PaginationEllipsis />
+                                                        ) : (
+                                                            <PaginationLink
+                                                                href={createPageUrl(
+                                                                    page
+                                                                )}
+                                                                isActive={
+                                                                    currentPage ===
+                                                                    page
+                                                                }
+                                                            >
+                                                                {page}
+                                                            </PaginationLink>
+                                                        )}
+                                                    </PaginationItem>
+                                                )
+                                            )}
 
                                             <PaginationItem>
                                                 <PaginationNext
@@ -242,10 +295,12 @@ export default async function ReportsPage({
                                                         )
                                                     )}
                                                     aria-disabled={
-                                                        currentPage >= totalPages
+                                                        currentPage >=
+                                                        totalPages
                                                     }
                                                     className={
-                                                        currentPage >= totalPages
+                                                        currentPage >=
+                                                            totalPages
                                                             ? "pointer-events-none opacity-50"
                                                             : ""
                                                     }
@@ -265,7 +320,9 @@ export default async function ReportsPage({
                             </h3>
 
                             <p className="mx-auto max-w-md text-xs text-muted-foreground">
-                                We couldn't find any reports matching your search query or selected filters. Try clearing your filters.
+                                We couldn't find any reports matching
+                                your search query or selected filters.
+                                Try clearing your filters.
                             </p>
                         </div>
                     )}
