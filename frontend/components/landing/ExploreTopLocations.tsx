@@ -7,33 +7,62 @@ import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import SectionContainer from "../common/SectionContainer";
-import type { ExploreTopLocationsProps, TopWardLocation } from "@/types/report";
+import type { ExploreTopLocationsProps } from "@/types/report";
 
 export default function ExploreTopLocations({
     recentPosts = [],
 }: ExploreTopLocationsProps): React.ReactNode {
-    const wardCounts = recentPosts.reduce<Record<string, { count: number; sample: (typeof recentPosts)[number] }>>((acc, post) => {
-        const wardName = typeof post.ward === "object"
-            ? (post.ward as any)?.name || (post.ward as any)?.label
-            : post.ward;
+    const wardCounts = recentPosts.reduce<
+        Record<
+            string,
+            {
+                count: number;
+                sample: (typeof recentPosts)[number];
+                wardName: string;
+                wardCode: string;
+            }
+        >
+    >((acc, post) => {
+        const rawWard = post.ward;
 
-        if (!wardName) return acc;
+        if (!rawWard) return acc;
 
-        if (!acc[wardName]) {
-            acc[wardName] = { count: 0, sample: post };
+        const wardName =
+            typeof rawWard === "object"
+                ? rawWard.name || rawWard.code || ""
+                : rawWard;
+
+        const wardCode =
+            typeof rawWard === "object"
+                ? rawWard.code || rawWard.id || rawWard.name || ""
+                : rawWard;
+
+        const key = wardCode || wardName;
+
+        if (!key) return acc;
+
+        if (!acc[key]) {
+            acc[key] = {
+                count: 0,
+                sample: post,
+                wardName,
+                wardCode,
+            };
         }
-        acc[wardName].count += 1;
+        acc[key].count += 1;
         return acc;
     }, {});
 
-    const topWards: TopWardLocation[] = Object.entries(wardCounts)
-        .map(([ward, data]) => ({
-            ward,
+    const topWards = Object.entries(wardCounts)
+        .map(([, data]) => ({
+            ward: data.wardName,
+            wardCode: data.wardCode,
             reportsCount: data.count,
             samplePost: data.sample,
         }))
         .sort((a, b) => b.reportsCount - a.reportsCount)
         .slice(0, 4);
+
     return (
         <section className="relative w-full my-8 py-12 sm:py-16 md:py-20 text-white">
             <div className="absolute inset-x-0 top-0 h-80 bg-primary/90 z-0" />
@@ -65,17 +94,26 @@ export default function ExploreTopLocations({
                     {topWards.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
                             {topWards.map((item) => {
+                                const samplePost = item.samplePost as any;
+                                const sampleImage =
+                                    samplePost?.media?.image ||
+                                    (Array.isArray(samplePost?.images) && samplePost.images.length > 0
+                                        ? typeof samplePost.images[0] === "string"
+                                            ? samplePost.images[0]
+                                            : samplePost.images[0]?.url
+                                        : samplePost?.image || "/placeholder.jpg");
 
-                                const sampleImage = item.samplePost.media?.image || "/placeholder.jpg";
+                                const locationName =
+                                    typeof samplePost.location === "object"
+                                        ? samplePost.location?.address || samplePost.location?.name
+                                        : samplePost.location || item.ward;
 
-                                const locationName = typeof item.samplePost.location === "object"
-                                    ? (item.samplePost.location)?.address
-                                    : item.samplePost.location || item.ward;
+                                const queryCode = item.wardCode || item.ward;
 
                                 return (
                                     <Link
-                                        key={item.ward}
-                                        href={`/reports?ward=${encodeURIComponent(item.ward)}`}
+                                        key={queryCode}
+                                        href={`/reports?ward=${encodeURIComponent(queryCode)}`}
                                         className="group block h-full"
                                     >
                                         <Card className="relative h-68 sm:h-76 md:h-86 rounded-2xl overflow-hidden border-4 border-white shadow-md bg-muted">
