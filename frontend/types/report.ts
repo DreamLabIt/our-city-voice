@@ -218,3 +218,8 @@ export interface GetReportCommentsParams {
     page?: number;
     limit?: number;
 }
+
+export interface RecentPostsClientProps {
+    initialPosts: Report[];
+    tabs: string[];
+}
