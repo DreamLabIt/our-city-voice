@@ -223,3 +223,23 @@ export interface RecentPostsClientProps {
     initialPosts: Report[];
     tabs: string[];
 }
+
+export interface FilterOption {
+    categories: { name: string; value?: string }[];
+    wards: { name: string; value?: string }[];
+    status?: { name: string; value?: string }[];
+}
+
+
+export interface FilterValues {
+    category: string;
+    status: string;
+    ward: string;
+    road: string;
+    postalCode: string;
+    address: string;
+}
+
+export interface FilterPostsCardClientProps {
+    initialOptions: FilterOption;
+}
