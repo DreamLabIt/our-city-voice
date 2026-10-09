@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PostCard from "./PostCard";
 import type { RecentPostsClientProps } from "@/types/report";
-import RecentPostsSkeleton from "../skeleton/PostsSkeleton";
+import PostsSkeleton from "../skeleton/PostsSkeleton";
 
 export default function RecentPostsClient({
     initialPosts,
@@ -55,7 +55,7 @@ export default function RecentPostsClient({
                         ))}
                     </div>
                 ) : (
-                    <RecentPostsSkeleton />
+                    <PostsSkeleton />
                 )}
             </div>
         </Card>
