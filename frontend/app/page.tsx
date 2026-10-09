@@ -50,7 +50,9 @@ export default async function Home() {
         recentActivities={recentActivities}
       />
       <HowItWorks />
-      <ExploreTopLocations />
+      <ExploreTopLocations
+        recentPosts={recentPosts}
+      />
     </section>
   );
 }

@@ -6,23 +6,57 @@ import Link from "next/link";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { posts } from "@/data/mock-data";
-import type { PostItem } from "@/types";
 import SectionContainer from "../common/SectionContainer";
-import type { TopWardLocation } from "@/types";
+import type { ExploreTopLocationsProps } from "@/types/report";
 
-export default function ExploreTopLocations(): React.ReactNode {
-    const wardCounts = posts.reduce<Record<string, { count: number; sample: PostItem }>>((acc, post) => {
-        if (!acc[post.ward]) {
-            acc[post.ward] = { count: 0, sample: post };
+export default function ExploreTopLocations({
+    recentPosts = [],
+}: ExploreTopLocationsProps): React.ReactNode {
+    const wardCounts = recentPosts.reduce<
+        Record<
+            string,
+            {
+                count: number;
+                sample: (typeof recentPosts)[number];
+                wardName: string;
+                wardCode: string;
+            }
+        >
+    >((acc, post) => {
+        const rawWard = post.ward;
+
+        if (!rawWard) return acc;
+
+        const wardName =
+            typeof rawWard === "object"
+                ? rawWard.name || rawWard.code || ""
+                : rawWard;
+
+        const wardCode =
+            typeof rawWard === "object"
+                ? rawWard.code || rawWard.id || rawWard.name || ""
+                : rawWard;
+
+        const key = wardCode || wardName;
+
+        if (!key) return acc;
+
+        if (!acc[key]) {
+            acc[key] = {
+                count: 0,
+                sample: post,
+                wardName,
+                wardCode,
+            };
         }
-        acc[post.ward].count += 1;
+        acc[key].count += 1;
         return acc;
     }, {});
 
-    const topWards: TopWardLocation[] = Object.entries(wardCounts)
-        .map(([ward, data]) => ({
-            ward,
+    const topWards = Object.entries(wardCounts)
+        .map(([, data]) => ({
+            ward: data.wardName,
+            wardCode: data.wardCode,
             reportsCount: data.count,
             samplePost: data.sample,
         }))
@@ -47,7 +81,6 @@ export default function ExploreTopLocations(): React.ReactNode {
                         </div>
 
                         <Button
-
                             variant="outline"
                             className="bg-white hover:bg-white/90 text-foreground font-semibold px-5 py-2.5 sm:px-6 sm:py-3 h-auto rounded border-none transition-all duration-200 group shrink-0 cursor-pointer"
                         >
@@ -58,51 +91,76 @@ export default function ExploreTopLocations(): React.ReactNode {
                         </Button>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
-                        {topWards.map((item) => (
-                            <Link
-                                key={item.ward}
-                                href={`/reports?ward=${encodeURIComponent(item.ward)}`}
-                                className="group block h-full"
-                            >
-                                <Card className="relative h-68 sm:h-76 md:h-86 rounded-2xl overflow-hidden border-4 border-white shadow-md bg-transparent">
-                                    <Image
-                                        src={item.samplePost.image}
-                                        alt={item.ward}
-                                        fill
-                                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                                        className="object-cover w-full h-full"
-                                        priority
-                                    />
+                    {topWards.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
+                            {topWards.map((item) => {
+                                const samplePost = item.samplePost as any;
+                                const sampleImage =
+                                    samplePost?.media?.image ||
+                                    (Array.isArray(samplePost?.images) && samplePost.images.length > 0
+                                        ? typeof samplePost.images[0] === "string"
+                                            ? samplePost.images[0]
+                                            : samplePost.images[0]?.url
+                                        : samplePost?.image || "/placeholder.jpg");
 
-                                    <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-transparent transition-opacity duration-200 group-hover:from-black/90" />
+                                const locationName =
+                                    typeof samplePost.location === "object"
+                                        ? samplePost.location?.address || samplePost.location?.name
+                                        : samplePost.location || item.ward;
 
-                                    <CardContent className="absolute inset-0 p-5 sm:p-6 flex flex-col justify-end z-10 text-white">
-                                        <div className="flex items-end justify-between gap-3">
-                                            <div className="space-y-1">
-                                                <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white line-clamp-1">
-                                                    {item.ward}
-                                                </h3>
+                                const queryCode = item.wardCode || item.ward;
 
-                                                <p className="text-xs sm:text-sm font-medium text-white/80 line-clamp-1">
-                                                    {item.samplePost.location}
-                                                </p>
+                                return (
+                                    <Link
+                                        key={queryCode}
+                                        href={`/reports?ward=${encodeURIComponent(queryCode)}`}
+                                        className="group block h-full"
+                                    >
+                                        <Card className="relative h-68 sm:h-76 md:h-86 rounded-2xl overflow-hidden border-4 border-white shadow-md bg-muted">
+                                            <Image
+                                                src={sampleImage}
+                                                alt={item.ward}
+                                                fill
+                                                unoptimized
+                                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                                                className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+                                                priority
+                                            />
 
-                                                <p className="text-xs font-semibold text-white/90 pt-1">
-                                                    {item.reportsCount}{" "}
-                                                    {item.reportsCount === 1 ? "Report" : "Reports"} Posted
-                                                </p>
-                                            </div>
+                                            <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-transparent transition-opacity duration-200 group-hover:from-black/90" />
 
-                                            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white text-foreground flex items-center justify-center shrink-0 shadow-md transition-all duration-300 group-hover:bg-primary group-hover:text-white group-hover:scale-110">
-                                                <ArrowUpRight className="w-5 h-5 stroke-[2.5] transition-transform duration-300 group-hover:rotate-45" />
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </Link>
-                        ))}
-                    </div>
+                                            <CardContent className="absolute inset-0 p-5 sm:p-6 flex flex-col justify-end z-10 text-white">
+                                                <div className="flex items-end justify-between gap-3">
+                                                    <div className="space-y-1">
+                                                        <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white line-clamp-1">
+                                                            {item.ward}
+                                                        </h3>
+
+                                                        <p className="text-xs sm:text-sm font-medium text-white/80 line-clamp-1">
+                                                            {locationName}
+                                                        </p>
+
+                                                        <p className="text-xs font-semibold text-white/90 pt-1">
+                                                            {item.reportsCount}{" "}
+                                                            {item.reportsCount === 1 ? "Report" : "Reports"} Posted
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white text-foreground flex items-center justify-center shrink-0 shadow-md transition-all duration-300 group-hover:bg-primary group-hover:text-white group-hover:scale-110">
+                                                        <ArrowUpRight className="w-5 h-5 stroke-[2.5] transition-transform duration-300 group-hover:rotate-45" />
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-64 bg-white/10 rounded-2xl border border-white/20 text-white/80">
+                            No locations available right now.
+                        </div>
+                    )}
                 </div>
             </SectionContainer>
         </section>
