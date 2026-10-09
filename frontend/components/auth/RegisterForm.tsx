@@ -19,18 +19,11 @@ import {
 import { useUploads } from "@/hooks/use-uploads";
 import type { RegisterInputs } from "@/types";
 
-/** Matches the API's rule. See the note on passwordSchema in auth.controller.ts. */
 const MIN_PASSWORD_LENGTH = 8;
 
 export default function RegisterForm() {
     const [serverError, setServerError] = useState<string>("");
     const [isPending, startTransition] = useTransition();
-
-    /**
-     * Holds the chosen photo locally and does not send it until this form asks.
-     * Choosing one and then closing the tab therefore leaves nothing behind in
-     * Cloudinary, which is why the hook lives here and not inside AvatarUpload.
-     */
     const uploads = useUploads({ kind: "avatar" });
 
     const form = useForm<RegisterInputs>({
@@ -45,14 +38,10 @@ export default function RegisterForm() {
     const onSubmit = async (data: RegisterInputs) => {
         setServerError("");
 
-        // The photo goes to Cloudinary now, not when it was chosen. Deliberately
-        // outside the transition: progress updates marked as transition work can
-        // be deferred, and a progress bar that lags is worse than none.
         const uploaded = await uploads.upload();
 
         if (uploaded === null) {
-            // Which file and why is already shown under the picker, so this only
-            // has to say that the account was not created.
+
             setServerError(
                 "Your photo could not be uploaded. Remove it or choose another, then try again.",
             );
@@ -67,10 +56,6 @@ export default function RegisterForm() {
 
         startTransition(async () => {
             const res = await registerAction({ error: "" }, formData);
-
-            // Only failures come back; success redirects away. The upload is not
-            // repeated if they fix the field and submit again: upload() skips
-            // anything already sent.
             if (res?.fieldErrors) {
                 for (const [field, messages] of Object.entries(res.fieldErrors)) {
                     if (field === "name" || field === "email" || field === "password") {
@@ -81,13 +66,6 @@ export default function RegisterForm() {
             if (res?.error) setServerError(res.error);
         });
     };
-
-    /**
-     * isSubmitting as well as the two obvious flags. It is what covers the gap
-     * between the press and the first "uploading" render, which is otherwise a
-     * window where the button is still live and a second click would upload the
-     * photo twice.
-     */
     const isBusy = form.formState.isSubmitting || uploads.isUploading || isPending;
 
     return (

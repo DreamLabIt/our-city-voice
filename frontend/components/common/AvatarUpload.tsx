@@ -6,17 +6,6 @@ import { AlertCircle, Loader2, Trash2, Upload, UserRound } from "lucide-react";
 import Image from "next/image";
 import type { UseUploads } from "@/hooks/use-uploads";
 
-/**
- * A single optional profile photo.
- *
- * Same hook as FileUpload, different shape: one round preview and one line of
- * text, because this sits among the inputs on a signup form rather than being a
- * drop target of its own.
- *
- * The hook is passed in rather than created here. The form is what decides when
- * to upload, which happens on submit, so the form has to be the one holding it.
- */
-
 export interface AvatarUploadProps {
     uploads: UseUploads;
     disabled?: boolean;
@@ -45,7 +34,6 @@ export default function AvatarUpload({
                 className="hidden"
                 onChange={(event) => {
                     if (event.target.files) uploads.addFiles(event.target.files);
-                    // So re-picking the same file after removing it still fires a change.
                     event.target.value = "";
                 }}
             />
@@ -53,13 +41,13 @@ export default function AvatarUpload({
             <div className="flex items-center gap-3">
                 <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted border border-border shrink-0 flex items-center justify-center">
                     {slot?.previewUrl ? (
-                        // A blob: URL from the local file, which the next/image optimiser
-                        // cannot fetch. The uploaded copy is never shown here, so there is
-                        // nothing for it to optimise anyway.
+
                         <Image
                             src={slot.previewUrl}
                             alt=""
                             className="w-full h-full object-cover"
+                            width={100}
+                            height={100}
                         />
                     ) : (
                         <UserRound className="w-5 h-5 text-muted-foreground" />
@@ -75,11 +63,10 @@ export default function AvatarUpload({
                 <div className="min-w-0 flex-1">
                     <label
                         htmlFor={inputId}
-                        className={`flex items-center justify-between gap-2 px-3.5 h-10 rounded-xl border border-dashed text-xs transition-colors ${
-                            disabled
-                                ? "border-border bg-muted/20 text-muted-foreground cursor-not-allowed opacity-60"
-                                : "border-border bg-muted/30 hover:bg-muted/60 text-muted-foreground cursor-pointer"
-                        }`}
+                        className={`flex items-center justify-between gap-2 px-3.5 h-10 rounded-xl border border-dashed text-xs transition-colors ${disabled
+                            ? "border-border bg-muted/20 text-muted-foreground cursor-not-allowed opacity-60"
+                            : "border-border bg-muted/30 hover:bg-muted/60 text-muted-foreground cursor-pointer"
+                            }`}
                     >
                         <span className="truncate">{slot ? slot.name : "Choose a photo..."}</span>
                         <Upload className="w-4 h-4 shrink-0" />
