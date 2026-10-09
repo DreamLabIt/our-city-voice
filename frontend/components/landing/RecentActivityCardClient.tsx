@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { RecentActivityCardClientProps, ReportItem } from "@/types/report";
+import RecentActivitySkeleton from "../skeleton/ActivitySkeleton";
 
 const getCategoryName = (category?: ReportItem["category"]) => {
     if (!category) return "";
@@ -190,9 +191,7 @@ export default function RecentActivityCardClient({
                         );
                     })
                 ) : (
-                    <div className="flex flex-col items-center justify-center h-64 text-muted-foreground text-sm">
-                        No recent activity found.
-                    </div>
+                    <RecentActivitySkeleton />
                 )}
             </div>
         </div>
