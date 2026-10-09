@@ -1,15 +1,9 @@
-/**
- * The one error type the app throws on purpose.
- *
- * Services throw `AppError`, the error middleware turns it into a response.
- * Anything else that reaches the middleware is treated as a bug and becomes a
- * generic 500, so an internal message never leaks to a client.
- */
+
 export class AppError extends Error {
   public readonly statusCode: number;
   public readonly code: string;
   public readonly details: unknown;
-  /** True for errors we raised deliberately, as opposed to crashes. */
+  
   public readonly isOperational = true;
 
   constructor(

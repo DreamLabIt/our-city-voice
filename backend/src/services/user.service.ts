@@ -4,11 +4,6 @@ import { AppError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
 import { PUBLIC_USER_SELECT, toPublicUser, type PublicUser } from "../lib/public-user.js";
 
-/**
- * User administration. Every function here assumes the caller is a super admin;
- * the route layer is what enforces that, with requireSuperAdmin.
- */
-
 export interface ListUsersOptions {
   page: number;
   limit: number;
@@ -27,9 +22,6 @@ export interface ListUsersResult {
 export async function listUsers(options: ListUsersOptions): Promise<ListUsersResult> {
   const { page, limit, search, role } = options;
 
-  // insensitive mode, because the index on lower(email) only helps exact
-  // lookups. This is an admin screen over a small table, so a scan is fine;
-  // it would need a trigram index to stay fine at a million rows.
   const where = {
     ...(role ? { role } : {}),
     ...(search
@@ -42,7 +34,6 @@ export async function listUsers(options: ListUsersOptions): Promise<ListUsersRes
       : {}),
   };
 
-  // One round trip for both, so the count cannot drift from the page beneath it.
   const [rows, total] = await prisma.$transaction([
     prisma.user.findMany({
       where,
@@ -70,23 +61,6 @@ export async function getUser(id: bigint): Promise<PublicUser> {
   return toPublicUser(user);
 }
 
-/**
- * Changes somebody's role.
- *
- * Three guards, each for a failure that is easy to cause and unpleasant to
- * undo:
- *
- *   self        a super admin demoting themselves locks the only door, and
- *               nothing in the app can reopen it. That needs the CLI.
- *   last admin  unreachable through the route above, and kept anyway. The
- *               caller there is always a super admin who is not the target, so
- *               they always count as a remaining one. It guards the case where
- *               this function is called from somewhere that is not that route.
- *   sessions    the target's existing access tokens carry the old role in their
- *               claims and are not checked against the database. Revoking their
- *               refresh tokens is what stops a demoted account keeping admin
- *               rights until the token expires.
- */
 export async function updateUserRole(
   actorId: bigint,
   targetId: bigint,

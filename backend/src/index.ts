@@ -15,13 +15,6 @@ const server = app.listen(env.PORT, () => {
 
 let shuttingDown = false;
 
-/**
- * Graceful shutdown.
- *
- * `docker compose down` sends SIGTERM and then kills the container 10 seconds
- * later. Without this, in-flight requests are cut mid-response and pooled
- * Postgres connections are left for the server to time out.
- */
 async function shutdown(signal: NodeJS.Signals): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
@@ -38,7 +31,6 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
     await new Promise<void>((resolve, reject) => {
       server.close((error) => (error ? reject(error) : resolve()));
     });
-    // Prisma first: it holds checked-out clients from the same pool.
     await disconnectPrisma();
     await closePool();
     logger.info("shutdown complete");
@@ -52,8 +44,6 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
 process.on("SIGTERM", () => void shutdown("SIGTERM"));
 process.on("SIGINT", () => void shutdown("SIGINT"));
 
-// A promise rejected with no catch means a bug. Log it with a stack and exit,
-// rather than letting the process limp along in an unknown state.
 process.on("unhandledRejection", (reason) => {
   logger.fatal({ err: reason }, "unhandled promise rejection");
   void shutdown("SIGTERM");

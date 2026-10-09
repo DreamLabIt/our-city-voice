@@ -25,14 +25,6 @@ export interface ReadinessReport {
 
 const SERVICE_NAME = "ourcityvoice-api";
 
-/**
- * Liveness: is this process running and able to answer HTTP?
- *
- * It deliberately touches no dependency. Docker's HEALTHCHECK and any load
- * balancer use this, and if it checked the database then a 30 second Postgres
- * blip would make Docker restart a perfectly healthy API container. Restarting
- * the API does not fix the database.
- */
 export function getLiveness(): LivenessReport {
   return {
     status: "ok",
@@ -60,12 +52,6 @@ async function checkDatabase(): Promise<DependencyCheck> {
   }
 }
 
-/**
- * Readiness: can this process actually serve traffic right now?
- *
- * This one does check dependencies. A 503 here means "stop sending me
- * requests", which is a different and more useful signal than "kill me".
- */
 export async function getReadiness(): Promise<ReadinessReport> {
   const database = await checkDatabase();
 
