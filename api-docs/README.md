@@ -14,6 +14,7 @@ is why it behaves the way it does.
 | [`GET /me`](endpoints/get-current-user.md) | required | the signed-in account |
 | [`PATCH /me`](endpoints/update-current-user.md) | required | change your own name, email, phone or avatar |
 | [`GET /posts`](endpoints/list-reports.md) | optional | the filtered, paginated feed of reports |
+| [`POST /posts`](endpoints/create-report.md) | required | file a new report |
 | [`GET /posts/filters`](endpoints/report-filter-options.md) | none | option lists for the filter dropdowns |
 | [`GET /posts/:code`](endpoints/get-report.md) | optional | one report, with gallery, timeline and related |
 | [`GET /posts/:code/comments`](endpoints/list-report-comments.md) | optional | a page of comment threads |

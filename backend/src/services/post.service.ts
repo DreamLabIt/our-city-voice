@@ -1,7 +1,10 @@
+import { randomInt } from "node:crypto";
+
 import { prisma } from "../db/prisma.js";
 import type { Prisma } from "../generated/prisma/client.js";
-import type { PostPriority, PostStatus } from "../generated/prisma/enums.js";
+import type { MediaType, PostPriority, PostStatus } from "../generated/prisma/enums.js";
 import { AppError } from "../lib/errors.js";
+import { isUniqueViolation } from "../lib/prisma-errors.js";
 import {
   PUBLIC_COMMENT_SELECT,
   toPublicComment,
@@ -306,6 +309,123 @@ export async function getPost(
     ),
     related: await listRelated(post.id, post.category.id, viewerId),
   };
+}
+
+export interface CreatePostMediaInput {
+  url: string;
+  type: MediaType;
+  thumbnailUrl?: string | null | undefined;
+  mimeType?: string | null | undefined;
+  sizeBytes?: number | null | undefined;
+  durationSecs?: number | null | undefined;
+}
+
+export interface CreatePostLocationInput {
+  street?: string | null | undefined;
+  city: string;
+  address: string;
+  postalCode?: string | null | undefined;
+  latitude?: number | null | undefined;
+  longitude?: number | null | undefined;
+}
+
+export interface CreatePostInput {
+  title: string;
+  description: string;
+  category: string;
+  ward: string;
+  priority?: PostPriority | undefined;
+  isAnonymous?: boolean | undefined;
+  location: CreatePostLocationInput;
+  media?: CreatePostMediaInput[] | undefined;
+}
+
+const OPENING_STATUS: PostStatus = "pending";
+const DEFAULT_MEDIA_TYPE: Record<MediaType, string> = {
+  image: "image/jpeg",
+  video: "video/mp4",
+};
+
+function generateTrackingCode(year: number): string {
+  const serial = randomInt(1, 1_000_000).toString().padStart(6, "0");
+  return `OCV-${year}-${serial}`;
+}
+
+function unknownField(field: string, value: string, collection: string): AppError {
+  return AppError.badRequest("Some fields need attention", {
+    [field]: [`No ${collection} with the value "${value}". See GET /posts/filters for the valid options.`],
+  });
+}
+
+export async function createPost(userId: bigint, input: CreatePostInput): Promise<PublicPost> {
+  const [category, ward] = await Promise.all([
+    prisma.category.findUnique({
+      where: { slug: input.category },
+      select: { id: true, defaultDepartmentId: true },
+    }),
+    prisma.ward.findUnique({ where: { code: input.ward }, select: { id: true } }),
+  ]);
+
+  if (!category) throw unknownField("category", input.category, "category");
+  if (!ward) throw unknownField("ward", input.ward, "ward");
+
+  const media = input.media?.map((item, index) => ({
+    type: item.type,
+    storageKey: item.url,
+    thumbnailKey: item.thumbnailUrl ?? null,
+    mimeType: item.mimeType?.trim() || DEFAULT_MEDIA_TYPE[item.type],
+    sizeBytes: BigInt(item.sizeBytes ?? 0),
+    durationSecs: item.durationSecs ?? null,
+    sortOrder: index,
+  }));
+
+  const year = new Date().getFullYear();
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const created = await tx.post.create({
+          data: {
+            trackingCode: generateTrackingCode(year),
+            title: input.title,
+            description: input.description,
+            userId,
+            categoryId: category.id,
+            wardId: ward.id,
+            departmentId: category.defaultDepartmentId,
+            priority: input.priority ?? "medium",
+            isAnonymous: input.isAnonymous ?? false,
+            street: input.location.street?.trim() || null,
+            city: input.location.city,
+            address: input.location.address,
+            postalCode: input.location.postalCode?.trim() || null,
+            latitude: input.location.latitude ?? null,
+            longitude: input.location.longitude ?? null,
+            ...(media?.length ? { media: { create: media } } : {}),
+          },
+          select: PUBLIC_POST_SELECT,
+        });
+
+        await tx.postStatusHistory.create({
+          data: {
+            postId: created.id,
+            actorId: userId,
+            fromStatus: null,
+            toStatus: OPENING_STATUS,
+            title: "Report submitted",
+            note: "Received and queued for triage.",
+          },
+        });
+
+        return toPublicPost(created, false);
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) continue;
+      throw error;
+    }
+  }
+
+  throw AppError.serviceUnavailable("Could not assign a tracking code. Please try again.");
 }
 
 export interface ListCommentsOptions {

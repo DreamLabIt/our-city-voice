@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 
 import { AppError } from "../lib/errors.js";
+import { mediaUrlSchema } from "../lib/media-url.js";
 import { parseBody } from "../lib/validate.js";
 import * as postService from "../services/post.service.js";
 
@@ -62,6 +63,59 @@ const ListQuerySchema = z.object({
   
   includeDeleted: optional(z.stringbool().default(false)),
 });
+
+const CreateMediaSchema = z.object({
+  url: mediaUrlSchema,
+  type: z.enum(["image", "video"]),
+  thumbnailUrl: mediaUrlSchema.nullish(),
+  mimeType: z.string().trim().max(120).nullish(),
+  sizeBytes: z.coerce.number().int().nonnegative().nullish(),
+  durationSecs: z.coerce.number().int().nonnegative().nullish(),
+});
+
+const CreateLocationSchema = z
+  .object({
+    street: z.string().trim().max(160).nullish(),
+    city: z.string().trim().min(1, "City is required").max(80, "City is too long"),
+    address: z.string().trim().min(1, "Address is required").max(240, "Address is too long"),
+    postalCode: z.string().trim().max(16).nullish(),
+    latitude: z.coerce.number().min(-90, "Latitude must be between -90 and 90").max(90, "Latitude must be between -90 and 90").nullish(),
+    longitude: z.coerce.number().min(-180, "Longitude must be between -180 and 180").max(180, "Longitude must be between -180 and 180").nullish(),
+  })
+  .refine(
+    (location) =>
+      (location.latitude === undefined || location.latitude === null) ===
+      (location.longitude === undefined || location.longitude === null),
+    { error: "Send latitude and longitude together, or neither", path: ["longitude"] },
+  );
+
+const CreatePostSchema = z.strictObject({
+  title: z
+    .string()
+    .trim()
+    .min(6, "Title must be at least 6 characters")
+    .max(160, "Title is too long"),
+  description: z
+    .string()
+    .trim()
+    .min(15, "Description must be at least 15 characters")
+    .max(5000, "Description is too long"),
+  category: z.string().trim().min(1, "Category is required").max(80),
+  ward: z.string().trim().min(1, "Ward is required").max(80),
+  priority: prioritySchema.optional(),
+  isAnonymous: z.boolean().optional().default(false),
+  location: CreateLocationSchema,
+  media: z.array(CreateMediaSchema).max(6, "Up to 6 attachments are allowed").optional(),
+});
+
+export async function create(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw AppError.unauthorized();
+
+  const input = parseBody(CreatePostSchema, req.body ?? {});
+  const post = await postService.createPost(req.user.id, input);
+
+  res.status(201).json({ post });
+}
 
 export async function list(req: Request, res: Response): Promise<void> {
   const query = parseBody(ListQuerySchema, req.query);
