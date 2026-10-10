@@ -29,6 +29,14 @@ export default async function Home() {
     ...(filtersRes.categories?.map((category) => category.name) || []),
   ];
 
+  const allCategory = [
+    { id: "all", label: "All" },
+    ...(filtersRes.categories?.map((category) => ({
+      id: category.value || category.name.toLowerCase().replace(/\s+/g, "-"),
+      label: category.name,
+    })) || []),
+  ];
+
   const filterOptions: FilterOption = {
     categories: filtersRes.categories || [],
     wards: filtersRes.wards || [],
@@ -44,7 +52,7 @@ export default async function Home() {
   return (
     <section>
       <HeroSection AllPosts={AllPosts} />
-      <CategoryFilter />
+      <CategoryFilter allCategory={allCategory} />
       <HomeLayout
         recentPosts={recentPosts}
         categoryTabs={categoryTabs}

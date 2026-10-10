@@ -24,7 +24,7 @@ export interface PageHeaderProps {
 export interface CategoryItem {
     id: string;
     label: string;
-    icon: LucideIcon;
+    icon?: LucideIcon;
     iconColor?: string;
     isOther?: boolean;
 }
@@ -468,4 +468,9 @@ export interface HeroSectionProps {
 export interface IssueSearchBarProps {
     onSearch?: (query: string) => void;
     AllPosts?: Report[];
+}
+
+export interface CategoryFilterProps {
+    allCategory?: CategoryItem[];
+    onSelectCategory?: (categoryId: string) => void;
 }
