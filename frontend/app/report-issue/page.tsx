@@ -41,7 +41,7 @@ async function ReportIssueContent() {
 
                         <div className="lg:col-span-5 xl:col-span-4 space-y-6">
                             <PlatformInsightsCard Reports={Reports} />
-                            {/* <MostReportedIssuesCard Reports={Reports} /> */}
+                            <MostReportedIssuesCard Reports={Reports} />
                             <HowIssuesAreSolvedFaqCard />
                             <QuickReminderCard />
                         </div>

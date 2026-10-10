@@ -328,3 +328,8 @@ export interface ReportFiltersProps {
 export interface PlatformInsightsCardProps {
     Reports?: Report[];
 }
+
+export interface MostReportedIssuesCardProps {
+    Reports?: Report[];
+}
+
