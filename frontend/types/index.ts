@@ -1,4 +1,7 @@
 import { LucideIcon } from "lucide-react";
+import type {
+    Report,
+} from "@/types/report";
 
 // ── Navigation ──────────────────────────────────────────────
 export interface NavItem {
@@ -439,4 +442,20 @@ export interface UserProfileData {
 
 export interface ProfileHeaderProps {
     user: UserProfileData;
+}
+
+export interface SearchDialogProps {
+    Reports?: Report[];
+}
+
+
+export interface NavbarProps {
+    user: AuthUser | null;
+    Reports?: Report[];
+}
+
+export interface ConditionalLayoutProps {
+    children: React.ReactNode;
+    user: AuthUser | null;
+    Reports?: Report[];
 }

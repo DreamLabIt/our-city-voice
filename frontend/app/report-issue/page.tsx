@@ -22,7 +22,6 @@ async function ReportIssueContent() {
     ]);
 
     const Reports: Report[] = PostsRes.posts || [];
-    console.log(Reports)
 
     return (
         <section className="w-full bg-background text-foreground min-h-screen">
