@@ -1,7 +1,16 @@
 import { BarChart3, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import type { PlatformInsightsCardProps } from "@/types/report";
 
-export default function PlatformInsightsCard() {
+export default function PlatformInsightsCard({ Reports = [] }: PlatformInsightsCardProps) {
+    const totalReceived = Reports.length;
+    const solvedCount = Reports.filter((report) => {
+        const status = typeof report.status === "string" ? report.status.toLowerCase() : "";
+        return status === "resolved" || status === "solved";
+    }).length;
+
+    const resolutionRate = totalReceived > 0 ? ((solvedCount / totalReceived) * 100).toFixed(1) : "0.0";
+
     return (
         <Card className="bg-card border border-border-custom rounded-2xl p-6 space-y-4 shadow">
             <CardContent className="p-0 space-y-4">
@@ -21,7 +30,7 @@ export default function PlatformInsightsCard() {
                             <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
                             <span>Received</span>
                         </div>
-                        <p className="text-xl font-extrabold text-foreground">15,420</p>
+                        <p className="text-xl font-extrabold text-foreground">{totalReceived.toLocaleString()}</p>
                     </div>
 
                     <div className="bg-section border border-border-custom/80 p-3.5 rounded-xl space-y-1">
@@ -29,17 +38,17 @@ export default function PlatformInsightsCard() {
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                             <span>Solved</span>
                         </div>
-                        <p className="text-xl font-extrabold text-foreground">13,580</p>
+                        <p className="text-xl font-extrabold text-foreground">{solvedCount.toLocaleString()}</p>
                     </div>
                 </div>
 
                 <div className="bg-section border border-border-custom/80 p-3.5 rounded-xl flex items-center justify-between">
                     <div className="space-y-0.5">
                         <p className="text-xs text-muted-foreground">Success Resolution Rate</p>
-                        <p className="text-lg font-bold text-emerald-500">88.06%</p>
+                        <p className="text-lg font-bold text-emerald-500">{resolutionRate}%</p>
                     </div>
-                    <div className="w-9 h-9 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold text-xs">
-                        88%
+                    <div className="w-9 h-9 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold text-xs p-8">
+                        {Math.round(Number(resolutionRate))}%
                     </div>
                 </div>
             </CardContent>

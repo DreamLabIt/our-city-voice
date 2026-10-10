@@ -1,8 +1,4 @@
-"use client";
-
-import React, { Suspense } from "react";
 import PageHeader from "@/components/common/PageHeader";
-
 import { Loader2 } from "lucide-react";
 import ReportForm from "@/components/report-issu/ReportForm";
 import PlatformInsightsCard from "@/components/report-issu/PlatformInsightsCard";
@@ -10,8 +6,24 @@ import MostReportedIssuesCard from "@/components/report-issu/MostReportedIssuesC
 import HowIssuesAreSolvedFaqCard from "@/components/report-issu/HowIssuesAreSolvedFaqCard";
 import QuickReminderCard from "@/components/report-issu/QuickReminderCard";
 import SectionContainer from "@/components/common/SectionContainer";
+import { getReportFilters, getReports } from "../actions/report";
+import type { Report } from "@/types/report";
+import { Suspense } from "react";
 
-function ReportIssueContent() {
+async function ReportIssueContent() {
+    const [PostsRes, filtersRes] = await Promise.all([
+        getReports({ page: 1, limit: 100 }).catch(() => ({ posts: [] })),
+        getReportFilters().catch(() => ({
+            categories: [],
+            wards: [],
+            statuses: [],
+            priorities: [],
+        })),
+    ]);
+
+    const Reports: Report[] = PostsRes.posts || [];
+    console.log(Reports)
+
     return (
         <section className="w-full bg-background text-foreground min-h-screen">
             <PageHeader
@@ -28,8 +40,8 @@ function ReportIssueContent() {
                         </div>
 
                         <div className="lg:col-span-5 xl:col-span-4 space-y-6">
-                            <PlatformInsightsCard />
-                            <MostReportedIssuesCard />
+                            <PlatformInsightsCard Reports={Reports} />
+                            {/* <MostReportedIssuesCard Reports={Reports} /> */}
                             <HowIssuesAreSolvedFaqCard />
                             <QuickReminderCard />
                         </div>

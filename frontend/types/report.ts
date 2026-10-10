@@ -324,3 +324,7 @@ export interface ReportFiltersProps {
     statuses: string[];
     wards: (string | WardOption)[];
 }
+
+export interface PlatformInsightsCardProps {
+    Reports?: Report[];
+}
