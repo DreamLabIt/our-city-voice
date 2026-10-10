@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
     MapPin,
     Search,
@@ -48,20 +49,14 @@ const getStatusBadge = (status: ReportStatus) => {
 };
 
 export default function IssuesMapLayout() {
-    // Derived from the same reports the feed and the detail pages render.
-    // Reports without coordinates drop out here, which is why the count is
-    // shown below rather than left as a silent gap.
+    const searchParams = useSearchParams();
+    const queryTrackingCode = searchParams.get("trackingCode");
+    const queryId = searchParams.get("id");
     const pins = useMemo(() => toMapPins(posts), []);
     const unmappedCount = posts.length - pins.length;
-
     const [searchQuery, setSearchQuery] = useState<string>("");
-    // Deliberately nothing selected on load. Preselecting a pin makes the map
-    // fly to it at zoom 15, which overrides the fit-to-bounds and opens the
-    // page on one building instead of the whole city.
     const [selectedPin, setSelectedPin] = useState<IssueMapPin | null>(null);
 
-    // IssueMap refits its viewport whenever this reference changes, so it has
-    // to stay stable between renders that did not change the search.
     const filteredPins = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
         if (!query) return pins;
@@ -75,6 +70,21 @@ export default function IssuesMapLayout() {
                 pin.code.toLowerCase().includes(query)
         );
     }, [pins, searchQuery]);
+
+    useEffect(() => {
+        const targetCode = queryTrackingCode || queryId;
+        if (targetCode && pins.length > 0) {
+            const matchedPin = pins.find(
+                (pin) =>
+                    pin.code.toLowerCase() === targetCode.toLowerCase() ||
+                    pin.id.toLowerCase() === targetCode.toLowerCase()
+            );
+
+            if (matchedPin) {
+                setSelectedPin(matchedPin);
+            }
+        }
+    }, [queryTrackingCode, queryId, pins]);
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-180px)] min-h-150">
@@ -114,7 +124,7 @@ export default function IssuesMapLayout() {
                     )}
                 </div>
 
-                <ScrollArea className="h-164.5 w-full p-3 sm:p-4">
+                <ScrollArea className="h-190 w-full p-3 sm:p-4">
                     <div className="space-y-4">
                         {filteredPins.length > 0 ? (
                             filteredPins.map((pin) => {

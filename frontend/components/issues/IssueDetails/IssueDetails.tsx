@@ -223,14 +223,14 @@ export default function IssueDetails({
                                 <div className="flex gap-3">
                                     <Button
                                         variant="outline"
-                                        className="rounded-xl border-border-custom bg-card p-6 text-md font-bold hover:bg-background"
+                                        className="rounded-xl border-border-custom bg-card p-6 text-md font-bold hover:bg-background cursor-pointer"
                                     >
                                         <Link
-                                            href="/issues-map"
-                                            className="flex gap-3"
+                                            href={`/issues-map?trackingCode=${post.trackingCode}`}
+                                            className="flex items-center gap-3"
                                         >
                                             <MapPin className="h-6 w-6 text-primary" />
-                                            View on issues map
+                                            <span>View on issues map</span>
                                         </Link>
                                     </Button>
 
