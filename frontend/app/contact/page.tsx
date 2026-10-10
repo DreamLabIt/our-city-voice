@@ -391,7 +391,7 @@ export default function ContactPage(): React.ReactNode {
 
                         <div className="lg:col-span-5 space-y-6">
 
-                            <Card className="bg-card border-border-custom rounded-2xl overflow-hidden shadow-sm h-100 sm:h-113 relative">
+                            <Card className="bg-card border-border-custom rounded-2xl overflow-hidden shadow-sm h-100 sm:h-113 relative p-0">
                                 <iframe
                                     title="City Hall Location Map"
                                     src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d92350.29431056581!2d-79.31464390546872!3d43.77307222384263!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89d4d0f6229a32c3%3A0xb3e6a88b503ec910!2sScarborough%2C%20ON%2C%20Canada!5e0!3m2!1sen!2sbd!4v1700000000000!5m2!1sen!2sbd"

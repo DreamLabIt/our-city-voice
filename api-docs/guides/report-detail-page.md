@@ -97,7 +97,8 @@ the mapping is in [reports-page.md](reports-page.md#how-each-mock-field-maps).
 
 ## The buttons do not work yet
 
-Like, reply and comment are all reads away from being writes. Nothing in the API
-accepts a `POST` yet, so those controls can only update local state — which is what
+Like, reply and comment are still reads away from being writes — only
+[`POST /posts`](../endpoints/create-report.md) accepts a `POST` today, and these
+controls are not it. So they can only update local state, which is what
 `IssueDetails.tsx` already does. See
 [not-implemented.md](../not-implemented.md).

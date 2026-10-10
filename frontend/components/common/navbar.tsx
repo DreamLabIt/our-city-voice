@@ -6,29 +6,18 @@ import { useState } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { navItems } from "@/data/mock-data";
-import type { AuthUser, NavItem } from "@/types";
+import type { NavbarProps, NavItem } from "@/types";
 import SearchDialog from "../Dialog/SearchDialog";
 import SectionContainer from "./SectionContainer";
 import UserMenu from "./UserMenu";
 
-export interface NavbarProps {
-    /**
-     * Read in the root layout, which is a server component, and passed down.
-     * The navbar runs in the browser and has no way to read an httpOnly cookie,
-     * which is the whole point of the cookie being httpOnly.
-     */
-    user: AuthUser | null;
-}
-
-export default function Navbar({ user }: NavbarProps): React.ReactNode {
+export default function Navbar({ user, Reports = [] }: NavbarProps): React.ReactNode {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
     const pathname = usePathname();
 
     return (
         <header className="w-full bg-card relative">
             <SectionContainer>
-
-
                 <div className="w-full flex h-20 items-center justify-between border-b border-border-custom">
 
                     <Link
@@ -77,12 +66,9 @@ export default function Navbar({ user }: NavbarProps): React.ReactNode {
                     </nav>
 
                     <div className="flex items-center gap-2 sm:gap-4">
-                        <SearchDialog />
+                        <SearchDialog Reports={Reports} />
 
                         {user ? (
-                            // Shown at every width, unlike the Login button
-                            // below. An avatar is small enough that the mobile
-                            // menu does not need a copy of it.
                             <UserMenu user={user} />
                         ) : (
                             <Link

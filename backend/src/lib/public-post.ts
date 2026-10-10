@@ -2,28 +2,9 @@ import type { Prisma } from "../generated/prisma/client.js";
 import type { MediaType, PostPriority, PostStatus } from "../generated/prisma/enums.js";
 import { mediaUrl } from "./media-url.js";
 
-/**
- * The only post shape that leaves the API, and the select that feeds it.
- *
- * Same reasoning as lib/public-user.ts: going through one function is a habit,
- * and the habit is what stops a column reaching a response because somebody
- * forgot a `select` at one call site out of five.
- *
- * Two rules this file exists to enforce rather than document:
- *
- *   anonymity   a post with is_anonymous set has no author in the response.
- *               Not "an author the client should remember not to render" — the
- *               field is null and the name never leaves the process
- *   enums       status and priority are the database's own values, "in_progress"
- *               rather than "In Progress". An API that ships display strings
- *               makes itself the wrong place to change wording, and the role
- *               field already set this precedent
- */
-
-/** Ids are strings for the reason given in lib/public-user.ts: 2^53. */
 export interface PublicPost {
   id: string;
-  /** The human-facing ticket number. The id is not in any URL. */
+  
   trackingCode: string;
   title: string;
   description: string;
@@ -34,7 +15,7 @@ export interface PublicPost {
   category: { id: string; name: string; slug: string; icon: string };
   ward: { id: string; name: string; code: string };
   department: { id: string; name: string } | null;
-  /** Null when the report is anonymous. See the note above. */
+  
   author: { id: string; name: string; avatarUrl: string | null } | null;
   assignedOfficer: { id: string; name: string } | null;
 
@@ -43,35 +24,24 @@ export interface PublicPost {
     city: string;
     address: string;
     postalCode: string | null;
-    /**
-     * Numbers, not the strings a Decimal column serialises to. Decimal(9,6) is
-     * nine significant digits, well inside what a double represents exactly, so
-     * there is nothing to lose and the frontend's own PostItem type already
-     * declares `number | null`.
-     */
+    
     latitude: number | null;
     longitude: number | null;
   };
 
   counts: { views: number; likes: number; comments: number };
 
-  /**
-   * Whether the caller has liked this one. Always false for a signed-out
-   * reader, which is also what the like button should show them.
-   */
+  
   likedByMe: boolean;
 
-  /**
-   * Enough media for a card, not the gallery. A list of twenty posts does not
-   * need eighty media rows, and the detail view is where the gallery belongs.
-   */
+  
   media: {
-    /** The first image by sort order, or null for a post with no image. */
+    
     image: string | null;
-    /** The first video, if there is one. */
+    
     video: string | null;
     durationSecs: number | null;
-    /** Everything attached, images and video, so a card can say "+3". */
+    
     count: number;
   };
 
@@ -80,14 +50,6 @@ export interface PublicPost {
   updatedAt: string;
 }
 
-/**
- * Passed to every query that returns a post.
- *
- * `media` is ordered and unbounded rather than `take: 1`, because a card needs
- * the first image *and* the first video and those can be any two rows. Posts
- * carry a handful of attachments, so this is a few rows per post, not a join
- * that grows with the table.
- */
 export const PUBLIC_POST_SELECT = {
   id: true,
   trackingCode: true,
@@ -119,10 +81,8 @@ export const PUBLIC_POST_SELECT = {
   },
 } satisfies Prisma.PostSelect;
 
-/** Exactly what PUBLIC_POST_SELECT returns, so the mapper cannot drift from it. */
 export type PostRow = Prisma.PostGetPayload<{ select: typeof PUBLIC_POST_SELECT }>;
 
-/** Decimal | null -> number | null. Decimal has no implicit conversion. */
 function toNumber(value: Prisma.Decimal | null): number | null {
   return value === null ? null : value.toNumber();
 }
@@ -161,8 +121,6 @@ export function toPublicPost(post: PostRow, likedByMe = false): PublicPost {
     department: post.department
       ? { id: post.department.id.toString(), name: post.department.name }
       : null,
-    // The whole point of the column. A client that forgets to check
-    // isAnonymous still cannot render a name, because there is not one here.
     author: post.isAnonymous
       ? null
       : {
@@ -192,8 +150,6 @@ export function toPublicPost(post: PostRow, likedByMe = false): PublicPost {
     likedByMe,
 
     media: {
-      // A video's poster frame counts as the card image when there is no
-      // standalone image row, which is how a video-only report gets a thumbnail.
       image: image ? mediaUrl(image.storageKey) : video?.thumbnailKey
         ? mediaUrl(video.thumbnailKey)
         : null,
@@ -208,26 +164,14 @@ export function toPublicPost(post: PostRow, likedByMe = false): PublicPost {
   };
 }
 
-
-// ── detail ──────────────────────────────────────────────────────────
-
-/** One attachment, for the gallery on a detail page. */
 export interface PublicMediaItem {
   type: MediaType;
   url: string;
-  /** A poster frame for video. Null for images, and for video without one. */
+  
   thumbnailUrl: string | null;
   durationSecs: number | null;
 }
 
-/**
- * One step in a report's life, from post_status_history.
- *
- * `fromStatus` is null on the first entry, where the report was created rather
- * than moved. `actor` is null when the step was automated, when the actor's
- * account has since been deleted, or when naming them would identify the author
- * of an anonymous report.
- */
 export interface PublicTimelineEntry {
   id: string;
   fromStatus: PostStatus | null;
@@ -238,26 +182,11 @@ export interface PublicTimelineEntry {
   createdAt: string;
 }
 
-/**
- * A single report, for its own page.
- *
- * A superset of PublicPost rather than a different shape, so a card and a detail
- * header can read the same fields and the frontend's two types can extend one
- * another instead of being kept in step by hand.
- */
 export interface PublicPostDetail extends PublicPost {
   media: PublicPost["media"] & { gallery: PublicMediaItem[] };
   timeline: PublicTimelineEntry[];
 }
 
-/**
- * The list select plus the two things a detail page needs and a card does not:
- * every attachment in order, and the full status history.
- *
- * Unbounded on purpose. A report has a handful of attachments and a handful of
- * status changes; comments are the part that grows without limit, and those have
- * their own paginated endpoint rather than being embedded here.
- */
 export const PUBLIC_POST_DETAIL_SELECT = {
   ...PUBLIC_POST_SELECT,
   statusHistory: {
@@ -270,7 +199,6 @@ export const PUBLIC_POST_DETAIL_SELECT = {
       actor: { select: { id: true, name: true } },
       createdAt: true,
     },
-    // Oldest first: this is read top to bottom as a story.
     orderBy: { createdAt: "asc" },
   },
 } satisfies Prisma.PostSelect;
@@ -299,10 +227,6 @@ export function toPublicPostDetail(post: PostDetailRow, likedByMe = false): Publ
       toStatus: entry.toStatus,
       title: entry.title,
       note: entry.note,
-      // The first entry's actor is almost always the author, so on an anonymous
-      // report naming them would undo the anonymity that toPublicPost just
-      // protected. Any other actor is staff acting in an official capacity and
-      // is named.
       actor:
         entry.actor && !(post.isAnonymous && entry.actor.id === post.author.id)
           ? { id: entry.actor.id.toString(), name: entry.actor.name }

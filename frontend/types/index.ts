@@ -1,4 +1,7 @@
 import { LucideIcon } from "lucide-react";
+import type {
+    Report,
+} from "@/types/report";
 
 // ── Navigation ──────────────────────────────────────────────
 export interface NavItem {
@@ -21,7 +24,7 @@ export interface PageHeaderProps {
 export interface CategoryItem {
     id: string;
     label: string;
-    icon: LucideIcon;
+    icon?: LucideIcon;
     iconColor?: string;
     isOther?: boolean;
 }
@@ -439,4 +442,35 @@ export interface UserProfileData {
 
 export interface ProfileHeaderProps {
     user: UserProfileData;
+}
+
+export interface SearchDialogProps {
+    Reports?: Report[];
+}
+
+
+export interface NavbarProps {
+    user: AuthUser | null;
+    Reports?: Report[];
+}
+
+export interface ConditionalLayoutProps {
+    children: React.ReactNode;
+    user: AuthUser | null;
+    Reports?: Report[];
+}
+
+
+export interface HeroSectionProps {
+    AllPosts?: Report[];
+}
+
+export interface IssueSearchBarProps {
+    onSearch?: (query: string) => void;
+    AllPosts?: Report[];
+}
+
+export interface CategoryFilterProps {
+    allCategory?: CategoryItem[];
+    onSelectCategory?: (categoryId: string) => void;
 }

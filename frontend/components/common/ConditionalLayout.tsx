@@ -3,15 +3,13 @@
 import { usePathname } from "next/navigation";
 import Navbar from "@/components/common/navbar";
 import Footer from "@/components/common/Footer";
-import type { AuthUser } from "@/types";
+import type { ConditionalLayoutProps } from "@/types";
 
 export default function ConditionalLayout({
     children,
     user,
-}: {
-    children: React.ReactNode;
-    user: AuthUser | null;
-}) {
+    Reports = [],
+}: ConditionalLayoutProps) {
     const pathname = usePathname();
 
     const isChromeless =
@@ -26,7 +24,7 @@ export default function ConditionalLayout({
 
     return (
         <div className="min-h-screen flex flex-col">
-            <Navbar user={user} />
+            <Navbar user={user} Reports={Reports} />
 
             <main className="flex-1">
                 {children}

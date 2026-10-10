@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { RecentActivityCardClientProps, ReportItem } from "@/types/report";
+import RecentActivitySkeleton from "../skeleton/ActivitySkeleton";
 
 const getCategoryName = (category?: ReportItem["category"]) => {
     if (!category) return "";
@@ -160,7 +161,7 @@ export default function RecentActivityCardClient({
                         return (
                             <Link
                                 key={item.id}
-                                href={`/reports/${item.trackingCode}`}
+                                href={`/issues/${item.trackingCode}`}
                                 className="flex items-center justify-between p-3.5 sm:p-4 gap-1 hover:bg-muted/40 transition-colors cursor-pointer group"
                             >
                                 <div className="flex items-center gap-3.5 min-w-0 py-0">
@@ -190,9 +191,7 @@ export default function RecentActivityCardClient({
                         );
                     })
                 ) : (
-                    <div className="flex flex-col items-center justify-center h-64 text-muted-foreground text-sm">
-                        No recent activity found.
-                    </div>
+                    <RecentActivitySkeleton />
                 )}
             </div>
         </div>

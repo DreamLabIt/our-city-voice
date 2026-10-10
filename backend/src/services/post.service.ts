@@ -1,7 +1,10 @@
+import { randomInt } from "node:crypto";
+
 import { prisma } from "../db/prisma.js";
 import type { Prisma } from "../generated/prisma/client.js";
-import type { PostPriority, PostStatus } from "../generated/prisma/enums.js";
+import type { MediaType, PostPriority, PostStatus } from "../generated/prisma/enums.js";
 import { AppError } from "../lib/errors.js";
+import { isUniqueViolation } from "../lib/prisma-errors.js";
 import {
   PUBLIC_COMMENT_SELECT,
   toPublicComment,
@@ -17,16 +20,6 @@ import {
   type PublicPostDetail,
 } from "../lib/public-post.js";
 
-/**
- * Reading reports.
- *
- * One list function serves the public reports page and both dashboards, because
- * they are the same query with different filters. Splitting them would mean two
- * places to fix the next time the shape of a card changes, and the only thing
- * that actually differs is which rows a caller is allowed to ask for — which is
- * the route layer's business, not this file's.
- */
-
 export type PostSort =
   | "newest"
   | "oldest"
@@ -40,15 +33,15 @@ export interface ListPostsOptions {
   limit: number;
   sort: PostSort;
   search?: string | undefined;
-  /** Category slugs. Several, so one request can ask for roads and water. */
+  
   category?: string[] | undefined;
-  /** Ward codes. */
+  
   ward?: string[] | undefined;
   status?: PostStatus[] | undefined;
   priority?: PostPriority[] | undefined;
-  /** Restricts to one author. The route decides who may set it. */
+  
   authorId?: bigint | undefined;
-  /** Soft-deleted posts. Super admin only, enforced by the route. */
+  
   includeDeleted?: boolean | undefined;
 }
 
@@ -60,14 +53,6 @@ export interface ListPostsResult {
   pageCount: number;
 }
 
-/**
- * Every sort ends with id desc.
- *
- * Not decoration. `ORDER BY like_count DESC` alone leaves rows with equal counts
- * in whatever order the planner picked, and that order is free to differ between
- * the query for page 1 and the query for page 2 — so a row appears twice, or
- * never. A unique tiebreak is what makes an OFFSET page boundary stable.
- */
 const ORDER_BY: Record<PostSort, Prisma.PostOrderByWithRelationInput[]> = {
   newest: [{ createdAt: "desc" }, { id: "desc" }],
   oldest: [{ createdAt: "asc" }, { id: "asc" }],
@@ -81,8 +66,6 @@ function buildWhere(options: ListPostsOptions): Prisma.PostWhereInput {
   const { search, category, ward, status, priority, authorId, includeDeleted } = options;
 
   return {
-    // Soft deletes are invisible by default. A moderated report should not come
-    // back on the public feed because a filter was left off.
     ...(includeDeleted ? {} : { deletedAt: null }),
     ...(status?.length ? { status: { in: status } } : {}),
     ...(priority?.length ? { priority: { in: priority } } : {}),
@@ -91,13 +74,6 @@ function buildWhere(options: ListPostsOptions): Prisma.PostWhereInput {
     ...(authorId !== undefined ? { userId: authorId } : {}),
     ...(search
       ? {
-          // The same five fields the reports page searches today: its title,
-          // description, tracking code and location text.
-          //
-          // `contains` with insensitive mode is a sequential scan. Fine at this
-          // size and a problem at a million rows, where this wants a trigram
-          // index (pg_trgm) or a tsvector column. Saying so here because the
-          // query that quietly stops scaling is the one nobody wrote a note on.
           OR: [
             { title: { contains: search, mode: "insensitive" } },
             { description: { contains: search, mode: "insensitive" } },
@@ -110,10 +86,6 @@ function buildWhere(options: ListPostsOptions): Prisma.PostWhereInput {
   };
 }
 
-/**
- * Which of these posts the viewer has liked, as one query rather than one per
- * row. Empty for a signed-out reader, who has not liked anything.
- */
 async function likedPostIds(viewerId: bigint | undefined, postIds: bigint[]): Promise<Set<string>> {
   if (viewerId === undefined || postIds.length === 0) return new Set();
 
@@ -132,8 +104,6 @@ export async function listPosts(
   const { page, limit, sort } = options;
   const where = buildWhere(options);
 
-  // One round trip for both, so the total cannot disagree with the page under
-  // it when a report is filed between the two queries.
   const [rows, total] = await prisma.$transaction([
     prisma.post.findMany({
       where,
@@ -159,12 +129,10 @@ export async function listPosts(
   };
 }
 
-// ── filter options ──────────────────────────────────────────────────
-
 export interface FilterOption {
   id: string;
   name: string;
-  /** The value to send back as a filter: a category slug or a ward code. */
+  
   value: string;
   postCount: number;
 }
@@ -181,24 +149,9 @@ export interface FilterOptions {
   priorities: EnumFilterOption[];
 }
 
-/**
- * Everything the filter dropdowns need, in one request.
- *
- * It has to be its own call rather than a block on the list response. The
- * options are a property of the whole table, and a paginated list only knows
- * about the twenty rows it returned: build the dropdown from those and "Roads"
- * disappears from the menu the moment you are on a page with no road reports.
- *
- * Counts are of every visible post, not of the current filter selection. True
- * faceted counts would mean re-running the filtered query once per option, and
- * a count that changes as you narrow is a different, more expensive feature.
- */
 export async function listFilterOptions(): Promise<FilterOptions> {
   const where: Prisma.PostWhereInput = { deletedAt: null };
 
-  // Promise.all rather than $transaction. These six feed four dropdowns, and a
-  // count being one report stale next to its neighbour is not a thing anybody
-  // can see; the list query is where a consistent total actually matters.
   const [categories, wards, byCategory, byWard, byStatus, byPriority] = await Promise.all([
     prisma.category.findMany({
       select: { id: true, name: true, slug: true, icon: true },
@@ -208,9 +161,6 @@ export async function listFilterOptions(): Promise<FilterOptions> {
       select: { id: true, name: true, code: true },
       orderBy: { name: "asc" },
     }),
-    // orderBy is not optional on groupBy, so these are ordered by the count
-    // they produce, biggest first. Harmless for the two that get reshaped into
-    // a lookup, and the right order for the two that do not.
     prisma.post.groupBy({
       by: ["categoryId"],
       where,
@@ -243,9 +193,6 @@ export async function listFilterOptions(): Promise<FilterOptions> {
   const perWard = new Map(byWard.map((group) => [group.wardId.toString(), group._count._all]));
 
   return {
-    // Every category and ward is listed, including ones with no reports yet, and
-    // the count says which. A dropdown that hides empty options cannot be used
-    // to find out that a ward has filed nothing.
     categories: categories.map((category) => ({
       id: category.id.toString(),
       name: category.name,
@@ -270,50 +217,23 @@ export async function listFilterOptions(): Promise<FilterOptions> {
   };
 }
 
-
-// ── one report ──────────────────────────────────────────────────────
-
-/**
- * How a report was asked for.
- *
- * A tracking code is the identifier meant for public URLs: the primary key is
- * sequential, so a URL built from it tells anybody who looks how many reports
- * the platform has ever received. Ids are accepted as well because they are
- * already in every list response and refusing them would be theatre.
- */
 export type PostIdentifier = { trackingCode: string } | { id: bigint };
 
 export interface GetPostOptions {
-  /** Soft-deleted reports. Super admin only, enforced by the controller. */
+  
   includeDeleted?: boolean | undefined;
-  /**
-   * Whether to count this read as a view.
-   *
-   * Off by default so that nothing increments the counter by accident. The
-   * controller turns it on for the one route a person actually lands on.
-   */
+  
   countView?: boolean | undefined;
 }
 
 export interface GetPostResult {
   post: PublicPostDetail;
-  /** A few other reports to offer at the bottom of the page. */
+  
   related: PublicPost[];
 }
 
 const RELATED_LIMIT = 4;
 
-/**
- * Other reports worth showing beneath this one.
- *
- * Same category first, then the newest of anything else to fill the row. The
- * padding matters: a category with one report would otherwise leave the section
- * empty, which looks like a bug rather than like a quiet category.
- *
- * Deliberately not a parameter on the list endpoint. "Four posts, this category
- * first, excluding this one, padded with others" is not a filter, and bending
- * listPosts into expressing it would make that function worse.
- */
 async function listRelated(
   postId: bigint,
   categoryId: bigint,
@@ -348,13 +268,6 @@ async function listRelated(
   return rows.map((row) => toPublicPost(row, liked.has(row.id.toString())));
 }
 
-/**
- * Resolves an identifier to a primary key, for routes that hang off a report
- * without needing the report itself.
- *
- * Soft-deleted reports resolve too. The alternative is a comments endpoint that
- * 404s for a super admin looking at why something was moderated.
- */
 export async function findPostId(identifier: PostIdentifier): Promise<bigint> {
   const post = await prisma.post.findFirst({ where: identifier, select: { id: true } });
   if (!post) throw AppError.notFound("No report with that tracking code");
@@ -372,26 +285,11 @@ export async function getPost(
     ...(options.includeDeleted ? {} : { deletedAt: null }),
   };
 
-  // findFirst, not findUnique: both identifiers are unique on their own, but the
-  // deletedAt condition makes this a filtered lookup rather than a key lookup.
   const post = await prisma.post.findFirst({ where, select: PUBLIC_POST_DETAIL_SELECT });
 
-  // The same 404 whether the report never existed or was moderated away. A
-  // distinct "this was removed" tells somebody their report was deleted and tells
-  // everybody else that a given tracking code was real, which is worse.
   if (!post) throw AppError.notFound("No report with that tracking code");
 
-  /**
-   * Counted before the response is built, so the number a reader sees includes
-   * their own visit rather than lagging it by one.
-   *
-   * No deduplication. Every successful read of this route counts, so a refresh
-   * counts twice and a crawler counts once per crawl. Doing better needs a record
-   * of who has already viewed what inside some window, which is a table and a
-   * decision about how long the window is; the column is a cache of engagement,
-   * not an audited figure, and inflating it is a smaller problem than leaving the
-   * feature out.
-   */
+  
   let viewCount = post.viewCount;
   if (options.countView) {
     const updated = await prisma.post.update({
@@ -413,7 +311,122 @@ export async function getPost(
   };
 }
 
-// ── comments ────────────────────────────────────────────────────────
+export interface CreatePostMediaInput {
+  url: string;
+  type: MediaType;
+  thumbnailUrl?: string | null | undefined;
+  mimeType?: string | null | undefined;
+  sizeBytes?: number | null | undefined;
+  durationSecs?: number | null | undefined;
+}
+
+export interface CreatePostLocationInput {
+  street?: string | null | undefined;
+  city: string;
+  address: string;
+  postalCode?: string | null | undefined;
+  latitude?: number | null | undefined;
+  longitude?: number | null | undefined;
+}
+
+export interface CreatePostInput {
+  title: string;
+  description: string;
+  category: string;
+  ward: string;
+  priority?: PostPriority | undefined;
+  isAnonymous?: boolean | undefined;
+  location: CreatePostLocationInput;
+  media?: CreatePostMediaInput[] | undefined;
+}
+
+const OPENING_STATUS: PostStatus = "pending";
+const DEFAULT_MEDIA_TYPE: Record<MediaType, string> = {
+  image: "image/jpeg",
+  video: "video/mp4",
+};
+
+function generateTrackingCode(year: number): string {
+  const serial = randomInt(1, 1_000_000).toString().padStart(6, "0");
+  return `OCV-${year}-${serial}`;
+}
+
+function unknownField(field: string, value: string, collection: string): AppError {
+  return AppError.badRequest("Some fields need attention", {
+    [field]: [`No ${collection} with the value "${value}". See GET /posts/filters for the valid options.`],
+  });
+}
+
+export async function createPost(userId: bigint, input: CreatePostInput): Promise<PublicPost> {
+  const [category, ward] = await Promise.all([
+    prisma.category.findUnique({
+      where: { slug: input.category },
+      select: { id: true, defaultDepartmentId: true },
+    }),
+    prisma.ward.findUnique({ where: { code: input.ward }, select: { id: true } }),
+  ]);
+
+  if (!category) throw unknownField("category", input.category, "category");
+  if (!ward) throw unknownField("ward", input.ward, "ward");
+
+  const media = input.media?.map((item, index) => ({
+    type: item.type,
+    storageKey: item.url,
+    thumbnailKey: item.thumbnailUrl ?? null,
+    mimeType: item.mimeType?.trim() || DEFAULT_MEDIA_TYPE[item.type],
+    sizeBytes: BigInt(item.sizeBytes ?? 0),
+    durationSecs: item.durationSecs ?? null,
+    sortOrder: index,
+  }));
+
+  const year = new Date().getFullYear();
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const created = await tx.post.create({
+          data: {
+            trackingCode: generateTrackingCode(year),
+            title: input.title,
+            description: input.description,
+            userId,
+            categoryId: category.id,
+            wardId: ward.id,
+            departmentId: category.defaultDepartmentId,
+            priority: input.priority ?? "medium",
+            isAnonymous: input.isAnonymous ?? false,
+            street: input.location.street?.trim() || null,
+            city: input.location.city,
+            address: input.location.address,
+            postalCode: input.location.postalCode?.trim() || null,
+            latitude: input.location.latitude ?? null,
+            longitude: input.location.longitude ?? null,
+            ...(media?.length ? { media: { create: media } } : {}),
+          },
+          select: PUBLIC_POST_SELECT,
+        });
+
+        await tx.postStatusHistory.create({
+          data: {
+            postId: created.id,
+            actorId: userId,
+            fromStatus: null,
+            toStatus: OPENING_STATUS,
+            title: "Report submitted",
+            note: "Received and queued for triage.",
+          },
+        });
+
+        return toPublicPost(created, false);
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) continue;
+      throw error;
+    }
+  }
+
+  throw AppError.serviceUnavailable("Could not assign a tracking code. Please try again.");
+}
 
 export interface ListCommentsOptions {
   page: number;
@@ -422,17 +435,13 @@ export interface ListCommentsOptions {
 
 export interface ListCommentsResult {
   comments: PublicCommentThread[];
-  /** Top-level comments only, which is what the pages are over. */
+  
   total: number;
   page: number;
   limit: number;
   pageCount: number;
 }
 
-/**
- * Which of these comments the viewer has liked, batched the same way posts are.
- * Covers top-level comments and their replies in one query.
- */
 async function likedCommentIds(
   viewerId: bigint | undefined,
   commentIds: bigint[],
@@ -447,17 +456,6 @@ async function likedCommentIds(
   return new Set(rows.map((row) => row.commentId.toString()));
 }
 
-/**
- * A page of comment threads on one report.
- *
- * Paginated over top-level comments, with every reply to the ones on this page
- * attached in full. Paginating replies as well would mean a "show more" control
- * inside each thread for a schema that caps nesting at one level and threads that
- * are a handful of messages long.
- *
- * Two queries for the replies rather than a nested include, because an include
- * would have Prisma issue one reply query per parent.
- */
 export async function listComments(
   postId: bigint,
   options: ListCommentsOptions,
@@ -470,8 +468,6 @@ export async function listComments(
     prisma.comment.findMany({
       where,
       select: PUBLIC_COMMENT_SELECT,
-      // Oldest first, and the id tiebreak for the same reason every post sort
-      // has one: equal timestamps must not reorder between pages.
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       skip: (page - 1) * limit,
       take: limit,

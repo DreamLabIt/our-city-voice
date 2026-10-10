@@ -4,11 +4,12 @@ Called out so nothing in these docs is mistaken for an oversight.
 
 **The short version: every read the current pages need exists, and no write does.**
 
-## Writes, all of them
+## Writes
 
-Nothing in the API accepts a `POST`, `PUT` or `DELETE` on a report. That means:
+**One write now exists:** creating a report via
+[`POST /posts`](endpoints/create-report.md). Everything else below still has no
+`POST`, `PUT` or `DELETE`:
 
-- **Creating a report.** `ReportForm.tsx` has nowhere to post.
 - **Liking a report**, and **unliking one**. `likedByMe` can be read, not set.
 - **Posting a comment or a reply**, and **liking a comment**. The controls in
   `IssueDetails.tsx` can only update local state.

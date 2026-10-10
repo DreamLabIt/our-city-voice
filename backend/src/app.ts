@@ -12,17 +12,9 @@ import { apiRouter } from "./routes/index.js";
 
 const API_PREFIX = "/api/v1";
 
-/**
- * Builds the Express app without starting a server.
- *
- * Keeping `listen` out of here is what lets tests run the whole app in-process
- * with supertest, and it keeps the startup sequence in one readable place.
- */
 export function createApp(): Express {
   const app = express();
 
-  // Behind nginx, req.ip must come from X-Forwarded-For or every client IP in
-  // your logs and rate limiter is the proxy container's IP.
   app.set("trust proxy", 1);
   app.disable("x-powered-by");
 
@@ -31,7 +23,6 @@ export function createApp(): Express {
   app.use(
     cors({
       origin(origin, callback) {
-        // No Origin header: curl, server-to-server, same-origin navigation.
         if (!origin) {
           callback(null, true);
           return;
@@ -43,8 +34,6 @@ export function createApp(): Express {
           return;
         }
 
-        // Vercel mints a fresh URL per preview deploy, so an exact allowlist
-        // cannot cover them. Allowed outside production only.
         if (!env.isProduction && /^https:\/\/[\w-]+\.vercel\.app$/.test(normalised)) {
           callback(null, true);
           return;
@@ -69,8 +58,6 @@ export function createApp(): Express {
         res.setHeader("x-request-id", id);
         return id;
       },
-      // The docker healthcheck hits /health every 10s forever. Logging it
-      // buries everything you actually want to read.
       autoLogging: {
         ignore: (req) => req.url?.startsWith(`${API_PREFIX}/health`) ?? false,
       },
@@ -79,7 +66,6 @@ export function createApp(): Express {
 
   app.use(API_PREFIX, apiRouter);
 
-  // Order matters: 404 first, then the error handler, both after all routes.
   app.use(notFoundHandler);
   app.use(errorHandler);
 

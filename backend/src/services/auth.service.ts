@@ -17,21 +17,6 @@ import {
 } from "../lib/public-user.js";
 import { createRefreshToken, hashRefreshToken } from "../lib/refresh-token.js";
 
-/**
- * Sessions: a short-lived signed access token plus a long-lived opaque refresh
- * token, rotated on every use.
- *
- * Why two tokens. The access token is not checked against the database, which
- * is what makes it cheap, and also what makes it impossible to revoke before
- * it expires. Keeping it to minutes bounds that. The refresh token is the part
- * that is checked, stored hashed, and can be killed.
- *
- * Neither token is set as a cookie here. This API answers JSON and nothing
- * else; the Next.js server is the only client that sees these values and it
- * puts them in its own httpOnly cookies. That avoids cross-site cookie rules
- * entirely, and the browser never holds a token in reachable JavaScript.
- */
-
 export interface SessionContext {
   userAgent?: string | undefined;
   ipAddress?: string | undefined;
@@ -40,7 +25,7 @@ export interface SessionContext {
 export interface AuthResult {
   user: PublicUser;
   accessToken: string;
-  /** ISO. The caller sets a cookie max-age from this rather than guessing. */
+  
   accessTokenExpiresAt: string;
   refreshToken: string;
   refreshTokenExpiresAt: string;
@@ -59,19 +44,8 @@ export interface LoginInput {
   password: string;
 }
 
-/**
- * One message for "no such account" and for "wrong password".
- *
- * Distinguishing them turns the login form into an account-existence oracle,
- * which is how a leaked password list gets matched against your user base.
- */
 const INVALID_CREDENTIALS = "Invalid email or password";
 
-/**
- * `ip_address` is a Postgres inet column, so a value that is not an IP makes
- * the insert fail. req.ip is usually one, but behind a misconfigured proxy it
- * can be anything in X-Forwarded-For. Recording nothing beats 500ing a login.
- */
 function validIpOrNull(value: string | undefined): string | null {
   if (!value) return null;
   return isIP(value) === 0 ? null : value;
@@ -79,14 +53,6 @@ function validIpOrNull(value: string | undefined): string | null {
 
 let dummyHash: Promise<string> | null = null;
 
-/**
- * A real hash of a random string, used to make the "no such user" path cost
- * the same scrypt work as the "wrong password" path.
- *
- * Without it, a missing account answers in a millisecond and an existing one
- * takes ~100ms, so an attacker can enumerate accounts with a stopwatch even
- * though both responses say the same thing.
- */
 function dummyPasswordHash(): Promise<string> {
   dummyHash ??= hashPassword(randomBytes(32).toString("base64"));
   return dummyHash;
@@ -96,7 +62,6 @@ function refreshExpiry(): Date {
   return new Date(Date.now() + env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
 }
 
-/** Mints both tokens and records the refresh half. */
 async function issueSession(user: UserRow, context: SessionContext): Promise<AuthResult> {
   const access = signAccessToken(user.id, user.role);
   const refresh = createRefreshToken();
@@ -143,16 +108,10 @@ export async function register(
         passwordHash,
         phone: input.phone?.trim() || null,
         avatarUrl: input.avatarUrl ?? null,
-        // Never from input. `role` is absent on purpose rather than set to
-        // "user": the column default is the single source of that decision, and
-        // spreading an untrusted object into this call cannot reach it.
       },
       select: PUBLIC_USER_SELECT,
     });
   } catch (error) {
-    // The findFirst above loses a race with a second concurrent signup. The
-    // unique index on lower(email) is what actually prevents the duplicate;
-    // this turns its error into the same 409 the happy path would have given.
     if (isUniqueViolation(error)) {
       throw AppError.conflict("An account with that email address already exists");
     }
@@ -170,8 +129,6 @@ export async function login(input: LoginInput, context: SessionContext): Promise
     select: { ...PUBLIC_USER_SELECT, passwordHash: true },
   });
 
-  // Hash against a throwaway when there is no such account, so both failure
-  // paths cost the same scrypt work. See dummyPasswordHash.
   const storedHash = row?.passwordHash ?? (await dummyPasswordHash());
   const correct = await verifyPassword(input.password, storedHash);
 
@@ -184,15 +141,6 @@ export async function login(input: LoginInput, context: SessionContext): Promise
   return issueSession(user, context);
 }
 
-/**
- * Exchanges a refresh token for a fresh pair, and invalidates the one used.
- *
- * Rotation plus reuse detection: each token works exactly once. If a revoked
- * token comes back, either it was stolen and replayed or the real client lost
- * our response and retried. Both cases end the same way, with every session for
- * that account killed, because there is no way to tell from here which of the
- * two holders is the attacker.
- */
 export async function refresh(
   rawToken: string,
   context: SessionContext,
@@ -231,8 +179,6 @@ export async function refresh(
   const refreshToken = createRefreshToken();
   const expiresAt = refreshExpiry();
 
-  // One transaction, so there is never a moment where the old token is dead and
-  // the new one does not exist. A crash between the two would sign the user out.
   await prisma.$transaction([
     prisma.refreshToken.update({
       where: { id: stored.id },
@@ -249,8 +195,6 @@ export async function refresh(
     }),
   ]);
 
-  // Role is read fresh here rather than copied from the old token, which is
-  // what makes a role change take effect within one access-token lifetime.
   const access = signAccessToken(stored.user.id, stored.user.role);
 
   return {
@@ -262,11 +206,6 @@ export async function refresh(
   };
 }
 
-/**
- * Idempotent, and silent about whether the token existed. Signing out is not a
- * place to report errors: the client is discarding its cookies either way, and
- * saying "that token was already revoked" only tells an attacker something.
- */
 export async function logout(rawToken: string | undefined): Promise<void> {
   if (!rawToken) return;
 
@@ -276,7 +215,6 @@ export async function logout(rawToken: string | undefined): Promise<void> {
   });
 }
 
-/** Signs out every device. Used after a password change, and on token reuse. */
 export async function logoutEverywhere(userId: bigint): Promise<number> {
   const { count } = await prisma.refreshToken.updateMany({
     where: { userId, revokedAt: null },
@@ -285,15 +223,12 @@ export async function logoutEverywhere(userId: bigint): Promise<number> {
   return count;
 }
 
-/** The authenticated user, read fresh rather than taken from token claims. */
 export async function getCurrentUser(userId: bigint): Promise<PublicUser> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: PUBLIC_USER_SELECT,
   });
 
-  // The token verified, so the account existed when it was minted. Reaching
-  // here means it has since been deleted.
   if (!user) throw AppError.unauthorized("Account no longer exists");
 
   return toPublicUser(user);

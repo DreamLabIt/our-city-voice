@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import SectionContainer from "../common/SectionContainer";
 import type { ExploreTopLocationsProps } from "@/types/report";
+import ExploreTopLocationsSkeleton from "../skeleton/TopLocationsSkeleton";
 
 export default function ExploreTopLocations({
     recentPosts = [],
@@ -157,9 +158,7 @@ export default function ExploreTopLocations({
                             })}
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center h-64 bg-white/10 rounded-2xl border border-white/20 text-white/80">
-                            No locations available right now.
-                        </div>
+                        <ExploreTopLocationsSkeleton />
                     )}
                 </div>
             </SectionContainer>
