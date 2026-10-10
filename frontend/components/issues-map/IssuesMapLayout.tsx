@@ -10,6 +10,10 @@ import {
     Layers,
     ExternalLink,
     AlertCircle,
+    Clock,
+    CheckCircle2,
+    XCircle,
+    HelpCircle,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,10 +21,8 @@ import { Input } from "@/components/ui/input";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import dynamic from "next/dynamic";
-import { posts } from "@/data/mock-data";
-import { toMapPins } from "@/lib/map";
-import { STATUS_META } from "@/lib/status";
-import type { IssueMapPin, ReportStatus } from "@/types";
+import type { IssueMapPin } from "@/types";
+import type { Report } from "@/types/report";
 
 const IssueMap = dynamic(
     () => import("./IssueMap"),
@@ -36,24 +38,119 @@ const IssueMap = dynamic(
     }
 );
 
-const getStatusBadge = (status: ReportStatus) => {
-    const meta = STATUS_META[status];
-    const Icon = meta.icon;
+const getStatusBadge = (status: string) => {
+    const normalizeStatus = status.toLowerCase().replace("_", " ").replace("-", " ");
+
+    let badgeStyle = "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800";
+    let Icon = AlertCircle;
+    let label = status;
+
+    if (normalizeStatus.includes("pending")) {
+        badgeStyle = "bg-blue-100/80 text-blue-600 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800";
+        Icon = AlertCircle;
+        label = "Pending";
+    } else if (normalizeStatus.includes("progress")) {
+        badgeStyle = "bg-amber-100/80 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800";
+        Icon = Clock;
+        label = "In Progress";
+    } else if (normalizeStatus.includes("resolved") || normalizeStatus.includes("completed")) {
+        badgeStyle = "bg-emerald-100/80 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800";
+        Icon = CheckCircle2;
+        label = "Resolved";
+    } else if (normalizeStatus.includes("rejected") || normalizeStatus.includes("closed")) {
+        badgeStyle = "bg-rose-100/80 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800";
+        Icon = XCircle;
+        label = "Rejected";
+    } else {
+        badgeStyle = "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700";
+        Icon = HelpCircle;
+    }
 
     return (
-        <Badge className={`gap-1 font-medium ${meta.badge}`}>
-            <Icon className="w-3 h-3" />
-            {status}
+        <Badge variant="outline" className={`gap-1 font-semibold text-[11px] sm:text-xs px-2.5 py-0.5 rounded-full border shadow-2xs ${badgeStyle}`}>
+            <Icon className="w-3 h-3 shrink-0 stroke-[2.5]" />
+            <span>{label}</span>
         </Badge>
     );
 };
 
-export default function IssuesMapLayout() {
+const getTimeAgo = (dateString?: string) => {
+    if (!dateString) return "Recently";
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + " years ago";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + " months ago";
+    interval = seconds / 86400;
+    if (interval > 1) {
+        const days = Math.floor(interval);
+        return days === 1 ? "1 day ago" : `${days} days ago`;
+    }
+    interval = seconds / 3600;
+    if (interval > 1) {
+        const hours = Math.floor(interval);
+        return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
+    }
+    interval = seconds / 60;
+    if (interval > 1) {
+        const minutes = Math.floor(interval);
+        return minutes === 1 ? "1 minute ago" : `${minutes} minutes ago`;
+    }
+    return "Just now";
+};
+
+export interface IssuesMapLayoutProps {
+    AllPosts?: Report[];
+}
+
+export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps) {
     const searchParams = useSearchParams();
     const queryTrackingCode = searchParams.get("trackingCode");
     const queryId = searchParams.get("id");
-    const pins = useMemo(() => toMapPins(posts), []);
-    const unmappedCount = posts.length - pins.length;
+
+    const pins = useMemo(() => {
+        if (!Array.isArray(AllPosts) || AllPosts.length === 0) return [];
+
+        return AllPosts.map((report: any, index: number) => {
+            const locationObj = report.location || {};
+
+            const address =
+                typeof locationObj === "object"
+                    ? locationObj.address || `${locationObj.street || ""}, ${locationObj.city || ""}`.trim() || "Location not specified"
+                    : String(report.location || "Location not specified");
+
+            const category =
+                typeof report.category === "object" && report.category !== null
+                    ? report.category.name || report.category.slug || "General"
+                    : String(report.category || "General");
+
+            const ward =
+                typeof report.ward === "object" && report.ward !== null
+                    ? report.ward.name || report.ward.code || "N/A"
+                    : String(report.ward || "N/A");
+
+            const lat = Number(report.lat ?? report.latitude ?? locationObj.latitude ?? locationObj.lat ?? 0);
+            const lng = Number(report.lng ?? report.longitude ?? locationObj.longitude ?? locationObj.lng ?? 0);
+
+            return {
+                id: String(report.id || report._id || report.trackingCode || ""),
+                code: String(report.trackingCode || report.id || ""),
+                title: String(report.title || "Untitled Report"),
+                address: address,
+                ward: ward,
+                category: category,
+                status: report.status || "pending",
+                lat: lat !== 0 && !isNaN(lat) ? lat : 43.771568 + (index * 0.001),
+                lng: lng !== 0 && !isNaN(lng) ? lng : -79.213000 + (index * 0.001),
+                updatedAt: getTimeAgo(report.updatedAt || report.createdAt),
+            };
+        }) as IssueMapPin[];
+    }, [AllPosts]);
+
+    const unmappedCount = AllPosts.length - pins.length;
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [selectedPin, setSelectedPin] = useState<IssueMapPin | null>(null);
 
@@ -146,7 +243,7 @@ export default function IssuesMapLayout() {
                                                 </h3>
 
                                                 <div className="flex items-center flex-wrap gap-1.5 shrink-0">
-                                                    <Badge variant="secondary" className="text-[11px] sm:text-xs font-normal">
+                                                    <Badge className="bg-sky-600 hover:bg-sky-700 text-white text-[11px] sm:text-xs font-medium rounded-full px-2.5 py-0.5 border-none shadow-2xs">
                                                         {pin.category}
                                                     </Badge>
                                                     {getStatusBadge(pin.status)}
@@ -205,8 +302,7 @@ export default function IssuesMapLayout() {
                                     <div className="flex items-start justify-between gap-3">
                                         <div>
                                             <Badge
-                                                variant="outline"
-                                                className="text-[10px] mb-1"
+                                                className="bg-sky-600 text-white text-[10px] mb-1 rounded-full border-none"
                                             >
                                                 {selectedPin.category}
                                             </Badge>

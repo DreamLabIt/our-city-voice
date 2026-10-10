@@ -2,8 +2,22 @@ import React from "react";
 import PageHeader from "@/components/common/PageHeader";
 import IssuesMapLayout from "@/components/issues-map/IssuesMapLayout";
 import SectionContainer from "@/components/common/SectionContainer";
+import { getReportFilters, getReports } from "../actions/report";
+import type { Report } from "@/types/report";
 
-export default function IssuesMapPage(): React.ReactNode {
+export default async function IssuesMapPage(): Promise<React.ReactNode> {
+    const [AllPostsRes] = await Promise.all([
+        getReports({ page: 1, limit: 100 }).catch(() => ({ posts: [] })),
+        getReportFilters().catch(() => ({
+            categories: [],
+            wards: [],
+            statuses: [],
+            priorities: [],
+        })),
+    ]);
+
+    const AllPosts: Report[] = AllPostsRes.posts || [];
+
     return (
         <section className="w-full bg-background text-foreground min-h-screen">
             <PageHeader
@@ -18,7 +32,7 @@ export default function IssuesMapPage(): React.ReactNode {
                 customBreadcrumbName="Issues Map"
             />
             <SectionContainer className="py-12">
-                <IssuesMapLayout />
+                <IssuesMapLayout AllPosts={AllPosts} />
             </SectionContainer>
         </section>
     );
