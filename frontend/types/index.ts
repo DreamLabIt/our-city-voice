@@ -459,3 +459,13 @@ export interface ConditionalLayoutProps {
     user: AuthUser | null;
     Reports?: Report[];
 }
+
+
+export interface HeroSectionProps {
+    AllPosts?: Report[];
+}
+
+export interface IssueSearchBarProps {
+    onSearch?: (query: string) => void;
+    AllPosts?: Report[];
+}

@@ -9,7 +9,7 @@ import type { Report, FilterOption } from "@/types/report";
 export const revalidate = 60;
 
 export default async function Home() {
-  const [recentPostsRes, filtersRes, recentActivitiesRes] = await Promise.all([
+  const [recentPostsRes, filtersRes, recentActivitiesRes, AllPostsRes] = await Promise.all([
     getReports({ page: 1, limit: 50 }).catch(() => ({ posts: [] })),
     getReportFilters().catch(() => ({
       categories: [],
@@ -18,9 +18,11 @@ export default async function Home() {
       priorities: [],
     })),
     getReports({ page: 1, limit: 4 }).catch(() => ({ posts: [] })),
+    getReports({ page: 1, limit: 100 }).catch(() => ({ posts: [] })),
   ]);
 
   const recentPosts: Report[] = recentPostsRes.posts || [];
+  const AllPosts: Report[] = AllPostsRes.posts || [];
 
   const categoryTabs = [
     "Latest",
@@ -41,7 +43,7 @@ export default async function Home() {
 
   return (
     <section>
-      <HeroSection />
+      <HeroSection AllPosts={AllPosts} />
       <CategoryFilter />
       <HomeLayout
         recentPosts={recentPosts}
