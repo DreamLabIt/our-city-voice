@@ -161,7 +161,7 @@ export default function RecentActivityCardClient({
                         return (
                             <Link
                                 key={item.id}
-                                href={`/reports/${item.trackingCode}`}
+                                href={`/issues/${item.trackingCode}`}
                                 className="flex items-center justify-between p-3.5 sm:p-4 gap-1 hover:bg-muted/40 transition-colors cursor-pointer group"
                             >
                                 <div className="flex items-center gap-3.5 min-w-0 py-0">
