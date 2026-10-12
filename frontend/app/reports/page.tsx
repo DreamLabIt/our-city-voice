@@ -117,7 +117,7 @@ export default async function ReportsPage({
         filtersData.categories.length > 0
             ? filtersData.categories
             : mockCategories.map((category) => ({
-                name: category.label,
+                name: category.name,
                 value: category.id,
             }));
 
