@@ -4,7 +4,7 @@ The shapes that come back. Endpoint files link here rather than repeating them.
 
 - [`User`](#user)
 - [`Report`](#report) — a list item
-- [`ReportDetail`](#reportdetail) — a `Report` plus the gallery and timeline
+- [`ReportDetail`](#reportdetail) — a `Report` plus the timeline
 - [`Comment` and `CommentThread`](#comment-and-commentthread)
 - [`FilterOptions`](#filteroptions)
 
@@ -40,7 +40,11 @@ that excludes it. There is no `updatedAt`, no `location` and no `bio` — see
 ## `Report`
 
 What `GET /posts` returns in its array, and what `related` holds on a detail
-response.
+response. The shape mirrors the `Post` model 1:1: the Post columns
+(`street`/`city`/`address`/`postalCode`/`latitude`/`longitude`,
+`viewCount`/`likeCount`/`commentCount`) stay flat under their own names,
+reduced relation rows appear as the objects below, and `media` is the `Media`
+relation itself — one entry per row — rather than a summary object.
 
 ```json
 {
@@ -56,31 +60,47 @@ response.
   "department": { "id": "2", "name": "Transportation Services" },
   "author":     { "id": "2", "name": "Platform User", "avatarUrl": "https://res.cloudinary.com/..." },
   "assignedOfficer": null,
-  "location": {
-    "street": null,
-    "city": "Toronto",
-    "address": "400 Front St W",
-    "postalCode": "M5V 3K2",
-    "latitude": 43.812345,
-    "longitude": -79.287654
-  },
-  "counts": { "views": 51, "likes": 1, "comments": 0 },
+  "street": null,
+  "city": "Toronto",
+  "address": "400 Front St W",
+  "postalCode": "M5V 3K2",
+  "latitude": 43.812345,
+  "longitude": -79.287654,
+  "viewCount": 51,
+  "likeCount": 1,
+  "commentCount": 0,
   "likedByMe": false,
-  "media": {
-    "image": "/road_surface.jpeg",
-    "video": "https://lorem.video/...",
-    "durationSecs": 47,
-    "count": 3
-  },
+  "media": [
+    { "id": "9",  "type": "image", "storageKey": "/road_surface.jpeg",       "thumbnailKey": null,                 "mimeType": "image/jpeg", "sizeBytes": "1048576", "durationSecs": null, "sortOrder": 0, "url": "/road_surface.jpeg",       "thumbnailUrl": null },
+    { "id": "10", "type": "video", "storageKey": "video/surface-crack.mp4",   "thumbnailKey": "/road_surface.jpeg", "mimeType": "video/mp4",  "sizeBytes": "5242880", "durationSecs": 47, "sortOrder": 1, "url": "https://lorem.video/...",   "thumbnailUrl": "/road_surface.jpeg" }
+  ],
   "resolvedAt": null,
   "createdAt": "2026-10-07T10:13:40.253Z",
   "updatedAt": "2026-10-07T10:13:40.253Z"
 }
 ```
 
-**Nullable:** `department`, `author`, `assignedOfficer`, `location.street`,
-`location.postalCode`, `location.latitude`, `location.longitude`, `media.image`,
-`media.video`, `media.durationSecs`, `resolvedAt`.
+**Nullable:** `department`, `author`, `assignedOfficer`, `street`, `postalCode`,
+`latitude`, `longitude`, `resolvedAt`; and per media item `thumbnailKey`,
+`durationSecs`, `thumbnailUrl`.
+
+### `media` maps the `Media` relation one-to-one
+
+Each entry is one `Media` row: `type` (`image`/`video`), the bucket `storageKey`,
+`thumbnailKey` (a video's poster frame), `mimeType`, `sizeBytes`, `durationSecs`
+(videos only) and `sortOrder`. Rows arrive in `sortOrder` order, so the first
+entry is the card's hero. `id` and `sizeBytes` are BigInts and therefore strings
+on the wire, like the report id.
+
+### `media.url` and `media.thumbnailUrl` are derived
+
+`storageKey` holds a bucket key (or a fixture path), never a URL; `url` and
+`thumbnailUrl` are built from it at read time so a bucket or CDN change never
+rewrites stored rows. An absolute URL and a root-relative path
+(`/road_surface.jpeg`, which is what fixtures hold) pass through untouched;
+anything else gets `MEDIA_BASE_URL` in front of it. That variable is empty in
+development, so a bare bucket key comes back unprefixed and unusable — it needs
+a value once real uploads start storing keys.
 
 ### An anonymous report has no author
 
@@ -94,54 +114,18 @@ The same rule reaches into `ReportDetail.timeline`.
 ### `likedByMe`
 
 Whether the caller has liked it. Always `false` for a signed-out reader, which is
-also what the like button should show them. `counts.likes` is the public total and
+also what the like button should show them. `likeCount` is the public total and
 is unaffected by who is asking.
-
-### `media` is enough for a card
-
-`image` is the first image by sort order, falling back to a video's poster frame so
-a video-only report still has a thumbnail. `video` is the first video. `count` is
-every attachment, so a card can show "+2". The full set is
-[`ReportDetail.media.gallery`](#reportdetail).
-
-> URLs are built from `media.storage_key`, which holds a bucket key rather than a
-> URL. An absolute URL and a root-relative path (`/road_surface.jpeg`, which is
-> what fixtures hold) pass through untouched; anything else gets `MEDIA_BASE_URL`
-> in front of it. That variable is empty in development, so a bare bucket key
-> comes back unprefixed and unusable — it needs a value once real uploads start
-> storing keys.
 
 ---
 
 ## `ReportDetail`
 
-A **superset of `Report`** — same fields, same names, same nullability — plus the
-two below. So a card type and a detail type can extend one another rather than
-being kept in step by hand.
-
-Returned by [`GET /posts/:code`](endpoints/get-report.md).
-
-### `media.gallery`
-
-Every attachment, in sort order. `image`, `video`, `durationSecs` and `count` are
-still there and mean the same thing, so a detail header needs no special case.
-
-```json
-"media": {
-  "image": "/road_surface.jpeg",
-  "video": "https://lorem.video/...",
-  "durationSecs": 32,
-  "count": 4,
-  "gallery": [
-    { "type": "image", "url": "/road_surface.jpeg",      "thumbnailUrl": null,                 "durationSecs": null },
-    { "type": "image", "url": "/residential_street.jpeg","thumbnailUrl": null,                 "durationSecs": null },
-    { "type": "video", "url": "https://lorem.video/...", "thumbnailUrl": "/road_surface.jpeg", "durationSecs": 32 }
-  ]
-}
-```
-
-`gallery` already contains the hero image, so there is no need to merge `image`
-into it the way the mock version does.
+Returned by [`GET /posts/:code`](endpoints/get-report.md). It is a **superset of
+`Report`** — same fields, same names, same nullability — plus `timeline` below.
+There is no separate "gallery" shape to merge: `media` on a detail is already
+the full set of `Media` rows, so a card type and a detail type extend one
+another rather than being kept in step by hand.
 
 ### `timeline`
 

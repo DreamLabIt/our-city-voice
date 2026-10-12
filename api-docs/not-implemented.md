@@ -75,7 +75,7 @@ Called out so nothing in these docs is mistaken for an oversight.
   shifts rows by one. The index for a keyset cursor already exists
   (`posts(created_at DESC, id DESC)`).
 - **Reads cost a constant but chunky number of queries.** A detail page is 17
-  statements, 19 signed in, constant regardless of how many gallery items, timeline
+  statements, 19 signed in, constant regardless of how many media rows, timeline
   entries or related reports come back. Prisma issues one query per relation by
   default; its `relationJoins` preview feature collapses them into joins if this
   ever matters.

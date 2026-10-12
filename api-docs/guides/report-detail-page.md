@@ -85,9 +85,9 @@ title off the first call in the page is cheaper if you can restructure for it.
 // paragraphs, so the split happens where it is rendered.
 const paragraphs = post.description.split(/\n{2,}/).filter(Boolean);
 
-// The media carousel already has what it needs. No merging image into gallery the
-// way the mock version does, because gallery already contains it.
-const items = post.media.gallery;
+// `post.media` is already the full set of Media rows in sortOrder order, and it
+// is the same list a card shows — no merging a gallery into a summary anywhere.
+const items = post.media;
 ```
 
 `post.updates` becomes `post.timeline`, with `update.date` → `entry.createdAt` and

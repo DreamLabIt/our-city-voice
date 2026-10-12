@@ -60,7 +60,7 @@ Oldest first, which is how a conversation reads. Field reference:
 ## Four things to know
 
 **1. `total` counts top-level comments only** — that is what the pages are over.
-The all-in number including replies is `post.counts.comments` on the report itself.
+The all-in number including replies is `post.commentCount` on the report itself.
 For the example above, `total` is `3` and `counts.comments` is `5`.
 
 **2. Replies are never paginated.** Every reply to a thread on the current page

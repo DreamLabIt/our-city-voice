@@ -106,8 +106,8 @@ rather than data. These have no API equivalent **by design**:
 | `code` | `trackingCode` |
 | `desc` | `description` |
 | `tag` | `category.name` |
-| `location` | `location.address` |
-| `comments`, `likes`, `views` | `counts.comments`, `counts.likes`, `counts.views` |
+| `location` | `address`, as one flat Post column (with `street`, `city`, `postalCode`, `latitude`, `longitude` alongside) |
+| `comments`, `likes`, `views` | `commentCount`, `likeCount`, `viewCount` |
 | `tagBg`, `tagText` | Tailwind class names. Derive from `category.slug` in the frontend; the API has no business shipping CSS |
 | `date` | `createdAt` (ISO). Format it where it is rendered |
 | `updatedAt: "2 hours ago"` | `updatedAt` is ISO; make the relative string on the client |
@@ -115,7 +115,8 @@ rather than data. These have no API equivalent **by design**:
 | `status`, `priority` | Same names, but `in_progress` not `"In Progress"` — see [conventions.md](../conventions.md#enums-are-not-display-strings) |
 | `category: "Latest" \| "Most Commented" \| ...` | Not a category — it is a feed tab. Use `sort` |
 | `details[]` | There is one `description` column, not an array. Split it: `description.split(/\n{2,}/)` |
-| `gallery[]` | `media.gallery`, on [`GET /posts/:code`](../endpoints/get-report.md) |
+| `media[]` | `media`, the `Media` rows themselves, on every response |
+| `gallery[]` | gone — `media` is the full set of rows on a detail too |
 | `updates[]` | `timeline`, on [`GET /posts/:code`](../endpoints/get-report.md) |
 
 ## Do not call the detail endpoint per card
