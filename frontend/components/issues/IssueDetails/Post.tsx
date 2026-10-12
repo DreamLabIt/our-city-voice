@@ -36,52 +36,25 @@ import {
 import type { MediaItem, PostProps } from "@/types/IssueDetails"
 
 export default function Post({ post }: PostProps): React.ReactNode {
-    const { media } = post;
-
+    // `media` is the Media relation itself — every row, in sortOrder order —
+    // so a video row already carries its poster frame and there is nothing to
+    // merge.
     const mediaItems = useMemo(() => {
         const items: MediaItem[] = [];
 
-        const image =
-            typeof media.image === "string" && media.image.trim()
-                ? media.image.trim()
-                : undefined;
-
-        const video =
-            typeof media.video === "string" && media.video.trim()
-                ? media.video.trim()
-                : undefined;
-
-        if (video) {
-            items.push({
-                type: "video",
-                src: video,
-                poster: image,
-            });
-        }
-
-        media.gallery.forEach((item) => {
-            if (!item.url) return;
-
-            if (items.some((mediaItem) => mediaItem.src === item.url)) {
-                return;
-            }
+        for (const row of post.media) {
+            if (!row.url || !row.url.trim()) continue;
+            if (items.some((item) => item.src === row.url)) continue;
 
             items.push({
-                type: item.type,
-                src: item.url,
-                poster: item.thumbnailUrl ?? undefined,
-            });
-        });
-
-        if (image && !items.some((item) => item.src === image)) {
-            items.push({
-                type: "image",
-                src: image,
+                type: row.type,
+                src: row.url,
+                poster: row.thumbnailUrl ?? undefined,
             });
         }
 
         return items;
-    }, [media]);
+    }, [post.media]);
 
     const [activeMedia, setActiveMedia] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -112,7 +85,7 @@ export default function Post({ post }: PostProps): React.ReactNode {
         setActiveMedia(index);
     };
 
-    const [likes, setLikes] = useState(post.counts.likes);
+    const [likes, setLikes] = useState(post.likeCount);
     const [hasLiked, setHasLiked] = useState(post.likedByMe);
 
     const handleLike = () => {
@@ -290,7 +263,7 @@ export default function Post({ post }: PostProps): React.ReactNode {
                     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground font-medium">
                         <span className="flex items-center gap-1.5">
                             <MapPin className="w-4 h-4 text-primary shrink-0" />
-                            {post.location.address}
+                            {post.address}
                         </span>
 
                         <span className="flex items-center gap-1.5">
@@ -330,7 +303,7 @@ export default function Post({ post }: PostProps): React.ReactNode {
                         >
                             <a href="#comments" className="flex gap-3">
                                 <MessageSquare className="w-4 h-4" />
-                                {post.counts.comments} Comments
+                                {post.commentCount} Comments
                             </a>
                         </Button>
 
@@ -346,7 +319,7 @@ export default function Post({ post }: PostProps): React.ReactNode {
 
                         <span className="flex items-center gap-2 text-xs font-bold text-muted-foreground ml-auto">
                             <Eye className="w-4 h-4" />
-                            {post.counts.views} views
+                            {post.viewCount} views
                         </span>
                     </div>
                 </CardContent>

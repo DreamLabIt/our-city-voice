@@ -8,24 +8,10 @@ export default function MostReportedIssuesCard({ Reports = [] }: MostReportedIss
     const wardCounts: Record<string, number> = {};
 
     Reports.forEach((report) => {
-        const catName =
-            typeof report.category === "object"
-                ? report.category?.name || "General"
-                : report.category || "General";
-
+        const catName = report.category.name || "General";
         categoryCounts[catName] = (categoryCounts[catName] || 0) + 1;
 
-        const wardName =
-            typeof report.ward === "object"
-                ? report.ward?.name || report.ward?.code || ""
-                : report.ward || "";
-
-        const locationName =
-            typeof report.location === "object"
-                ? report.location?.address || report.location?.city || ""
-                : report.location || "";
-
-        const areaKey = wardName || locationName;
+        const areaKey = report.ward.name || report.address;
         if (areaKey) {
             wardCounts[areaKey] = (wardCounts[areaKey] || 0) + 1;
         }

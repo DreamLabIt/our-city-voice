@@ -24,9 +24,9 @@ export default function RelatedPosts({
                             className="flex gap-3 bg-card border border-border-custom rounded-xl p-2.5 hover:border-primary/50 transition-colors group"
                         >
                             <div className="relative w-16 h-16 shrink-0 rounded-lg overflow-hidden bg-muted">
-                                {related.media.image !== null && (
+                                {related.media.length > 0 && (
                                     <Image
-                                        src={related.media.image}
+                                        src={related.media[0]!.url}
                                         alt={related.title}
                                         fill
                                         sizes="64px"
@@ -45,7 +45,7 @@ export default function RelatedPosts({
                                 </h3>
 
                                 <p className="text-[11px] text-muted-foreground truncate">
-                                    {related.location.address}
+                                    {related.address}
                                 </p>
                             </div>
                         </Link>

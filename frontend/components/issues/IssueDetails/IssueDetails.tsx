@@ -201,14 +201,14 @@ export default function IssueDetails({
                                     <p className="flex items-start gap-2 font-semibold text-foreground">
                                         <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                                         <span>
-                                            {post.location.address}
+                                            {post.address}
                                         </span>
                                     </p>
 
-                                    {post.location.postalCode && (
+                                    {post.postalCode && (
                                         <p className="flex items-center gap-2 font-medium text-muted-foreground">
                                             <Navigation className="h-4 w-4 shrink-0" />
-                                            {post.location.postalCode}
+                                            {post.postalCode}
                                         </p>
                                     )}
 

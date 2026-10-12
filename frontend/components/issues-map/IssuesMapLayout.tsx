@@ -111,43 +111,34 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
     const queryTrackingCode = searchParams.get("trackingCode");
     const queryId = searchParams.get("id");
 
-    const pins = useMemo(() => {
-        if (!Array.isArray(AllPosts) || AllPosts.length === 0) return [];
+    const pins = useMemo<IssueMapPin[]>(() => {
+        const mapped: IssueMapPin[] = [];
 
-        return AllPosts.map((report: any, index: number) => {
-            const locationObj = report.location || {};
+        for (const report of AllPosts) {
+            const lat = report.latitude;
+            const lng = report.longitude;
 
-            const address =
-                typeof locationObj === "object"
-                    ? locationObj.address || `${locationObj.street || ""}, ${locationObj.city || ""}`.trim() || "Location not specified"
-                    : String(report.location || "Location not specified");
+            // A report with no resolvable point still belongs in the list and
+            // the feed; it just cannot be drawn.
+            if (lat === null || lng === null) continue;
+            if (lat < -90 || lat > 90 || lng < -180 || lng > 180) continue;
+            if (lat === 0 && lng === 0) continue;
 
-            const category =
-                typeof report.category === "object" && report.category !== null
-                    ? report.category.name || report.category.slug || "General"
-                    : String(report.category || "General");
+            mapped.push({
+                id: report.id,
+                trackingCode: report.trackingCode,
+                title: report.title,
+                address: report.address || "Location not specified",
+                ward: report.ward.name,
+                category: report.category.name,
+                status: report.status,
+                lat,
+                lng,
+                updatedAt: getTimeAgo(report.updatedAt),
+            });
+        }
 
-            const ward =
-                typeof report.ward === "object" && report.ward !== null
-                    ? report.ward.name || report.ward.code || "N/A"
-                    : String(report.ward || "N/A");
-
-            const lat = Number(report.lat ?? report.latitude ?? locationObj.latitude ?? locationObj.lat ?? 0);
-            const lng = Number(report.lng ?? report.longitude ?? locationObj.longitude ?? locationObj.lng ?? 0);
-
-            return {
-                id: String(report.id || report._id || report.trackingCode || ""),
-                code: String(report.trackingCode || report.id || ""),
-                title: String(report.title || "Untitled Report"),
-                address: address,
-                ward: ward,
-                category: category,
-                status: report.status || "pending",
-                lat: lat !== 0 && !isNaN(lat) ? lat : 43.771568 + (index * 0.001),
-                lng: lng !== 0 && !isNaN(lng) ? lng : -79.213000 + (index * 0.001),
-                updatedAt: getTimeAgo(report.updatedAt || report.createdAt),
-            };
-        }) as IssueMapPin[];
+        return mapped;
     }, [AllPosts]);
 
     const unmappedCount = AllPosts.length - pins.length;
@@ -164,7 +155,7 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
                 pin.address.toLowerCase().includes(query) ||
                 pin.ward.toLowerCase().includes(query) ||
                 pin.category.toLowerCase().includes(query) ||
-                pin.code.toLowerCase().includes(query)
+                pin.trackingCode.toLowerCase().includes(query)
         );
     }, [pins, searchQuery]);
 
@@ -173,7 +164,7 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
         if (targetCode && pins.length > 0) {
             const matchedPin = pins.find(
                 (pin) =>
-                    pin.code.toLowerCase() === targetCode.toLowerCase() ||
+                    pin.trackingCode.toLowerCase() === targetCode.toLowerCase() ||
                     pin.id.toLowerCase() === targetCode.toLowerCase()
             );
 

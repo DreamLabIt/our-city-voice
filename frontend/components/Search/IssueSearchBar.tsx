@@ -24,20 +24,9 @@ export default function IssueSearchBar({ onSearch, AllPosts = [] }: IssueSearchB
             const trackingCode = report.trackingCode || "";
             const id = report.id || "";
 
-            const categoryName =
-                typeof report.category === "object"
-                    ? report.category?.name || report.category?.slug || ""
-                    : report.category || "";
-
-            const locationName =
-                typeof report.location === "object"
-                    ? report.location?.address || ""
-                    : report.location || "";
-
-            const wardName =
-                typeof report.ward === "object"
-                    ? report.ward?.name || report.ward?.code || ""
-                    : report.ward || "";
+            const categoryName = report.category.name;
+            const locationName = report.address;
+            const wardName = report.ward.name;
 
             return (
                 title.toLowerCase().includes(query) ||
@@ -109,18 +98,9 @@ export default function IssueSearchBar({ onSearch, AllPosts = [] }: IssueSearchB
                                 {filteredSuggestions.length > 0 ? (
                                     <div className="space-y-1">
                                         {filteredSuggestions.map((report) => {
-                                            const categoryName =
-                                                typeof report.category === "object"
-                                                    ? report.category?.name || "General"
-                                                    : report.category || "General";
-
-                                            const locationName =
-                                                typeof report.location === "object"
-                                                    ? report.location?.address || "City Area"
-                                                    : report.location || "City Area";
-
-                                            const statusName =
-                                                typeof report.status === "string" ? report.status : "Pending";
+                                            const categoryName = report.category.name || "General";
+                                            const locationName = report.address || "City Area";
+                                            const statusName = report.status;
 
                                             return (
                                                 <div
