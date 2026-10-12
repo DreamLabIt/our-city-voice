@@ -38,9 +38,9 @@ export default async function Home() {
         filtersRes.categories.length > 0
             ? filtersRes.categories
             : mockCategories.map((category) => ({
-                  id: category.id,
-                  name: category.name,
-              }));
+                id: category.id,
+                name: category.name,
+            }));
 
     const categoryTabs = ["Latest", ...categoriesList.map((category) => category.name)];
 
@@ -58,14 +58,14 @@ export default async function Home() {
         status:
             filtersRes.statuses.length > 0
                 ? filtersRes.statuses.map((status) => ({
-                      name: status.value,
-                      value: status.value,
-                  }))
+                    name: status.value,
+                    value: status.value,
+                }))
                 : [
-                      { name: "Pending", value: "pending" },
-                      { name: "In Progress", value: "in_progress" },
-                      { name: "Resolved", value: "resolved" },
-                  ],
+                    { name: "Pending", value: "pending" },
+                    { name: "In Progress", value: "in_progress" },
+                    { name: "Resolved", value: "resolved" },
+                ],
     };
 
     return (
