@@ -1,4 +1,5 @@
-import type { IssueMapPin, PostItem } from "@/types";
+import type { IssueMapPin } from "@/types";
+import type { Report } from "@/types/report";
 
 /**
  * Turns reports into Leaflet markers.
@@ -26,7 +27,7 @@ function toCoordinate(value: Coordinate): number | null {
  * turns into once something coerces null to a number. The database has the
  * same check, so this is the second line of defence rather than the only one.
  */
-export function toMapPin(post: PostItem): IssueMapPin | null {
+export function toMapPin(post: Report): IssueMapPin | null {
     const lat = toCoordinate(post.latitude);
     const lng = toCoordinate(post.longitude);
 
@@ -36,11 +37,11 @@ export function toMapPin(post: PostItem): IssueMapPin | null {
 
     return {
         id: post.id,
-        code: post.code,
+        trackingCode: post.trackingCode,
         title: post.title,
-        category: post.tag,
+        category: post.category.name,
         address: post.address,
-        ward: post.ward,
+        ward: post.ward.name,
         status: post.status,
         updatedAt: post.updatedAt,
         lat,
@@ -48,7 +49,7 @@ export function toMapPin(post: PostItem): IssueMapPin | null {
     };
 }
 
-export function toMapPins(posts: PostItem[]): IssueMapPin[] {
+export function toMapPins(posts: Report[]): IssueMapPin[] {
     return posts.map(toMapPin).filter((pin): pin is IssueMapPin => pin !== null);
 }
 

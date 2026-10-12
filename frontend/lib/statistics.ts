@@ -1,13 +1,5 @@
-import type {
-    CivicReport,
-    CountRow,
-    PlatformStatistics,
-    PostItem,
-    ReportStatus,
-    ReportSummary,
-    StatusCount,
-    WardBreakdown,
-} from "@/types";
+import type { Priority, Report, ReportStatus } from "@/types/report";
+import type { CountRow, PlatformStatistics, StatusCount, WardBreakdown } from "@/types";
 
 /**
  * Counts the statistics page from the reports themselves.
@@ -17,80 +9,37 @@ import type {
  * that had been renamed. Deriving everything here means a figure cannot be
  * wrong without the underlying report being wrong too.
  *
- * Same reducer will work on API rows. Only the two adapters below know which
- * fixture shape they came from.
+ * The reducer takes the schema-faithful `Report` shape, so it works unchanged
+ * on mock data and on API rows.
  */
 
 /** The order a reader expects, not the order the data happens to arrive in. */
-export const STATUS_ORDER: ReportStatus[] = ["Pending", "In Progress", "Resolved", "Rejected"];
-const PRIORITY_ORDER = ["Critical", "High", "Medium", "Low"] as const;
+export const STATUS_ORDER: ReportStatus[] = ["pending", "in_progress", "resolved", "rejected"];
+const PRIORITY_ORDER = ["critical", "high", "medium", "low"] as const;
+
+/** Written labels for the post_priority enum values. */
+const PRIORITY_LABEL: Record<Priority, string> = {
+    critical: "Critical",
+    high: "High",
+    medium: "Medium",
+    low: "Low",
+};
 
 /**
- * Handles both fixture date shapes: "Oct 26, 2026" on posts, "2026-09-28" on
- * reports, and "Oct 26, 2026 · 08:14" inside timelines.
+ * Hours from `createdAt` to `resolvedAt`. Null unless the report is resolved
+ * and both columns are present, so a missing date cannot turn into a fake
+ * duration. The report fixtures carry no `resolvedAt`, so they cannot drag the
+ * median toward a number nothing measured.
  */
-function parseDate(value: string): Date | null {
-    const cleaned = value.replace("·", " ").replace(/\s+/g, " ").trim();
-    const parsed = new Date(cleaned);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
+function resolutionHours(report: Report): number | null {
+    if (report.status !== "resolved") return null;
 
-/**
- * Hours from the first timeline entry to the one that resolved the report.
- * Null when the report never reached Resolved, or when either date is
- * unparseable, so a bad string cannot turn into a fake duration.
- */
-function resolutionHours(post: PostItem): number | null {
-    if (post.updates.length === 0) return null;
+    const start = new Date(report.createdAt).getTime();
+    const end = report.resolvedAt === null ? NaN : new Date(report.resolvedAt).getTime();
+    if (Number.isNaN(start) || Number.isNaN(end)) return null;
 
-    const resolved = [...post.updates].reverse().find((u) => u.status === "Resolved");
-    if (!resolved) return null;
-
-    const start = parseDate(post.updates[0]!.date);
-    const end = parseDate(resolved.date);
-    if (!start || !end) return null;
-
-    const hours = (end.getTime() - start.getTime()) / 3_600_000;
+    const hours = (end - start) / 3_600_000;
     return hours >= 0 ? hours : null;
-}
-
-export function summarisePost(post: PostItem): ReportSummary {
-    return {
-        id: post.id,
-        code: post.code,
-        title: post.title,
-        status: post.status,
-        priority: post.priority,
-        category: post.tag,
-        ward: post.ward,
-        department: post.department,
-        date: parseDate(post.date) ?? new Date(0),
-        upvotes: post.likes,
-        comments: post.comments,
-        views: post.views,
-        resolutionHours: resolutionHours(post),
-    };
-}
-
-export function summariseReport(report: CivicReport): ReportSummary {
-    return {
-        id: report.id,
-        code: report.trackingId,
-        title: report.title,
-        status: report.status,
-        priority: report.priority,
-        category: report.category,
-        ward: report.ward,
-        department: report.department,
-        date: parseDate(report.date) ?? new Date(0),
-        upvotes: report.upvotes,
-        comments: report.commentsCount,
-        views: report.views,
-        // This fixture set has no status timeline, so it cannot contribute to
-        // the resolution-time median. Counting it as zero hours would drag the
-        // median toward a number nothing measured.
-        resolutionHours: null,
-    };
 }
 
 /** Descending by count, then alphabetical, so equal counts do not reorder. */
@@ -114,18 +63,19 @@ function median(values: number[]): number | null {
         : sorted[mid]!;
 }
 
-export function buildStatistics(reports: ReportSummary[]): PlatformStatistics {
+export function buildStatistics(reports: Report[]): PlatformStatistics {
     const total = reports.length;
     const countOf = (status: ReportStatus) =>
         reports.filter((r) => r.status === status).length;
 
-    const resolved = countOf("Resolved");
-    const rejected = countOf("Rejected");
+    const resolved = countOf("resolved");
+    const rejected = countOf("rejected");
 
     const byWard = new Map<string, WardBreakdown>();
     for (const report of reports) {
-        const row = byWard.get(report.ward) ?? {
-            ward: report.ward,
+        const ward = report.ward.name;
+        const row = byWard.get(ward) ?? {
+            ward,
             total: 0,
             pending: 0,
             inProgress: 0,
@@ -133,18 +83,20 @@ export function buildStatistics(reports: ReportSummary[]): PlatformStatistics {
             rejected: 0,
         };
         row.total += 1;
-        if (report.status === "Pending") row.pending += 1;
-        else if (report.status === "In Progress") row.inProgress += 1;
-        else if (report.status === "Resolved") row.resolved += 1;
+        if (report.status === "pending") row.pending += 1;
+        else if (report.status === "in_progress") row.inProgress += 1;
+        else if (report.status === "resolved") row.resolved += 1;
         else row.rejected += 1;
-        byWard.set(report.ward, row);
+        byWard.set(ward, row);
     }
 
     const resolutionTimes = reports
-        .map((r) => r.resolutionHours)
+        .map(resolutionHours)
         .filter((hours): hours is number => hours !== null);
 
-    const dates = reports.map((r) => r.date.getTime()).filter((t) => t > 0);
+    const dates = reports
+        .map((r) => new Date(r.createdAt).getTime())
+        .filter((t) => !Number.isNaN(t) && t > 0);
 
     const priorityCounts = toSortedCounts(reports.map((r) => r.priority));
 
@@ -162,18 +114,18 @@ export function buildStatistics(reports: ReportSummary[]): PlatformStatistics {
         })),
         // Severity order, not frequency order: a reader scanning priorities
         // wants Critical first whether or not it is the biggest bucket.
-        byPriority: PRIORITY_ORDER.map((label) => ({
-            label,
-            count: priorityCounts.find((p) => p.label === label)?.count ?? 0,
+        byPriority: PRIORITY_ORDER.map((value) => ({
+            label: PRIORITY_LABEL[value],
+            count: priorityCounts.find((p) => p.label === value)?.count ?? 0,
         })),
-        byCategory: toSortedCounts(reports.map((r) => r.category)),
+        byCategory: toSortedCounts(reports.map((r) => r.category.name)),
         byWard: [...byWard.values()].sort(
             (a, b) => b.total - a.total || a.ward.localeCompare(b.ward),
         ),
 
-        upvotes: reports.reduce((sum, r) => sum + r.upvotes, 0),
-        comments: reports.reduce((sum, r) => sum + r.comments, 0),
-        views: reports.reduce((sum, r) => sum + r.views, 0),
+        upvotes: reports.reduce((sum, r) => sum + r.likeCount, 0),
+        comments: reports.reduce((sum, r) => sum + r.commentCount, 0),
+        views: reports.reduce((sum, r) => sum + r.viewCount, 0),
 
         medianResolutionHours: median(resolutionTimes),
         resolutionSampleSize: resolutionTimes.length,

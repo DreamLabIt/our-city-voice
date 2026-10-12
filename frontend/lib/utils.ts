@@ -2,7 +2,8 @@ export { cn } from "cn"
 
 
 
-import type { IssueComment, PriorityLevel, ReportStatus } from "@/types/IssueDetails";
+import type { IssueComment } from "@/types/IssueDetails";
+import type { Priority, ReportStatus } from "@/types/report";
 
 export const STATUS_LABEL: Record<ReportStatus, string> = {
     pending: "Pending",
@@ -18,14 +19,14 @@ export const STATUS_STYLES: Record<ReportStatus, string> = {
     rejected: "bg-red-50 text-red-700 border-red-200",
 };
 
-export const PRIORITY_LABEL: Record<PriorityLevel, string> = {
+export const PRIORITY_LABEL: Record<Priority, string> = {
     low: "Low",
     medium: "Medium",
     high: "High",
     critical: "Critical",
 };
 
-export const PRIORITY_STYLES: Record<PriorityLevel, string> = {
+export const PRIORITY_STYLES: Record<Priority, string> = {
     low: "bg-section text-muted-foreground border-border-custom",
     medium: "bg-tag-blue-bg text-tag-blue-text border-tag-blue-text/25",
     high: "bg-tag-amber-bg text-tag-amber-text border-tag-amber-text/25",
