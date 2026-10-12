@@ -21,6 +21,7 @@ const mockDataPath = resolve(here, "../../frontend/data/mock-data.ts");
 const WANTED = [
   "categories",
   "posts",
+  "postTimelines",
   "postComments",
   "initialReports",
   "reportCategories",

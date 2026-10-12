@@ -7,26 +7,19 @@ import PostCard from "./PostCard";
 import type { RecentPostsClientProps } from "@/types/report";
 import PostsSkeleton from "../skeleton/PostsSkeleton";
 
-export default function RecentPostsClient({
-    initialPosts,
-    tabs,
-}: RecentPostsClientProps) {
+export default function RecentPostsClient({ initialPosts, tabs }: RecentPostsClientProps) {
     const [activeTab, setActiveTab] = useState<string>("Latest");
 
     const filteredPosts = (
         activeTab === "Latest"
             ? initialPosts
-            : initialPosts.filter(
-                (post) => post.category?.name === activeTab
-            )
+            : initialPosts.filter((post) => post.category?.name === activeTab)
     ).slice(0, 4);
 
     return (
         <Card className="w-full p-5 rounded-2xl border-border">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-start border-b border-border pb-3 gap-4">
-                <h2 className="text-base font-bold text-foreground shrink-0">
-                    Recent Posts
-                </h2>
+                <h2 className="text-base font-bold text-foreground shrink-0">Recent Posts</h2>
 
                 <Tabs
                     value={activeTab}
@@ -61,4 +54,3 @@ export default function RecentPostsClient({
         </Card>
     );
 }
-

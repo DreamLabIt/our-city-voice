@@ -1,7 +1,7 @@
 # `GET /posts/:code`
 
-One report, with everything the detail page needs: the full gallery, the status
-timeline, and four related reports.
+One report, with everything the detail page needs: the status timeline, and four
+related reports.
 
 **Auth: optional.** A token adds `likedByMe`.
 
@@ -47,9 +47,9 @@ tell everybody else that a given code was once real.
 }
 ```
 
-`post` is a [`ReportDetail`](../objects.md#reportdetail) — a **superset of a list
-item** plus `media.gallery` and `timeline`. So your card type and your detail type
-can extend one another rather than being kept in step by hand.
+`post` is a [`ReportDetail`](../objects.md#reportdetail) — a `Report` (whose
+`media` is already the full set of rows) plus `timeline`. So your card type and
+your detail type can extend one another rather than being kept in step by hand.
 
 `related` is up to four reports: same category first, newest of anything else to
 fill the row. The padding is deliberate — a category with one report would
@@ -104,4 +104,6 @@ Prisma issues one query per relation by default; see
 ## See also
 
 - [`GET /posts/:code/comments`](list-report-comments.md) — the discussion, a separate call
+- [`PATCH /posts/:code`](update-report.md) — edit the report this returns
+- [`DELETE /posts/:code`](delete-report.md) — soft-delete it
 - [guides/report-detail-page.md](../guides/report-detail-page.md)

@@ -10,17 +10,8 @@ import {
     ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { RecentActivityCardClientProps, ReportItem } from "@/types/report";
+import type { Report } from "@/types/report";
 import RecentActivitySkeleton from "../skeleton/ActivitySkeleton";
-
-const getCategoryName = (category?: ReportItem["category"]) => {
-    if (!category) return "";
-    if (typeof category === "string") return category;
-    if (typeof category === "object") {
-        return category.name || category.label || "";
-    }
-    return "";
-};
 
 const getCategoryMeta = (categoryName: string) => {
     const name = categoryName.toLowerCase();
@@ -118,7 +109,9 @@ const formatRelativeTime = (date?: string | Date) => {
 
 export default function RecentActivityCardClient({
     initialReports,
-}: RecentActivityCardClientProps) {
+}: {
+    initialReports: Report[];
+}) {
 
     return (
         <div className="w-full bg-slate-100 dark:bg-card/40 rounded-2xl border border-border/80 space-y-2 ">
@@ -140,7 +133,7 @@ export default function RecentActivityCardClient({
             <div className="rounded-2xl bg-white py-0 min-h-82">
                 {initialReports && initialReports.length > 0 ? (
                     initialReports.map((item) => {
-                        const categoryName = getCategoryName(item.category);
+                        const categoryName = item.category.name;
 
                         const {
                             icon: Icon,
@@ -150,12 +143,7 @@ export default function RecentActivityCardClient({
 
                         const timeAgo = formatRelativeTime(item.updatedAt);
 
-                        const displayTitle = item.title
-                            ? item.title
-                            : item.type === "comment"
-                                ? `New comment on ${categoryName || "Post"}`
-                                : `New post on ${categoryName || "General"}`;
-
+                        const displayTitle = item.title;
                         const trackingCode = item.trackingCode;
 
                         return (

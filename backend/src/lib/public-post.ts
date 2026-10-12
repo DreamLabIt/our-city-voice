@@ -2,9 +2,16 @@ import type { Prisma } from "../generated/prisma/client.js";
 import type { MediaType, PostPriority, PostStatus } from "../generated/prisma/enums.js";
 import { mediaUrl } from "./media-url.js";
 
+/**
+ * A report as the API ships it. Mirrors the Post model 1:1: the Post columns
+ * (`street`/`city`/`address`/…, `viewCount`/`likeCount`/`commentCount`) stay
+ * flat under their own names, reduced relation rows appear as the objects
+ * below, and `media` is the Media relation itself rather than a summary. The
+ * only field that is not a stored column is the computed `likedByMe`.
+ */
 export interface PublicPost {
   id: string;
-  
+
   trackingCode: string;
   title: string;
   description: string;
@@ -15,39 +22,49 @@ export interface PublicPost {
   category: { id: string; name: string; slug: string; icon: string };
   ward: { id: string; name: string; code: string };
   department: { id: string; name: string } | null;
-  
+
   author: { id: string; name: string; avatarUrl: string | null } | null;
   assignedOfficer: { id: string; name: string } | null;
 
-  location: {
-    street: string | null;
-    city: string;
-    address: string;
-    postalCode: string | null;
-    
-    latitude: number | null;
-    longitude: number | null;
-  };
+  // Post columns, flat and untranslated.
+  street: string | null;
+  city: string;
+  address: string;
+  postalCode: string | null;
+  latitude: number | null;
+  longitude: number | null;
 
-  counts: { views: number; likes: number; comments: number };
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
 
-  
   likedByMe: boolean;
 
-  
-  media: {
-    
-    image: string | null;
-    
-    video: string | null;
-    durationSecs: number | null;
-    
-    count: number;
-  };
+  // The Media relation, one entry per row, in display (sortOrder) order.
+  media: PublicMediaItem[];
 
   resolvedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * One Media row. `storageKey` holds a bucket key (or a fixture path), never a
+ * URL; `url`/`thumbnailUrl` are built from it at read time so a bucket or CDN
+ * change never rewrites stored rows. `sizeBytes` is a BigInt and so a string
+ * on the wire, exactly like the ids.
+ */
+export interface PublicMediaItem {
+  id: string;
+  type: MediaType;
+  storageKey: string;
+  thumbnailKey: string | null;
+  mimeType: string;
+  sizeBytes: string;
+  durationSecs: number | null;
+  sortOrder: number;
+  url: string;
+  thumbnailUrl: string | null;
 }
 
 export const PUBLIC_POST_SELECT = {
@@ -76,7 +93,18 @@ export const PUBLIC_POST_SELECT = {
   author: { select: { id: true, name: true, avatarUrl: true } },
   assignedOfficer: { select: { id: true, name: true } },
   media: {
-    select: { type: true, storageKey: true, thumbnailKey: true, durationSecs: true },
+    select: {
+      id: true,
+      type: true,
+      storageKey: true,
+      thumbnailKey: true,
+      mimeType: true,
+      sizeBytes: true,
+      durationSecs: true,
+      sortOrder: true,
+      createdAt: true,
+      updatedAt: true,
+    },
     orderBy: { sortOrder: "asc" },
   },
 } satisfies Prisma.PostSelect;
@@ -87,17 +115,22 @@ function toNumber(value: Prisma.Decimal | null): number | null {
   return value === null ? null : value.toNumber();
 }
 
-function firstOfType(
-  media: PostRow["media"],
-  type: MediaType,
-): PostRow["media"][number] | undefined {
-  return media.find((item) => item.type === type);
+function toPublicMediaItem(item: PostRow["media"][number]): PublicMediaItem {
+  return {
+    id: item.id.toString(),
+    type: item.type,
+    storageKey: item.storageKey,
+    thumbnailKey: item.thumbnailKey,
+    mimeType: item.mimeType,
+    sizeBytes: item.sizeBytes.toString(),
+    durationSecs: item.durationSecs,
+    sortOrder: item.sortOrder,
+    url: mediaUrl(item.storageKey),
+    thumbnailUrl: item.thumbnailKey ? mediaUrl(item.thumbnailKey) : null,
+  };
 }
 
 export function toPublicPost(post: PostRow, likedByMe = false): PublicPost {
-  const image = firstOfType(post.media, "image");
-  const video = firstOfType(post.media, "video");
-
   return {
     id: post.id.toString(),
     trackingCode: post.trackingCode,
@@ -132,44 +165,25 @@ export function toPublicPost(post: PostRow, likedByMe = false): PublicPost {
       ? { id: post.assignedOfficer.id.toString(), name: post.assignedOfficer.name }
       : null,
 
-    location: {
-      street: post.street,
-      city: post.city,
-      address: post.address,
-      postalCode: post.postalCode,
-      latitude: toNumber(post.latitude),
-      longitude: toNumber(post.longitude),
-    },
+    street: post.street,
+    city: post.city,
+    address: post.address,
+    postalCode: post.postalCode,
+    latitude: toNumber(post.latitude),
+    longitude: toNumber(post.longitude),
 
-    counts: {
-      views: post.viewCount,
-      likes: post.likeCount,
-      comments: post.commentCount,
-    },
+    viewCount: post.viewCount,
+    likeCount: post.likeCount,
+    commentCount: post.commentCount,
 
     likedByMe,
 
-    media: {
-      image: image ? mediaUrl(image.storageKey) : video?.thumbnailKey
-        ? mediaUrl(video.thumbnailKey)
-        : null,
-      video: video ? mediaUrl(video.storageKey) : null,
-      durationSecs: video?.durationSecs ?? null,
-      count: post.media.length,
-    },
+    media: post.media.map(toPublicMediaItem),
 
     resolvedAt: post.resolvedAt?.toISOString() ?? null,
     createdAt: post.createdAt.toISOString(),
     updatedAt: post.updatedAt.toISOString(),
   };
-}
-
-export interface PublicMediaItem {
-  type: MediaType;
-  url: string;
-  
-  thumbnailUrl: string | null;
-  durationSecs: number | null;
 }
 
 export interface PublicTimelineEntry {
@@ -182,8 +196,12 @@ export interface PublicTimelineEntry {
   createdAt: string;
 }
 
+/**
+ * A `PublicPost` plus the append-only status timeline. Media is already the
+ * full set of rows on `PublicPost`, so a detail only adds `timeline` rather
+ * than re-shipping a gallery alongside a summary.
+ */
 export interface PublicPostDetail extends PublicPost {
-  media: PublicPost["media"] & { gallery: PublicMediaItem[] };
   timeline: PublicTimelineEntry[];
 }
 
@@ -208,19 +226,8 @@ export type PostDetailRow = Prisma.PostGetPayload<{
 }>;
 
 export function toPublicPostDetail(post: PostDetailRow, likedByMe = false): PublicPostDetail {
-  const base = toPublicPost(post, likedByMe);
-
   return {
-    ...base,
-    media: {
-      ...base.media,
-      gallery: post.media.map((item) => ({
-        type: item.type,
-        url: mediaUrl(item.storageKey),
-        thumbnailUrl: item.thumbnailKey ? mediaUrl(item.thumbnailKey) : null,
-        durationSecs: item.durationSecs,
-      })),
-    },
+    ...toPublicPost(post, likedByMe),
     timeline: post.statusHistory.map((entry) => ({
       id: entry.id.toString(),
       fromStatus: entry.fromStatus,

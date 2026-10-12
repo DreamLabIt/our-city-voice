@@ -14,11 +14,14 @@ export default function PostCard({ post }: { post: Report }): React.ReactNode {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
-    const initialDurationSecs = post.media?.durationSecs || 0;
+    const videoRow = post.media.find((item) => item.type === "video");
+    const imageRow = post.media.find((item) => item.type === "image");
+
+    const initialDurationSecs = videoRow?.durationSecs || 0;
     const [durationSecs, setDurationSecs] = useState<number>(initialDurationSecs);
     const detailsHref = `/issues/${post.trackingCode || post.id}`;
-    const mediaImage = post.media?.image || "/placeholder-image.jpg";
-    const mediaVideo = post.media?.video;
+    const mediaImage = imageRow?.url ?? videoRow?.thumbnailUrl ?? "/placeholder-image.jpg";
+    const mediaVideo = videoRow?.url;
     const hasVideo = Boolean(mediaVideo);
     const formattedDate = new Date(post.createdAt).toLocaleDateString("en-US", {
         month: "short",
@@ -26,9 +29,7 @@ export default function PostCard({ post }: { post: Report }): React.ReactNode {
         year: "numeric",
     });
 
-    const locationText = post.location
-        ? [post.location.street, post.location.city].filter(Boolean).join(", ") || post.location.address
-        : "N/A";
+    const locationText = [post.street, post.city].filter(Boolean).join(", ") || post.address;
 
     const minutes = Math.floor(durationSecs / 60);
     const seconds = Math.floor(durationSecs % 60);
@@ -78,14 +79,21 @@ export default function PostCard({ post }: { post: Report }): React.ReactNode {
                     </Badge>
 
                     <div
-                        className={`absolute inset-0 bg-black/25 transition-opacity flex items-center justify-center ${isPlaying ? "opacity-0 hover:opacity-100" : "opacity-0 group-hover/media:opacity-100"
-                            }`}
+                        className={`absolute inset-0 bg-black/25 transition-opacity flex items-center justify-center ${
+                            isPlaying
+                                ? "opacity-0 hover:opacity-100"
+                                : "opacity-0 group-hover/media:opacity-100"
+                        }`}
                     >
                         <Button
                             size="icon"
                             variant="secondary"
                             onClick={handleVideoPlay}
-                            aria-label={isPlaying ? `Pause video for ${post.title}` : `Play video for ${post.title}`}
+                            aria-label={
+                                isPlaying
+                                    ? `Pause video for ${post.title}`
+                                    : `Play video for ${post.title}`
+                            }
                             className="w-10 h-10 rounded-full bg-white/90 text-primary hover:bg-white shadow-lg transform scale-90 group-hover/media:scale-100 transition-transform cursor-pointer"
                         >
                             {isPlaying ? (
@@ -117,7 +125,9 @@ export default function PostCard({ post }: { post: Report }): React.ReactNode {
                     <div className="p-3.5 space-y-4">
                         <div className="flex items-center justify-between text-[15px]">
                             <span className="font-bold text-primary">{post.trackingCode}</span>
-                            <span className="text-muted-foreground font-medium">{formattedDate}</span>
+                            <span className="text-muted-foreground font-medium">
+                                {formattedDate}
+                            </span>
                         </div>
 
                         <div>
@@ -146,15 +156,15 @@ export default function PostCard({ post }: { post: Report }): React.ReactNode {
                 <CardFooter className="p-4 pt-0 flex items-center gap-4 text-[16px] text-muted-foreground font-medium border-t-0 w-full">
                     <div className="flex items-center gap-1.5">
                         <MessageSquare className="w-5 h-5 text-muted-foreground" />
-                        <span>{post.counts?.comments ?? 0}</span>
+                        <span>{post.commentCount}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                         <ThumbsUp className="w-5 h-5 text-muted-foreground" />
-                        <span>{post.counts?.likes ?? 0}</span>
+                        <span>{post.likeCount}</span>
                     </div>
                     <div className="flex items-center gap-1.5 ml-auto">
                         <Eye className="w-5 h-5 text-muted-foreground" />
-                        <span>{post.counts?.views ?? 0}</span>
+                        <span>{post.viewCount}</span>
                     </div>
                 </CardFooter>
             </Link>

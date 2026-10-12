@@ -2,8 +2,9 @@ import { randomInt } from "node:crypto";
 
 import { prisma } from "../db/prisma.js";
 import type { Prisma } from "../generated/prisma/client.js";
-import type { MediaType, PostPriority, PostStatus } from "../generated/prisma/enums.js";
+import type { MediaType, PostPriority, PostStatus, UserRole } from "../generated/prisma/enums.js";
 import { AppError } from "../lib/errors.js";
+import { logger } from "../lib/logger.js";
 import { isUniqueViolation } from "../lib/prisma-errors.js";
 import {
   PUBLIC_COMMENT_SELECT,
@@ -357,6 +358,24 @@ function unknownField(field: string, value: string, collection: string): AppErro
   });
 }
 
+/**
+ * Maps the request's already-uploaded media onto `Media` rows. The schema keeps
+ * a bucket key, not a URL, but an upload arrives as a finished Cloudinary URL
+ * and `mediaUrl()` passes an absolute URL through untouched, so the URL is what
+ * gets stored. `sortOrder` follows the array, which is the display order.
+ */
+function buildMediaRows(items: CreatePostMediaInput[]) {
+  return items.map((item, index) => ({
+    type: item.type,
+    storageKey: item.url,
+    thumbnailKey: item.thumbnailUrl ?? null,
+    mimeType: item.mimeType?.trim() || DEFAULT_MEDIA_TYPE[item.type],
+    sizeBytes: BigInt(item.sizeBytes ?? 0),
+    durationSecs: item.durationSecs ?? null,
+    sortOrder: index,
+  }));
+}
+
 export async function createPost(userId: bigint, input: CreatePostInput): Promise<PublicPost> {
   const [category, ward] = await Promise.all([
     prisma.category.findUnique({
@@ -369,15 +388,7 @@ export async function createPost(userId: bigint, input: CreatePostInput): Promis
   if (!category) throw unknownField("category", input.category, "category");
   if (!ward) throw unknownField("ward", input.ward, "ward");
 
-  const media = input.media?.map((item, index) => ({
-    type: item.type,
-    storageKey: item.url,
-    thumbnailKey: item.thumbnailUrl ?? null,
-    mimeType: item.mimeType?.trim() || DEFAULT_MEDIA_TYPE[item.type],
-    sizeBytes: BigInt(item.sizeBytes ?? 0),
-    durationSecs: item.durationSecs ?? null,
-    sortOrder: index,
-  }));
+  const media = input.media ? buildMediaRows(input.media) : undefined;
 
   const year = new Date().getFullYear();
 
@@ -426,6 +437,165 @@ export async function createPost(userId: bigint, input: CreatePostInput): Promis
   }
 
   throw AppError.serviceUnavailable("Could not assign a tracking code. Please try again.");
+}
+
+/** The signed-in caller on a write, reduced to what authorisation needs. */
+export interface PostActor {
+  id: bigint;
+  role: UserRole;
+}
+
+export interface UpdatePostLocationInput {
+  street?: string | null | undefined;
+  city?: string | undefined;
+  address?: string | undefined;
+  postalCode?: string | null | undefined;
+  latitude?: number | null | undefined;
+  longitude?: number | null | undefined;
+}
+
+export interface UpdatePostInput {
+  title?: string | undefined;
+  description?: string | undefined;
+  category?: string | undefined;
+  ward?: string | undefined;
+  priority?: PostPriority | undefined;
+  isAnonymous?: boolean | undefined;
+  location?: UpdatePostLocationInput | undefined;
+  media?: CreatePostMediaInput[] | undefined;
+}
+
+/**
+ * A write that a caller is not allowed to make is a `403`; a report that is not
+ * there (never existed, or was moderated away) is a `404`. Both an edit and a
+ * delete start by looking the row up without the `deletedAt` filter so the two
+ * cases stay distinguishable, then treat a soft-deleted report as gone.
+ */
+async function findPostForWrite(
+  identifier: PostIdentifier,
+): Promise<{ id: bigint; userId: bigint; categoryId: bigint; deletedAt: Date | null }> {
+  const post = await prisma.post.findFirst({
+    where: identifier,
+    select: { id: true, userId: true, categoryId: true, deletedAt: true },
+  });
+
+  if (!post) throw AppError.notFound("No report with that tracking code");
+  return post;
+}
+
+export async function updatePost(
+  actor: PostActor,
+  identifier: PostIdentifier,
+  input: UpdatePostInput,
+): Promise<PublicPost> {
+  const post = await findPostForWrite(identifier);
+
+  // Editing a moderated-away report has no public effect; it must be restored
+  // first (no restore endpoint yet), so it reads as gone here too.
+  if (post.deletedAt !== null) {
+    throw AppError.notFound("No report with that tracking code");
+  }
+
+  if (post.userId !== actor.id && actor.role !== "super_admin") {
+    throw AppError.forbidden("You can only edit a report you filed");
+  }
+
+  const data: Prisma.PostUpdateInput = {};
+
+  if (input.title !== undefined) data.title = input.title;
+  if (input.description !== undefined) data.description = input.description;
+  if (input.priority !== undefined) data.priority = input.priority;
+  if (input.isAnonymous !== undefined) data.isAnonymous = input.isAnonymous;
+
+  const [category, ward] = await Promise.all([
+    input.category === undefined
+      ? Promise.resolve(null)
+      : prisma.category.findUnique({
+          where: { slug: input.category },
+          select: { id: true, defaultDepartmentId: true },
+        }),
+    input.ward === undefined
+      ? Promise.resolve(null)
+      : prisma.ward.findUnique({ where: { code: input.ward }, select: { id: true } }),
+  ]);
+
+  if (input.category !== undefined && !category) {
+    throw unknownField("category", input.category, "category");
+  }
+  if (input.ward !== undefined && !ward) {
+    throw unknownField("ward", input.ward, "ward");
+  }
+
+  if (category) {
+    data.category = { connect: { id: category.id } };
+    // Routing follows the category, so the department moves with it — but only
+    // when the category actually changes, or a no-op send would clobber a
+    // department an officer reassigned by hand.
+    if (category.id !== post.categoryId) {
+      data.department = category.defaultDepartmentId
+        ? { connect: { id: category.defaultDepartmentId } }
+        : { disconnect: true };
+    }
+  }
+  if (ward) data.ward = { connect: { id: ward.id } };
+
+  const location = input.location;
+  if (location) {
+    if (location.street !== undefined) data.street = location.street?.trim() || null;
+    if (location.city !== undefined) data.city = location.city;
+    if (location.address !== undefined) data.address = location.address;
+    if (location.postalCode !== undefined) data.postalCode = location.postalCode?.trim() || null;
+    // Coordinates are a pair: sending either replaces both, and null clears.
+    if (location.latitude !== undefined || location.longitude !== undefined) {
+      data.latitude = location.latitude ?? null;
+      data.longitude = location.longitude ?? null;
+    }
+  }
+
+  const media = input.media === undefined ? undefined : buildMediaRows(input.media);
+
+  const updated = await prisma.$transaction(async (tx) => {
+    if (media !== undefined) {
+      // Replace the whole set: the edit form sends what should remain. An
+      // empty array therefore clears the attachments.
+      await tx.media.deleteMany({ where: { postId: post.id } });
+      if (media.length) data.media = { create: media };
+    }
+
+    return tx.post.update({ where: { id: post.id }, data, select: PUBLIC_POST_SELECT });
+  });
+
+  const liked = await likedPostIds(actor.id, [post.id]);
+
+  logger.info(
+    { postId: post.id.toString(), actorId: actor.id.toString(), fields: Object.keys(data) },
+    "report updated",
+  );
+
+  return toPublicPost(updated, liked.has(post.id.toString()));
+}
+
+export async function deletePost(actor: PostActor, identifier: PostIdentifier): Promise<void> {
+  const post = await findPostForWrite(identifier);
+
+  // Already gone. Same answer as a code that never existed.
+  if (post.deletedAt !== null) {
+    throw AppError.notFound("No report with that tracking code");
+  }
+
+  if (post.userId !== actor.id && actor.role !== "super_admin") {
+    throw AppError.forbidden("You can only delete a report you filed");
+  }
+
+  await prisma.post.update({
+    where: { id: post.id },
+    data: { deletedAt: new Date() },
+  });
+
+  logger.info(
+    { postId: post.id.toString(), actorId: actor.id.toString() },
+    "report soft-deleted",
+  );
 }
 
 export interface ListCommentsOptions {

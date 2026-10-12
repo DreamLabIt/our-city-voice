@@ -19,19 +19,26 @@ import {
     SearchCheck,
     Camera,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type {
     ActivityItem,
     CategoryItem,
     ChartMonth,
-    CivicReport,
     NavItem,
-    PostComment,
-    PostItem,
     StatItem,
     SearchSuggestion,
     StepItem,
     LocationItem,
 } from "@/types";
+import type {
+    Category,
+    Priority,
+    Report,
+    ReportCommentThread,
+    ReportMedia,
+    ReportStatus,
+    TimelineEntry,
+} from "@/types/report";
 
 // ── Navigation ──────────────────────────────────────────────
 export const navItems: NavItem[] = [
@@ -60,13 +67,100 @@ export const categories: CategoryItem[] = [
     { id: "other", label: "Other", icon: MoreHorizontal, isOther: true },
 ];
 
+// ── Feed fixtures to schema-faithful Report rows ───────────
+// The raw arrays below are the richer feed data (tag colours, feed tabs,
+// status timelines, commenter labels). What the app and the seed actually see
+// are the exports at the bottom of each section: plain `Report` / comment
+// objects, exactly the shape the API ships, so a component cannot drift from
+// the contract. Times are converted to ISO strings, and sizes to BigInt-as-
+// string, just as the backend serializer would.
+function toIso(value: string): string {
+    const cleaned = value.replace("·", " ").replace(/\s+/g, " ").trim();
+    const parsed = new Date(cleaned);
+    return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+}
+
+// Relative timestamps ("4 hours ago") become concrete ISO instants anchored at
+// a fixed point, so the fixtures stay date-shaped and do not drift on import.
+const COMMENT_ANCHOR = new Date("2026-10-26T12:00:00.000Z").getTime();
+
+function toIsoFromRelative(value: string): string {
+    const match = /^(\d+)\s+(second|minute|hour|day|week)s?\s+ago$/.exec(value.trim());
+    if (!match) return toIso(value);
+
+    const amount = Number(match[1]);
+    const unit = match[2];
+    const msPerUnit =
+        unit === "second" ? 1_000
+            : unit === "minute" ? 60_000
+            : unit === "hour" ? 3_600_000
+            : unit === "day" ? 86_400_000
+            : 604_800_000;
+
+    return new Date(COMMENT_ANCHOR - amount * msPerUnit).toISOString();
+}
+
+function iconName(icon: LucideIcon | undefined): string {
+    return icon?.displayName ?? "CircleHelp";
+}
+
+// Category label -> the category object the API would ship, so a fixture's tag
+// or category string maps onto the same reduced Category row.
+const CATEGORY_BY_LABEL = new Map(
+    categories
+        .filter((category) => category.id !== "all")
+        .map((category) => [
+            category.label,
+            {
+                id: category.id,
+                name: category.label,
+                slug: category.id,
+                icon: iconName(category.icon),
+            },
+        ]),
+);
+
+function categoryFor(label: string): Category {
+    return (
+        CATEGORY_BY_LABEL.get(label) ?? {
+            id: "other",
+            name: label,
+            slug: "other",
+            icon: "CircleHelp",
+        }
+    );
+}
+
+function toReportMedia(
+    postId: string,
+    item: (typeof feedPosts)[number]["media"][number],
+): ReportMedia {
+    return {
+        id: `${postId}-m${item.sortOrder}`,
+        type: item.type as ReportMedia["type"],
+        storageKey: item.storageKey,
+        thumbnailKey: item.thumbnailKey,
+        mimeType: item.mimeType,
+        sizeBytes: String(item.sizeBytes),
+        durationSecs: item.durationSecs,
+        sortOrder: item.sortOrder,
+        // Fixtures hold display-ready paths (root-relative or absolute), same
+        // as what the backend's mediaUrl() would resolve a stored key to.
+        url: item.storageKey,
+        thumbnailUrl: item.thumbnailKey,
+    };
+}
+
 // ── Recent Posts ────────────────────────────────────────────
 export const tabs: string[] = ["Latest", "Most Commented", "Nearby", "Map View"];
 
-export const posts: PostItem[] = [
+// ── Feed fixtures (raw) ────────────────────────────────────
+// Rich feed rows, not the API shape. The exports at the end of this section
+// are what the app and the seed consume.
+const feedPosts = [
     {
         id: "1",
-        code: "OCV-2024-001245",
+        trackingCode: "OCV-2024-001245",
         date: "Oct 26, 2026",
         tag: "Roads",
         tagBg: "bg-tag-blue-bg",
@@ -74,21 +168,56 @@ export const posts: PostItem[] = [
         location: "Finch Ave E, Scarborough",
         title: "Large pothole causing traffic issues",
         desc: "This pothole has been getting bigger and is causing vehicle damage.",
-        comments: 7,
-        likes: 8,
-        views: 245,
-        image: "/road_surface .jpeg",
-        video: "https://lorem.video/1280x720_h264_20s_30fps",
-        isVideo: true,
-        duration: "0:32",
-        category: "Latest",
-        status: "In Progress",
-        priority: "High",
-        ward: "Ward 22 (Scarborough Agincourt)",
+        commentCount: 7,
+        likeCount: 8,
+        viewCount: 245,
+        media: [
+            {
+                type: "image",
+                storageKey: "/road_surface .jpeg",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 824320,
+                durationSecs: null,
+                sortOrder: 0,
+            },
+            {
+                type: "video",
+                storageKey: "https://lorem.video/1280x720_h264_20s_30fps",
+                thumbnailKey: "/road_surface .jpeg",
+                mimeType: "video/mp4",
+                sizeBytes: 4290880,
+                durationSecs: 32,
+                sortOrder: 1,
+            },
+            {
+                type: "image",
+                storageKey: "/residential_street.jpeg",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 648452,
+                durationSecs: null,
+                sortOrder: 2,
+            },
+            {
+                type: "image",
+                storageKey: "/uneven_concrete.jpeg",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 712033,
+                durationSecs: null,
+                sortOrder: 3,
+            },
+        ],
+        feed: "Latest",
+        status: "in_progress",
+        priority: "high",
+        ward: { name: "Ward 22 (Scarborough Agincourt)", code: "ward-22" },
         department: "Transportation Services",
         assignedOfficer: "Eng. Daniel Okafor",
-        reportedBy: "Amina R.",
+        author: "Amina R.",
         reporterInitials: "AR",
+        isAnonymous: false,
         street: "4120 Finch Ave E",
         city: "Toronto",
         address: "4120 Finch Ave E, near Birchmount Rd",
@@ -101,37 +230,39 @@ export const posts: PostItem[] = [
             "Two neighbours have already reported rim and suspension damage after hitting it at night, when standing water hides how deep it is. The patch applied in the spring washed out after the first heavy rain.",
             "Requesting a permanent resurfacing of the section rather than another cold patch, plus temporary cones until the crew can be scheduled.",
         ],
-        gallery: ["/road_surface .jpeg", "/residential_street.jpeg", "/uneven_concrete.jpeg"],
-        updates: [
+        statusHistory: [
             {
                 id: "u1-1",
-                status: "Pending",
+                fromStatus: null,
+                toStatus: "pending",
                 title: "Report submitted",
                 note: "Issue received with photo and video evidence and queued for triage.",
-                date: "Oct 26, 2026 · 08:14",
                 actor: "Amina R.",
+                createdAt: "Oct 26, 2026 · 08:14",
             },
             {
                 id: "u1-2",
-                status: "Pending",
+                fromStatus: "pending",
+                toStatus: "pending",
                 title: "Verified by field inspector",
                 note: "Location and severity confirmed on site. Logged as a road hazard and routed to Transportation Services.",
-                date: "Oct 26, 2026 · 13:40",
                 actor: "Insp. Laila Haque",
+                createdAt: "Oct 26, 2026 · 13:40",
             },
             {
                 id: "u1-3",
-                status: "In Progress",
+                fromStatus: "pending",
+                toStatus: "in_progress",
                 title: "Repair crew scheduled",
                 note: "Cones placed around the hazard. Hot-mix resurfacing booked for the next dry weather window.",
-                date: "Oct 26, 2026 · 16:05",
                 actor: "Eng. Daniel Okafor",
+                createdAt: "Oct 26, 2026 · 16:05",
             },
         ],
     },
     {
         id: "2",
-        code: "OCV-2024-001244",
+        trackingCode: "OCV-2024-001244",
         date: "Oct 26, 2026",
         tag: "Stormwater & Flooding",
         tagBg: "bg-tag-blue-bg",
@@ -139,18 +270,38 @@ export const posts: PostItem[] = [
         location: "Morningside Ave, Scarborough",
         title: "Flooding during heavy rain",
         desc: "Water is not draining properly on this street after rain.",
-        comments: 5,
-        likes: 5,
-        views: 180,
-        image: "/residential_street.jpeg",
-        category: "Most Commented",
-        status: "Pending",
-        priority: "Critical",
-        ward: "Ward 24 (Scarborough Guildwood)",
+        commentCount: 5,
+        likeCount: 5,
+        viewCount: 180,
+        media: [
+            {
+                type: "image",
+                storageKey: "/residential_street.jpeg",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 648452,
+                durationSecs: null,
+                sortOrder: 0,
+            },
+            {
+                type: "image",
+                storageKey: "/isue.jpeg",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 590118,
+                durationSecs: null,
+                sortOrder: 1,
+            },
+        ],
+        feed: "Most Commented",
+        status: "pending",
+        priority: "critical",
+        ward: { name: "Ward 24 (Scarborough Guildwood)", code: "ward-24" },
         department: "Water & Sewerage Board",
         assignedOfficer: "Unassigned",
-        reportedBy: "Marcus D.",
+        author: "Marcus D.",
         reporterInitials: "MD",
+        isAnonymous: false,
         street: "880 Morningside Ave",
         city: "Toronto",
         address: "880 Morningside Ave, between Coronation Dr and Beechgrove",
@@ -163,29 +314,30 @@ export const posts: PostItem[] = [
             "The catch basin at the corner looks completely blocked — leaves and silt sit level with the grate, and no water moves through it even when the street is flooded.",
             "Pedestrians have to walk on the road to get around the water because the sidewalk dips lower than the curb here. This is the fourth time this season.",
         ],
-        gallery: ["/residential_street.jpeg", "/isue.jpeg"],
-        updates: [
+        statusHistory: [
             {
                 id: "u2-1",
-                status: "Pending",
+                fromStatus: null,
+                toStatus: "pending",
                 title: "Report submitted",
                 note: "Flooding reported with photos taken during the Oct 25 rainfall.",
-                date: "Oct 26, 2026 · 07:02",
                 actor: "Marcus D.",
+                createdAt: "Oct 26, 2026 · 07:02",
             },
             {
                 id: "u2-2",
-                status: "Pending",
+                fromStatus: "pending",
+                toStatus: "pending",
                 title: "Awaiting inspection",
                 note: "Flagged as critical because of standing water on an active roadway. Catch basin inspection requested.",
-                date: "Oct 26, 2026 · 09:30",
                 actor: "Intake Desk",
+                createdAt: "Oct 26, 2026 · 09:30",
             },
         ],
     },
     {
         id: "3",
-        code: "OCV-2024-001243",
+        trackingCode: "OCV-2024-001243",
         date: "Oct 25, 2026",
         tag: "Sidewalks",
         tagBg: "bg-tag-green-bg",
@@ -193,18 +345,38 @@ export const posts: PostItem[] = [
         location: "Sheppard Ave W, North York",
         title: "Broken sidewalk near bus stop",
         desc: "The sidewalk is cracked and unsafe for pedestrians.",
-        comments: 4,
-        likes: 6,
-        views: 95,
-        image: "/uneven_concrete.jpeg",
-        category: "Nearby",
-        status: "Resolved",
-        priority: "Medium",
-        ward: "Ward 07 (Humber River Black Creek)",
+        commentCount: 4,
+        likeCount: 6,
+        viewCount: 95,
+        media: [
+            {
+                type: "image",
+                storageKey: "/uneven_concrete.jpeg",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 712033,
+                durationSecs: null,
+                sortOrder: 0,
+            },
+            {
+                type: "image",
+                storageKey: "/residential_street.jpeg",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 648452,
+                durationSecs: null,
+                sortOrder: 1,
+            },
+        ],
+        feed: "Nearby",
+        status: "resolved",
+        priority: "medium",
+        ward: { name: "Ward 07 (Humber River Black Creek)", code: "ward-07" },
         department: "Public Works Department",
         assignedOfficer: "Supt. Priya Menon",
-        reportedBy: "Grace T.",
+        author: "Grace T.",
         reporterInitials: "GT",
+        isAnonymous: false,
         street: "2301 Sheppard Ave W",
         city: "Toronto",
         address: "2301 Sheppard Ave W, at the westbound bus stop",
@@ -217,37 +389,39 @@ export const posts: PostItem[] = [
             "Two regular riders at this stop use walkers, and one caught a wheel on the raised edge last week. The gap also traps water that freezes overnight.",
             "The slabs were ground down and relaid, and the surface is now level with the boarding pad.",
         ],
-        gallery: ["/uneven_concrete.jpeg", "/residential_street.jpeg"],
-        updates: [
+        statusHistory: [
             {
                 id: "u3-1",
-                status: "Pending",
+                fromStatus: null,
+                toStatus: "pending",
                 title: "Report submitted",
                 note: "Trip hazard reported next to a transit boarding area.",
-                date: "Oct 25, 2026 · 10:20",
                 actor: "Grace T.",
+                createdAt: "Oct 25, 2026 · 10:20",
             },
             {
                 id: "u3-2",
-                status: "In Progress",
+                fromStatus: "pending",
+                toStatus: "in_progress",
                 title: "Work order issued",
                 note: "Concrete crew assigned; temporary asphalt wedge installed the same afternoon.",
-                date: "Oct 25, 2026 · 15:45",
                 actor: "Supt. Priya Menon",
+                createdAt: "Oct 25, 2026 · 15:45",
             },
             {
                 id: "u3-3",
-                status: "Resolved",
+                fromStatus: "in_progress",
+                toStatus: "resolved",
                 title: "Repair completed",
                 note: "Slabs replaced and the walkway levelled to the boarding pad. Photo proof added to the file.",
-                date: "Oct 26, 2026 · 11:10",
                 actor: "Public Works Department",
+                createdAt: "Oct 26, 2026 · 11:10",
             },
         ],
     },
     {
         id: "4",
-        code: "OCV-2024-001242",
+        trackingCode: "OCV-2024-001242",
         date: "Oct 24, 2026",
         tag: "Streetlights & Signals",
         tagBg: "bg-tag-amber-bg",
@@ -255,18 +429,29 @@ export const posts: PostItem[] = [
         location: "Markham Rd, Scarborough",
         title: "Streetlight not working",
         desc: "This streetlight has been out for over a week.",
-        comments: 3,
-        likes: 3,
-        views: 120,
-        image: "/street_light.jpeg",
-        category: "Map View",
-        status: "In Progress",
-        priority: "Medium",
-        ward: "Ward 24 (Scarborough Guildwood)",
+        commentCount: 3,
+        likeCount: 3,
+        viewCount: 120,
+        media: [
+            {
+                type: "image",
+                storageKey: "/street_light.jpeg",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 687210,
+                durationSecs: null,
+                sortOrder: 0,
+            },
+        ],
+        feed: "Map View",
+        status: "in_progress",
+        priority: "medium",
+        ward: { name: "Ward 24 (Scarborough Guildwood)", code: "ward-24" },
         department: "Electrical Safety Cell",
         assignedOfficer: "Tech. Omar Siddiqui",
-        reportedBy: "Nadia K.",
+        author: "Nadia K.",
         reporterInitials: "NK",
+        isAnonymous: false,
         street: "1455 Markham Rd",
         city: "Toronto",
         address: "1455 Markham Rd, opposite the pharmacy entrance",
@@ -279,29 +464,30 @@ export const posts: PostItem[] = [
             "The stretch is busy after 7pm with people walking to the bus loop, and several have said they now cross at the next intersection instead.",
             "The pole number on the plate is MK-4471 if that helps the crew locate it.",
         ],
-        gallery: ["/street_light.jpeg"],
-        updates: [
+        statusHistory: [
             {
                 id: "u4-1",
-                status: "Pending",
+                fromStatus: null,
+                toStatus: "pending",
                 title: "Report submitted",
                 note: "Outage reported for pole MK-4471.",
-                date: "Oct 24, 2026 · 20:35",
                 actor: "Nadia K.",
+                createdAt: "Oct 24, 2026 · 20:35",
             },
             {
                 id: "u4-2",
-                status: "In Progress",
+                fromStatus: "pending",
+                toStatus: "in_progress",
                 title: "Diagnosed as ballast failure",
                 note: "Crew tested the circuit and confirmed a failed ballast. Replacement part ordered.",
-                date: "Oct 25, 2026 · 14:18",
                 actor: "Tech. Omar Siddiqui",
+                createdAt: "Oct 25, 2026 · 14:18",
             },
         ],
     },
     {
         id: "5",
-        code: "OCV-2024-001241",
+        trackingCode: "OCV-2024-001241",
         date: "Oct 23, 2026",
         tag: "Waste & Recycling",
         tagBg: "bg-tag-green-bg",
@@ -309,18 +495,38 @@ export const posts: PostItem[] = [
         location: "Kingston Rd, Scarborough",
         title: "Recycling bins uncollected for two weeks",
         desc: "Blue bins have been left full on the curb since the last two pickup days.",
-        comments: 3,
-        likes: 11,
-        views: 310,
-        image: "/isue.jpeg",
-        category: "Most Commented",
-        status: "In Progress",
-        priority: "Medium",
-        ward: "Ward 20 (Scarborough Southwest)",
+        commentCount: 3,
+        likeCount: 11,
+        viewCount: 310,
+        media: [
+            {
+                type: "image",
+                storageKey: "/isue.jpeg",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 590118,
+                durationSecs: null,
+                sortOrder: 0,
+            },
+            {
+                type: "image",
+                storageKey: "/residential_street.jpeg",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 648452,
+                durationSecs: null,
+                sortOrder: 1,
+            },
+        ],
+        feed: "Most Commented",
+        status: "in_progress",
+        priority: "medium",
+        ward: { name: "Ward 20 (Scarborough Southwest)", code: "ward-20" },
         department: "Sanitation & Waste Management",
         assignedOfficer: "Coord. Beatrice Lam",
-        reportedBy: "Samuel O.",
+        author: "Samuel O.",
         reporterInitials: "SO",
+        isAnonymous: false,
         street: "3150 Kingston Rd",
         city: "Toronto",
         address: "3150 Kingston Rd, east side of the block",
@@ -333,29 +539,30 @@ export const posts: PostItem[] = [
             "Overflow is now stacked beside the bins in bags, and wind has scattered cardboard and plastic along the sidewalk and into the ravine path at the end of the street.",
             "Garbage and organics are still being collected normally on the same route, so it appears to be the recycling run specifically.",
         ],
-        gallery: ["/isue.jpeg", "/residential_street.jpeg"],
-        updates: [
+        statusHistory: [
             {
                 id: "u5-1",
-                status: "Pending",
+                fromStatus: null,
+                toStatus: "pending",
                 title: "Report submitted",
                 note: "Missed recycling collection reported for a full block.",
-                date: "Oct 23, 2026 · 09:05",
                 actor: "Samuel O.",
+                createdAt: "Oct 23, 2026 · 09:05",
             },
             {
                 id: "u5-2",
-                status: "In Progress",
+                fromStatus: "pending",
+                toStatus: "in_progress",
                 title: "Route audit opened",
                 note: "Collection logs pulled for the Tuesday run. A catch-up truck is being scheduled for this block.",
-                date: "Oct 24, 2026 · 12:40",
                 actor: "Coord. Beatrice Lam",
+                createdAt: "Oct 24, 2026 · 12:40",
             },
         ],
     },
     {
         id: "6",
-        code: "OCV-2024-001240",
+        trackingCode: "OCV-2024-001240",
         date: "Oct 22, 2026",
         tag: "Parks & Recreation",
         tagBg: "bg-tag-green-bg",
@@ -363,18 +570,38 @@ export const posts: PostItem[] = [
         location: "Thomson Memorial Park, Scarborough",
         title: "Damaged playground swing set",
         desc: "A swing chain has snapped and the seat is hanging loose at the north playground.",
-        comments: 2,
-        likes: 14,
-        views: 268,
-        image: "/isue.jpeg",
-        category: "Nearby",
-        status: "Resolved",
-        priority: "High",
-        ward: "Ward 21 (Scarborough Centre)",
+        commentCount: 2,
+        likeCount: 14,
+        viewCount: 268,
+        media: [
+            {
+                type: "image",
+                storageKey: "/isue.jpeg",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 590118,
+                durationSecs: null,
+                sortOrder: 0,
+            },
+            {
+                type: "image",
+                storageKey: "/residential_street.jpeg",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 648452,
+                durationSecs: null,
+                sortOrder: 1,
+            },
+        ],
+        feed: "Nearby",
+        status: "resolved",
+        priority: "high",
+        ward: { name: "Ward 21 (Scarborough Centre)", code: "ward-21" },
         department: "Parks & Urban Forestry",
         assignedOfficer: "Ranger Ellis Moreau",
-        reportedBy: "Priya S.",
+        author: "Priya S.",
         reporterInitials: "PS",
+        isAnonymous: false,
         street: "1005 Brimley Rd",
         city: "Toronto",
         address: "1005 Brimley Rd, north playground area",
@@ -387,37 +614,39 @@ export const posts: PostItem[] = [
             "Small children keep climbing onto it because nothing marks it as broken, and the loose chain end is at head height for a toddler.",
             "The swing was taken out of service the same day and a new chain and seat were fitted two days later.",
         ],
-        gallery: ["/isue.jpeg", "/residential_street.jpeg"],
-        updates: [
+        statusHistory: [
             {
                 id: "u6-1",
-                status: "Pending",
+                fromStatus: null,
+                toStatus: "pending",
                 title: "Report submitted",
                 note: "Broken swing reported with a photo of the snapped chain.",
-                date: "Oct 22, 2026 · 16:50",
                 actor: "Priya S.",
+                createdAt: "Oct 22, 2026 · 16:50",
             },
             {
                 id: "u6-2",
-                status: "In Progress",
+                fromStatus: "pending",
+                toStatus: "in_progress",
                 title: "Equipment taken out of service",
                 note: "Swing removed and the frame taped off pending replacement parts.",
-                date: "Oct 22, 2026 · 19:15",
                 actor: "Ranger Ellis Moreau",
+                createdAt: "Oct 22, 2026 · 19:15",
             },
             {
                 id: "u6-3",
-                status: "Resolved",
+                fromStatus: "in_progress",
+                toStatus: "resolved",
                 title: "Swing replaced",
                 note: "New chain and seat installed, and the full set was inspected for wear.",
-                date: "Oct 24, 2026 · 10:30",
                 actor: "Parks & Urban Forestry",
+                createdAt: "Oct 24, 2026 · 10:30",
             },
         ],
     },
     {
         id: "7",
-        code: "OCV-2024-001239",
+        trackingCode: "OCV-2024-001239",
         date: "Oct 21, 2026",
         tag: "Water & Sewer",
         tagBg: "bg-tag-blue-bg",
@@ -425,18 +654,38 @@ export const posts: PostItem[] = [
         location: "Ellesmere Rd, Scarborough",
         title: "Water main leak flooding the curb lane",
         desc: "Clean water has been running from under the pavement for three days straight.",
-        comments: 5,
-        likes: 19,
-        views: 402,
-        image: "/road_surface .jpeg",
-        category: "Latest",
-        status: "In Progress",
-        priority: "Critical",
-        ward: "Ward 25 (Scarborough Rouge Park)",
+        commentCount: 5,
+        likeCount: 19,
+        viewCount: 402,
+        media: [
+            {
+                type: "image",
+                storageKey: "/road_surface .jpeg",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 824320,
+                durationSecs: null,
+                sortOrder: 0,
+            },
+            {
+                type: "image",
+                storageKey: "/residential_street.jpeg",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 648452,
+                durationSecs: null,
+                sortOrder: 1,
+            },
+        ],
+        feed: "Latest",
+        status: "in_progress",
+        priority: "critical",
+        ward: { name: "Ward 25 (Scarborough Rouge Park)", code: "ward-25" },
         department: "Water & Sewerage Board",
         assignedOfficer: "Eng. Hannah Whitfield",
-        reportedBy: "Tomas V.",
+        author: "Tomas V.",
         reporterInitials: "TV",
+        isAnonymous: false,
         street: "2740 Ellesmere Rd",
         city: "Toronto",
         address: "2740 Ellesmere Rd, west of Neilson Rd",
@@ -449,56 +698,87 @@ export const posts: PostItem[] = [
             "The asphalt around the crack is beginning to sink, and there is a soft spot roughly a metre wide that moves under a car tire.",
             "Two houses on this stretch reported lower water pressure starting the same morning the leak appeared.",
         ],
-        gallery: ["/road_surface .jpeg", "/residential_street.jpeg"],
-        updates: [
+        statusHistory: [
             {
                 id: "u7-1",
-                status: "Pending",
+                fromStatus: null,
+                toStatus: "pending",
                 title: "Report submitted",
                 note: "Continuous water flow reported with a note about reduced pressure nearby.",
-                date: "Oct 21, 2026 · 06:48",
                 actor: "Tomas V.",
+                createdAt: "Oct 21, 2026 · 06:48",
             },
             {
                 id: "u7-2",
-                status: "In Progress",
+                fromStatus: "pending",
+                toStatus: "in_progress",
                 title: "Leak confirmed and lane closed",
                 note: "Acoustic survey located a break on the 150 mm main. Curb lane closed and excavation permit filed.",
-                date: "Oct 21, 2026 · 15:22",
                 actor: "Eng. Hannah Whitfield",
+                createdAt: "Oct 21, 2026 · 15:22",
             },
             {
                 id: "u7-3",
-                status: "In Progress",
+                fromStatus: "in_progress",
+                toStatus: "in_progress",
                 title: "Repair crew mobilised",
                 note: "Excavation underway. A short shutoff is planned for the block during the repair.",
-                date: "Oct 26, 2026 · 08:00",
                 actor: "Water & Sewerage Board",
+                createdAt: "Oct 26, 2026 · 08:00",
             },
         ],
     },
     {
-        id: "8",
-        code: "OCV-2024-001238",
+id: "8",
+        trackingCode: "OCV-2024-001238",
         date: "Oct 20, 2026",
         tag: "Transit & Mobility",
         tagBg: "bg-tag-amber-bg",
         tagText: "text-tag-amber-text",
-        location: "Eglinton Ave E, North York",
-        title: "Bus shelter glass smashed at the eastbound stop",
-        desc: "The side panel is shattered and glass fragments are spread across the pad.",
-        comments: 2,
-        likes: 7,
-        views: 164,
-        image: "/street_light.jpeg",
-        category: "Map View",
-        status: "Resolved",
-        priority: "Low",
-        ward: "Ward 16 (Don Valley East)",
+        location: "Eglinton Ave E, Scarborough",
+        title: "Broken bus shelter glass",
+        desc: "The glass panel on the west-facing side of the shelter is shattered.",
+        commentCount: 3,
+        likeCount: 4,
+        viewCount: 156,
+        media: [
+            {
+                type: "image",
+                storageKey: "/isue.jpeg",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 590118,
+                durationSecs: null,
+                sortOrder: 0,
+            },
+            {
+                type: "image",
+                storageKey: "/street_light.jpeg",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 687210,
+                durationSecs: null,
+                sortOrder: 1,
+            },
+            {
+                type: "image",
+                storageKey: "/uneven_concrete.jpeg",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 712033,
+                durationSecs: null,
+                sortOrder: 2,
+            },
+        ],
+        feed: "Map View",
+        status: "resolved",
+        priority: "low",
+        ward: { name: "Ward 21 (Scarborough Centre)", code: "ward-21" },
         department: "Transit & Mobility Office",
         assignedOfficer: "Coord. Felix Nunez",
-        reportedBy: "Wei L.",
+        author: "Wei L.",
         reporterInitials: "WL",
+        isAnonymous: false,
         street: "1780 Eglinton Ave E",
         city: "Toronto",
         address: "1780 Eglinton Ave E, eastbound shelter",
@@ -510,48 +790,112 @@ export const posts: PostItem[] = [
             "The rear panel of the eastbound shelter is shattered, with most of the glass still held in the frame and a spread of fragments across the concrete pad and the grass behind it.",
             "With the panel gone the bench offers no protection from wind or rain, and riders have been standing out at the curb instead of using the shelter.",
             "The pad was swept and a replacement panel was fitted the following week.",
-        ],
-        gallery: ["/street_light.jpeg", "/uneven_concrete.jpeg"],
-        updates: [
+],
+        statusHistory: [
             {
                 id: "u8-1",
-                status: "Pending",
+                fromStatus: null,
+                toStatus: "pending",
                 title: "Report submitted",
-                note: "Vandalised shelter panel reported with broken glass on the boarding pad.",
-                date: "Oct 20, 2026 · 07:30",
+                note: "Shattered shelter panel reported; loose shards were near the bench.",
                 actor: "Wei L.",
+                createdAt: "Oct 20, 2026 · 07:30",
             },
             {
                 id: "u8-2",
-                status: "In Progress",
+                fromStatus: "pending",
+                toStatus: "in_progress",
                 title: "Glass cleared from the site",
-                note: "Fragments swept and the frame taped pending a replacement panel.",
-                date: "Oct 20, 2026 · 13:05",
+                note: "Hazard sweep completed and the panel measured for a replacement order.",
                 actor: "Coord. Felix Nunez",
+                createdAt: "Oct 20, 2026 · 13:05",
             },
             {
                 id: "u8-3",
-                status: "Resolved",
+                fromStatus: "in_progress",
+                toStatus: "resolved",
                 title: "Panel replaced",
-                note: "New tempered glass panel installed and the shelter returned to service.",
-                date: "Oct 21, 2026 · 09:45",
+                note: "New tempered glass fitted and the shelter inspected for safety.",
                 actor: "Transit & Mobility Office",
+                createdAt: "Oct 21, 2026 · 09:45",
             },
         ],
     },
 ];
 
-// ── Issue Comments ──────────────────────────────────────────
-export const postComments: PostComment[] = [
+type FeedPost = (typeof feedPosts)[number];
+
+function feedPostToReport(post: FeedPost): Report {
+    const firstResolved = [...post.statusHistory]
+        .reverse()
+        .find((entry) => entry.toStatus === "resolved");
+    const lastChanged = post.statusHistory.at(-1)?.createdAt ?? post.date;
+
+    return {
+        id: post.id,
+        trackingCode: post.trackingCode,
+        title: post.title,
+        description: [post.desc, ...post.details].join("\n\n"),
+        status: post.status as ReportStatus,
+        priority: post.priority as Priority,
+        isAnonymous: post.isAnonymous,
+        category: categoryFor(post.tag),
+        ward: { id: post.ward.code, name: post.ward.name, code: post.ward.code },
+        department: { id: "", name: post.department },
+        author: { id: "", name: post.author, avatarUrl: null },
+        assignedOfficer:
+            post.assignedOfficer && post.assignedOfficer !== "Unassigned"
+                ? { id: "", name: post.assignedOfficer }
+                : null,
+        street: post.street,
+        city: post.city,
+        address: post.address,
+        postalCode: post.postalCode,
+        latitude: post.latitude,
+        longitude: post.longitude,
+        viewCount: post.viewCount,
+        likeCount: post.likeCount,
+        commentCount: post.commentCount,
+        likedByMe: false,
+        media: post.media.map((item) => toReportMedia(post.id, item)),
+        // The resolvedAt column is whatever the status timeline reached.
+        resolvedAt: firstResolved ? toIso(firstResolved.createdAt) : null,
+        createdAt: toIso(post.date),
+        updatedAt: toIso(lastChanged),
+    };
+}
+
+/** The landing page's feed of reports, in the API's `Report` shape. */
+export const posts: Report[] = feedPosts.map(feedPostToReport);
+
+// The curated status history, keyed for the seed: post_status_history seeds
+// from these rather than from something synthesised at seed time.
+export const postTimelines: { postId: string; entries: TimelineEntry[] }[] = feedPosts.map(
+    (post) => ({
+        postId: post.id,
+        entries: post.statusHistory.map((entry) => ({
+            id: entry.id,
+            fromStatus: entry.fromStatus as ReportStatus | null,
+            toStatus: entry.toStatus as ReportStatus,
+            title: entry.title,
+            note: entry.note,
+            actor: entry.actor ? { id: "", name: entry.actor } : null,
+            createdAt: toIso(entry.createdAt),
+        })),
+    }),
+);
+
+// ── Issue Comments (raw) ───────────────────────────────────
+const feedComments = [
     {
         id: "c1",
         postId: "1",
         author: "Derek Mensah",
         initials: "DM",
         role: "Resident",
-        time: "4 hours ago",
-        body: "Hit this on Saturday night and bent a rim. There is no warning at all once it rains and the hole fills up. Thanks for filing it with the video, that shows the depth much better than a photo.",
-        likes: 14,
+        createdAt: "4 hours ago",
+        message: "Hit this on Saturday night and bent a rim. There is no warning at all once it rains and the hole fills up. Thanks for filing it with the video, that shows the depth much better than a photo.",
+        likeCount: 14,
         replies: [
             {
                 id: "c1-r1",
@@ -559,9 +903,9 @@ export const postComments: PostComment[] = [
                 author: "Amina R.",
                 initials: "AR",
                 role: "Resident",
-                time: "3 hours ago",
-                body: "Sorry to hear that. Keep the repair invoice — the claims desk asked me for mine when I reported the damage last month.",
-                likes: 5,
+                createdAt: "3 hours ago",
+                message: "Sorry to hear that. Keep the repair invoice — the claims desk asked me for mine when I reported the damage last month.",
+                likeCount: 5,
             },
         ],
     },
@@ -571,9 +915,9 @@ export const postComments: PostComment[] = [
         author: "Eng. Daniel Okafor",
         initials: "DO",
         role: "Municipal Officer",
-        time: "2 hours ago",
-        body: "Transportation Services has this one. Cones are up as of this afternoon and the section is booked for hot-mix resurfacing in the next dry window rather than another cold patch. I will post here once the crew is on site.",
-        likes: 31,
+        createdAt: "2 hours ago",
+        message: "Transportation Services has this one. Cones are up as of this afternoon and the section is booked for hot-mix resurfacing in the next dry window rather than another cold patch. I will post here once the crew is on site.",
+        likeCount: 31,
         isOfficial: true,
     },
     {
@@ -582,9 +926,9 @@ export const postComments: PostComment[] = [
         author: "Shelly Vance",
         initials: "SV",
         role: "Local Business",
-        time: "6 hours ago",
-        body: "Our delivery vans use this lane every morning. Could the crew also look at the smaller cracks about ten metres east? They are heading the same way this one did.",
-        likes: 9,
+        createdAt: "6 hours ago",
+        message: "Our delivery vans use this lane every morning. Could the crew also look at the smaller cracks about ten metres east? They are heading the same way this one did.",
+        likeCount: 9,
         replies: [
             {
                 id: "c3-r1",
@@ -592,9 +936,9 @@ export const postComments: PostComment[] = [
                 author: "Insp. Laila Haque",
                 initials: "LH",
                 role: "Field Inspector",
-                time: "5 hours ago",
-                body: "Noted during the site visit. The whole stretch between the driveway and the bus pad is in the same work order, so those cracks are covered.",
-                likes: 12,
+                createdAt: "5 hours ago",
+                message: "Noted during the site visit. The whole stretch between the driveway and the bus pad is in the same work order, so those cracks are covered.",
+                likeCount: 12,
                 isOfficial: true,
             },
         ],
@@ -605,9 +949,9 @@ export const postComments: PostComment[] = [
         author: "Owen Brar",
         initials: "OB",
         role: "Resident",
-        time: "8 hours ago",
-        body: "Cyclists are swerving into the live lane to get around it, which feels more dangerous than the hole itself. Glad this is moving.",
-        likes: 7,
+        createdAt: "8 hours ago",
+        message: "Cyclists are swerving into the live lane to get around it, which feels more dangerous than the hole itself. Glad this is moving.",
+        likeCount: 7,
     },
     {
         id: "c5",
@@ -615,9 +959,9 @@ export const postComments: PostComment[] = [
         author: "Councillor Mira Ahmed",
         initials: "MA",
         role: "Ward Councillor",
-        time: "1 hour ago",
-        body: "My office is tracking this alongside two similar reports on Finch. If the resurfacing slips past this week, email us and we will push for an interim barrier.",
-        likes: 22,
+        createdAt: "1 hour ago",
+        message: "My office is tracking this alongside two similar reports on Finch. If the resurfacing slips past this week, email us and we will push for an interim barrier.",
+        likeCount: 22,
         isOfficial: true,
     },
     {
@@ -626,9 +970,9 @@ export const postComments: PostComment[] = [
         author: "Helena Cruz",
         initials: "HC",
         role: "Resident",
-        time: "5 hours ago",
-        body: "Same every storm. I measured it on Sunday and the water sat about 15 cm deep at the low point, right where people step off the sidewalk.",
-        likes: 18,
+        createdAt: "5 hours ago",
+        message: "Same every storm. I measured it on Sunday and the water sat about 15 cm deep at the low point, right where people step off the sidewalk.",
+        likeCount: 18,
         replies: [
             {
                 id: "c6-r1",
@@ -636,9 +980,9 @@ export const postComments: PostComment[] = [
                 author: "Marcus D.",
                 initials: "MD",
                 role: "Resident",
-                time: "4 hours ago",
-                body: "That matches what I saw. If you have photos from Sunday, adding them here would help — the more dates on file, the harder it is to call this a one-off.",
-                likes: 6,
+                createdAt: "4 hours ago",
+                message: "That matches what I saw. If you have photos from Sunday, adding them here would help — the more dates on file, the harder it is to call this a one-off.",
+                likeCount: 6,
             },
         ],
     },
@@ -648,9 +992,9 @@ export const postComments: PostComment[] = [
         author: "Raj Patel",
         initials: "RP",
         role: "Local Business",
-        time: "7 hours ago",
-        body: "Customers cannot reach our entrance for a couple of hours after every heavy rain. We have swept the grate ourselves twice, but it clogs again almost immediately.",
-        likes: 11,
+        createdAt: "7 hours ago",
+        message: "Customers cannot reach our entrance for a couple of hours after every heavy rain. We have swept the grate ourselves twice, but it clogs again almost immediately.",
+        likeCount: 11,
     },
     {
         id: "c8",
@@ -658,9 +1002,9 @@ export const postComments: PostComment[] = [
         author: "Intake Desk",
         initials: "ID",
         role: "Municipal Officer",
-        time: "6 hours ago",
-        body: "Logged as critical because of standing water on an active roadway. A catch basin inspection has been requested; the crew will confirm whether the blockage is at the grate or further down the lateral.",
-        likes: 15,
+        createdAt: "6 hours ago",
+        message: "Logged as critical because of standing water on an active roadway. A catch basin inspection has been requested; the crew will confirm whether the blockage is at the grate or further down the lateral.",
+        likeCount: 15,
         isOfficial: true,
     },
     {
@@ -669,9 +1013,9 @@ export const postComments: PostComment[] = [
         author: "Nina Sorensen",
         initials: "NS",
         role: "Resident",
-        time: "2 hours ago",
-        body: "Worth checking the basin across the street too. It drains fine, which makes me think the problem is specific to the one on this corner.",
-        likes: 4,
+        createdAt: "2 hours ago",
+        message: "Worth checking the basin across the street too. It drains fine, which makes me think the problem is specific to the one on this corner.",
+        likeCount: 4,
     },
     {
         id: "c10",
@@ -679,9 +1023,9 @@ export const postComments: PostComment[] = [
         author: "Albert Fung",
         initials: "AF",
         role: "Resident",
-        time: "1 day ago",
-        body: "I catch the 84 here every morning and the lifted slab was easy to miss in the dark. The new surface is level now — much better for anyone boarding with a walker.",
-        likes: 13,
+        createdAt: "1 day ago",
+        message: "I catch the 84 here every morning and the lifted slab was easy to miss in the dark. The new surface is level now — much better for anyone boarding with a walker.",
+        likeCount: 13,
         replies: [
             {
                 id: "c10-r1",
@@ -689,9 +1033,9 @@ export const postComments: PostComment[] = [
                 author: "Supt. Priya Menon",
                 initials: "PM",
                 role: "Municipal Officer",
-                time: "22 hours ago",
-                body: "Thanks for confirming. The slabs were relaid level with the boarding pad and photo proof is attached to the file. Flag it here if any settling shows up over the winter.",
-                likes: 10,
+                createdAt: "22 hours ago",
+                message: "Thanks for confirming. The slabs were relaid level with the boarding pad and photo proof is attached to the file. Flag it here if any settling shows up over the winter.",
+                likeCount: 10,
                 isOfficial: true,
             },
         ],
@@ -702,9 +1046,9 @@ export const postComments: PostComment[] = [
         author: "Grace T.",
         initials: "GT",
         role: "Resident",
-        time: "1 day ago",
-        body: "Quick turnaround on this one — reported Saturday morning and the temporary wedge was in by the afternoon. Thank you to the crew.",
-        likes: 20,
+        createdAt: "1 day ago",
+        message: "Quick turnaround on this one — reported Saturday morning and the temporary wedge was in by the afternoon. Thank you to the crew.",
+        likeCount: 20,
     },
     {
         id: "c12",
@@ -712,9 +1056,9 @@ export const postComments: PostComment[] = [
         author: "Lydia Novak",
         initials: "LN",
         role: "Resident",
-        time: "20 hours ago",
-        body: "Could the same crew look at the stretch two stops east? The cracking pattern there looks like the early stage of this.",
-        likes: 5,
+        createdAt: "20 hours ago",
+        message: "Could the same crew look at the stretch two stops east? The cracking pattern there looks like the early stage of this.",
+        likeCount: 5,
     },
     {
         id: "c13",
@@ -722,9 +1066,9 @@ export const postComments: PostComment[] = [
         author: "Jordan Ellis",
         initials: "JE",
         role: "Resident",
-        time: "12 hours ago",
-        body: "Walk past here most evenings and the gap between the two working poles is very dark. I have started crossing at the next intersection instead.",
-        likes: 8,
+        createdAt: "12 hours ago",
+        message: "Walk past here most evenings and the gap between the two working poles is very dark. I have started crossing at the next intersection instead.",
+        likeCount: 8,
     },
     {
         id: "c14",
@@ -732,9 +1076,9 @@ export const postComments: PostComment[] = [
         author: "Tech. Omar Siddiqui",
         initials: "OS",
         role: "Field Inspector",
-        time: "9 hours ago",
-        body: "Circuit tested at pole MK-4471 and the ballast has failed. The replacement part is ordered; once it arrives the swap takes under an hour.",
-        likes: 17,
+        createdAt: "9 hours ago",
+        message: "Circuit tested at pole MK-4471 and the ballast has failed. The replacement part is ordered; once it arrives the swap takes under an hour.",
+        likeCount: 17,
         isOfficial: true,
     },
     {
@@ -743,9 +1087,9 @@ export const postComments: PostComment[] = [
         author: "Fatima Noor",
         initials: "FN",
         role: "Local Business",
-        time: "11 hours ago",
-        body: "Our pharmacy closes at nine and staff have asked to be walked to their cars because of this. Appreciate the pole number being in the report.",
-        likes: 12,
+        createdAt: "11 hours ago",
+        message: "Our pharmacy closes at nine and staff have asked to be walked to their cars because of this. Appreciate the pole number being in the report.",
+        likeCount: 12,
     },
     {
         id: "c16",
@@ -753,9 +1097,9 @@ export const postComments: PostComment[] = [
         author: "Beatrice Lam",
         initials: "BL",
         role: "Municipal Officer",
-        time: "1 day ago",
-        body: "Collection logs for the Tuesday run are being audited. A catch-up truck is being scheduled for this block, and the overflow bags will be taken at the same time.",
-        likes: 21,
+        createdAt: "1 day ago",
+        message: "Collection logs for the Tuesday run are being audited. A catch-up truck is being scheduled for this block, and the overflow bags will be taken at the same time.",
+        likeCount: 21,
         isOfficial: true,
     },
     {
@@ -764,9 +1108,9 @@ export const postComments: PostComment[] = [
         author: "Henry Okonjo",
         initials: "HO",
         role: "Resident",
-        time: "2 days ago",
-        body: "Garbage and organics were both picked up on schedule, so it is only the recycling run skipping us. Third time this year on this block.",
-        likes: 9,
+        createdAt: "2 days ago",
+        message: "Garbage and organics were both picked up on schedule, so it is only the recycling run skipping us. Third time this year on this block.",
+        likeCount: 9,
         replies: [
             {
                 id: "c17-r1",
@@ -774,9 +1118,9 @@ export const postComments: PostComment[] = [
                 author: "Samuel O.",
                 initials: "SO",
                 role: "Resident",
-                time: "2 days ago",
-                body: "Same on my side. I have been photographing the bins each collection morning so there is a record of the dates.",
-                likes: 6,
+                createdAt: "2 days ago",
+                message: "Same on my side. I have been photographing the bins each collection morning so there is a record of the dates.",
+                likeCount: 6,
             },
         ],
     },
@@ -786,9 +1130,9 @@ export const postComments: PostComment[] = [
         author: "Priya S.",
         initials: "PS",
         role: "Resident",
-        time: "2 days ago",
-        body: "The new chain and seat are in and the rest of the set was checked at the same time. Two days from report to repair on a playground is a good result.",
-        likes: 24,
+        createdAt: "2 days ago",
+        message: "The new chain and seat are in and the rest of the set was checked at the same time. Two days from report to repair on a playground is a good result.",
+        likeCount: 24,
     },
     {
         id: "c19",
@@ -796,9 +1140,9 @@ export const postComments: PostComment[] = [
         author: "Ranger Ellis Moreau",
         initials: "EM",
         role: "Municipal Officer",
-        time: "2 days ago",
-        body: "Swing is back in service. If anything on this structure starts to rattle or sag, report it right away rather than waiting — chain wear tends to show up gradually.",
-        likes: 16,
+        createdAt: "2 days ago",
+        message: "Swing is back in service. If anything on this structure starts to rattle or sag, report it right away rather than waiting — chain wear tends to show up gradually.",
+        likeCount: 16,
         isOfficial: true,
     },
     {
@@ -807,9 +1151,9 @@ export const postComments: PostComment[] = [
         author: "Tomas V.",
         initials: "TV",
         role: "Resident",
-        time: "5 hours ago",
-        body: "Flow has not stopped since Tuesday and the soft spot in the asphalt is now wide enough that you can feel it through the steering wheel.",
-        likes: 26,
+        createdAt: "5 hours ago",
+        message: "Flow has not stopped since Tuesday and the soft spot in the asphalt is now wide enough that you can feel it through the steering wheel.",
+        likeCount: 26,
         replies: [
             {
                 id: "c20-r1",
@@ -817,9 +1161,9 @@ export const postComments: PostComment[] = [
                 author: "Eng. Hannah Whitfield",
                 initials: "HW",
                 role: "Municipal Officer",
-                time: "4 hours ago",
-                body: "The acoustic survey put the break on the 150 mm main under that soft spot, which is why the surface is sinking. Excavation is underway and there will be a short shutoff for the block during the repair.",
-                likes: 29,
+                createdAt: "4 hours ago",
+                message: "The acoustic survey put the break on the 150 mm main under that soft spot, which is why the surface is sinking. Excavation is underway and there will be a short shutoff for the block during the repair.",
+                likeCount: 29,
                 isOfficial: true,
             },
         ],
@@ -830,9 +1174,9 @@ export const postComments: PostComment[] = [
         author: "Margaret Ibe",
         initials: "MI",
         role: "Resident",
-        time: "8 hours ago",
-        body: "Our pressure dropped the same morning the water appeared at the curb, so the two are almost certainly the same break.",
-        likes: 13,
+        createdAt: "8 hours ago",
+        message: "Our pressure dropped the same morning the water appeared at the curb, so the two are almost certainly the same break.",
+        likeCount: 13,
     },
     {
         id: "c22",
@@ -840,9 +1184,9 @@ export const postComments: PostComment[] = [
         author: "Victor Lau",
         initials: "VL",
         role: "Local Business",
-        time: "7 hours ago",
-        body: "Please post the shutoff window here when it is set. We run a cafe on this block and need an hour of notice to fill containers.",
-        likes: 18,
+        createdAt: "7 hours ago",
+        message: "Please post the shutoff window here when it is set. We run a cafe on this block and need an hour of notice to fill containers.",
+        likeCount: 18,
     },
     {
         id: "c23",
@@ -850,9 +1194,9 @@ export const postComments: PostComment[] = [
         author: "Councillor Mira Ahmed",
         initials: "MA",
         role: "Ward Councillor",
-        time: "3 hours ago",
-        body: "Shutoff notices will be dropped at every address on the block and posted on this thread the day before. Businesses needing a longer window can contact my office.",
-        likes: 20,
+        createdAt: "3 hours ago",
+        message: "Shutoff notices will be dropped at every address on the block and posted on this thread the day before. Businesses needing a longer window can contact my office.",
+        likeCount: 20,
         isOfficial: true,
     },
     {
@@ -861,9 +1205,9 @@ export const postComments: PostComment[] = [
         author: "Wei L.",
         initials: "WL",
         role: "Resident",
-        time: "5 days ago",
-        body: "Panel is replaced and the pad was swept clean. Riders are using the shelter again instead of standing out at the curb.",
-        likes: 11,
+        createdAt: "5 days ago",
+        message: "Panel is replaced and the pad was swept clean. Riders are using the shelter again instead of standing out at the curb.",
+        likeCount: 11,
     },
     {
         id: "c25",
@@ -871,12 +1215,44 @@ export const postComments: PostComment[] = [
         author: "Coord. Felix Nunez",
         initials: "FN",
         role: "Municipal Officer",
-        time: "5 days ago",
-        body: "Tempered glass is in and the shelter is back in service. Reports of broken glass at transit stops are cleared the same day even when the panel takes longer to arrive.",
-        likes: 14,
+        createdAt: "5 days ago",
+        message: "Tempered glass is in and the shelter is back in service. Reports of broken glass at transit stops are cleared the same day even when the panel takes longer to arrive.",
+        likeCount: 14,
         isOfficial: true,
     },
 ];
+
+type FeedComment = (typeof feedComments)[number];
+
+function feedCommentToThread(comment: FeedComment): ReportCommentThread {
+    // The raw fixtures label a commenter's relationship to a report; the
+    // schema records whether they belong to a department. isOfficial becomes
+    // departmentId, which is what the frontend's "Official" badge reads.
+    const isOfficial = comment.isOfficial === true;
+
+    return {
+        id: comment.id,
+        postId: comment.postId,
+        message: comment.message,
+        likeCount: comment.likeCount,
+        likedByMe: false,
+        author: {
+            id: "",
+            name: comment.author,
+            avatarUrl: null,
+            // The DB has just `user` and `super_admin`. A commenter who belongs
+            // to a department is still a `user`; the "Official" badge reads
+            // departmentId, not role.
+            role: "user",
+            departmentId: isOfficial ? "1" : null,
+        },
+        createdAt: toIsoFromRelative(comment.createdAt),
+        updatedAt: toIsoFromRelative(comment.createdAt),
+        replies: (comment.replies ?? []).map(feedCommentToThread),
+    };
+}
+
+export const postComments: ReportCommentThread[] = feedComments.map(feedCommentToThread);
 
 // ── Recent Activity ────────────────────────────────────────
 export const activities: ActivityItem[] = [
@@ -1019,17 +1395,6 @@ export const faqs = [
 ];
 
 // ── Report Issue Page ──────────────────────────────────────
-export const REPORT_CATEGORIES = [
-    "Roads & Potholes",
-    "Street Lighting",
-    "Waste Management & Garbage",
-    "Drainage & Waterlogging",
-    "Water Supply & Leakage",
-    "Parks & Public Spaces",
-    "Traffic Signs & Signals",
-    "Others",
-];
-
 export const MINI_FAQS = [
     {
         q: "How are submitted issues verified?",
@@ -1045,14 +1410,14 @@ export const MINI_FAQS = [
     },
 ];
 
-// ── Reports Page ───────────────────────────────────────────
-export const initialReports: CivicReport[] = [
+// ── Reports Page (raw) ─────────────────────────────────────
+const feedReports = [
     {
         id: "r1",
-        trackingId: "OCV-982410",
+        trackingCode: "OCV-982410",
         title: "Major pothole hazard at the Kennedy Station bus loop",
         category: "Roads",
-        ward: "Ward 20 (Scarborough Southwest)",
+        ward: { name: "Ward 20 (Scarborough Southwest)", code: "ward-20" },
         location: "Transway Cres, Scarborough",
         street: "Transway Cres",
         city: "Toronto",
@@ -1060,25 +1425,36 @@ export const initialReports: CivicReport[] = [
         postalCode: "M1K 3N7",
         latitude: 43.732498,
         longitude: -79.263701,
-        status: "In Progress",
-        priority: "High",
+        status: "in_progress",
+        priority: "high",
         date: "2026-09-28",
         description:
             "Large deep pothole causing severe traffic slowdowns and potential accidents during rainy hours. Immediate resurfacing required.",
-        upvotes: 18,
-        commentsCount: 0,
-        views: 412,
+        likeCount: 18,
+        commentCount: 0,
+        viewCount: 412,
+        isAnonymous: false,
         department: "Transportation Services",
-        image: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?q=80&w=600&auto=format&fit=crop",
+        media: [
+            {
+                type: "image",
+                storageKey: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?q=80&w=600&auto=format&fit=crop",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 1046100,
+                durationSecs: null,
+                sortOrder: 0,
+            },
+        ],
         assignedOfficer: "Eng. Kamrul Hasan",
         updatedAt: "2 hours ago",
     },
     {
         id: "r2",
-        trackingId: "OCV-982398",
+        trackingCode: "OCV-982398",
         title: "Broken LED street lights along Danforth Ave",
         category: "Streetlights & Signals",
-        ward: "Ward 19 (Beaches East York)",
+        ward: { name: "Ward 19 (Beaches East York)", code: "ward-19" },
         location: "Danforth Ave, East York",
         street: "1904 Danforth Ave",
         city: "Toronto",
@@ -1086,50 +1462,73 @@ export const initialReports: CivicReport[] = [
         postalCode: "M4C 1J4",
         latitude: 43.685027,
         longitude: -79.316616,
-        status: "Resolved",
-        priority: "Medium",
+        status: "resolved",
+        priority: "medium",
         date: "2026-09-25",
         description:
             "Entire row of streetlights flickering and dark at night, posing safety concerns for night commuters.",
-        upvotes: 14,
-        commentsCount: 0,
-        views: 268,
+        likeCount: 14,
+        commentCount: 0,
+        viewCount: 268,
+        isAnonymous: false,
         department: "Electrical Safety Cell",
-        image: "https://images.unsplash.com/photo-1509114397022-ed747cca3f65?q=80&w=600&auto=format&fit=crop",
+        media: [
+            {
+                type: "image",
+                storageKey: "https://images.unsplash.com/photo-1509114397022-ed747cca3f65?q=80&w=600&auto=format&fit=crop",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 982400,
+                durationSecs: null,
+                sortOrder: 0,
+            },
+        ],
         assignedOfficer: "Sub-Inspector Rafiqul T.",
         updatedAt: "1 day ago",
     },
     {
         id: "r3",
-        trackingId: "OCV-982350",
+        trackingCode: "OCV-982350",
         title: "Overflowing waste bins at the Cedarbrook Park gate",
         category: "Waste & Recycling",
-        ward: "Ward 24 (Scarborough Guildwood)",
+        ward: { name: "Ward 24 (Scarborough Guildwood)", code: "ward-24" },
         location: "Cedarbrook Park, Scarborough",
+        street: null,
         city: "Toronto",
         address: "Cedarbrook Park, east gate off Markham Rd",
         postalCode: "M1J 3A7",
         latitude: 43.753952,
         longitude: -79.225741,
-        status: "Pending",
-        priority: "Critical",
+        status: "pending",
+        priority: "critical",
         date: "2026-09-30",
         description:
             "Garbage container unemptied for 4 days. Waste spreading across sidewalk creating unhygienic environment.",
-        upvotes: 21,
-        commentsCount: 0,
-        views: 735,
+        likeCount: 21,
+        commentCount: 0,
+        viewCount: 735,
+        isAnonymous: false,
         department: "Sanitation & Waste Management",
-        image: "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=600&auto=format&fit=crop",
+        media: [
+            {
+                type: "image",
+                storageKey: "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=600&auto=format&fit=crop",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 1215300,
+                durationSecs: null,
+                sortOrder: 0,
+            },
+        ],
         assignedOfficer: "Unassigned",
         updatedAt: "3 hours ago",
     },
     {
         id: "r4",
-        trackingId: "OCV-982210",
+        trackingCode: "OCV-982210",
         title: "Blocked storm drain flooding the Agincourt Mall service lane",
         category: "Stormwater & Flooding",
-        ward: "Ward 22 (Scarborough Agincourt)",
+        ward: { name: "Ward 22 (Scarborough Agincourt)", code: "ward-22" },
         location: "Sheppard Ave E, Scarborough",
         street: "3850 Sheppard Ave E",
         city: "Toronto",
@@ -1137,25 +1536,36 @@ export const initialReports: CivicReport[] = [
         postalCode: "M1T 3L4",
         latitude: 43.783924,
         longitude: -79.292929,
-        status: "Resolved",
-        priority: "High",
+        status: "resolved",
+        priority: "high",
         date: "2026-09-20",
         description:
             "Clogged main storm drain causing severe standing water after light rainfall. Impeding shopkeeper operations.",
-        upvotes: 17,
-        commentsCount: 0,
-        views: 390,
+        likeCount: 17,
+        commentCount: 0,
+        viewCount: 390,
+        isAnonymous: false,
         department: "Water & Sewerage Board",
-        image: "/residential_street.jpeg",
+        media: [
+            {
+                type: "image",
+                storageKey: "/residential_street.jpeg",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 648452,
+                durationSecs: null,
+                sortOrder: 0,
+            },
+        ],
         assignedOfficer: "Superintendent M. Rahim",
         updatedAt: "4 days ago",
     },
     {
         id: "r5",
-        trackingId: "OCV-982115",
+        trackingCode: "OCV-982115",
         title: "Damaged benches and bent fencing at Milliken Park",
         category: "Parks & Recreation",
-        ward: "Ward 23 (Scarborough North)",
+        ward: { name: "Ward 23 (Scarborough North)", code: "ward-23" },
         location: "Milliken Park, Scarborough",
         street: "5555 Steeles Ave E",
         city: "Toronto",
@@ -1163,53 +1573,91 @@ export const initialReports: CivicReport[] = [
         postalCode: "M1V 4P1",
         latitude: 43.831520,
         longitude: -79.271160,
-        status: "Pending",
-        priority: "Low",
+        status: "pending",
+        priority: "low",
         date: "2026-09-29",
         description:
             "Vandalized wooden seating benches and bent security wire along pedestrian walk path.",
-        upvotes: 9,
-        commentsCount: 0,
-        views: 156,
+        likeCount: 9,
+        commentCount: 0,
+        viewCount: 156,
+        isAnonymous: false,
         department: "Parks & Urban Forestry",
-        image: "https://images.unsplash.com/photo-1588880331179-bc9b93a8cb5e?q=80&w=600&auto=format&fit=crop",
+        media: [
+            {
+                type: "image",
+                storageKey: "https://images.unsplash.com/photo-1588880331179-bc9b93a8cb5e?q=80&w=600&auto=format&fit=crop",
+                thumbnailKey: null,
+                mimeType: "image/jpeg",
+                sizeBytes: 1130840,
+                durationSecs: null,
+                sortOrder: 0,
+            },
+        ],
         assignedOfficer: "Unassigned",
         updatedAt: "1 day ago",
     },
 ];
 
-// The filter lists below mirror the categories and wards tables. Any value
-// here that no row uses is a filter that can never match, so they are kept in
-// step with the two fixture sets above rather than maintained by hand.
-export const reportCategories = [
-    "All",
-    "Roads",
-    "Sidewalks",
-    "Water & Sewer",
-    "Stormwater & Flooding",
-    "Parks & Recreation",
-    "Waste & Recycling",
-    "Streetlights & Signals",
-    "Buildings & Facilities",
-    "Transit & Mobility",
-    "Environment",
-    "Community & Safety",
-    "Other",
-];
+type FeedReport = (typeof feedReports)[number];
 
-export const reportStatuses = ["All", "Pending", "In Progress", "Resolved", "Rejected"];
+function feedReportToReport(report: FeedReport): Report {
+    return {
+        id: report.id,
+        trackingCode: report.trackingCode,
+        title: report.title,
+        description: report.description,
+        status: report.status as ReportStatus,
+        priority: report.priority as Priority,
+        isAnonymous: report.isAnonymous ?? false,
+        category: categoryFor(report.category),
+        ward: { id: report.ward.code, name: report.ward.name, code: report.ward.code },
+        department: { id: "", name: report.department },
+        author: null,
+        assignedOfficer:
+            report.assignedOfficer && report.assignedOfficer !== "Unassigned"
+                ? { id: "", name: report.assignedOfficer }
+                : null,
+        street: report.street,
+        city: report.city,
+        address: report.address,
+        postalCode: report.postalCode,
+        latitude: report.latitude,
+        longitude: report.longitude,
+        viewCount: report.viewCount,
+        likeCount: report.likeCount,
+        commentCount: report.commentCount,
+        likedByMe: false,
+        media: report.media.map((item) => toReportMedia(report.id, item)),
+        // This fixture set carries no status timeline, so it has nothing to
+        // derive a resolvedAt from.
+        resolvedAt: null,
+        createdAt: toIso(report.date),
+        updatedAt: toIsoFromRelative(report.updatedAt),
+    };
+}
+
+export const initialReports: Report[] = feedReports.map(feedReportToReport);
+
+// The filter lists below mirror the categories, statuses and wards tables.
+// They are derived from (or kept in step with) the fixture sets above so that
+// no filter value can exist that no row uses.
+export const reportCategories = categories
+    .filter((cat) => cat.id !== "all")
+    .map((cat) => ({ slug: cat.id, name: cat.label }));
+
+export const reportStatuses = ["pending", "in_progress", "resolved", "rejected"];
 
 export const reportWards = [
-    "All",
-    "Ward 07 (Humber River Black Creek)",
-    "Ward 16 (Don Valley East)",
-    "Ward 19 (Beaches East York)",
-    "Ward 20 (Scarborough Southwest)",
-    "Ward 21 (Scarborough Centre)",
-    "Ward 22 (Scarborough Agincourt)",
-    "Ward 23 (Scarborough North)",
-    "Ward 24 (Scarborough Guildwood)",
-    "Ward 25 (Scarborough Rouge Park)",
+    { code: "ward-07", name: "Ward 07 (Humber River Black Creek)" },
+    { code: "ward-16", name: "Ward 16 (Don Valley East)" },
+    { code: "ward-19", name: "Ward 19 (Beaches East York)" },
+    { code: "ward-20", name: "Ward 20 (Scarborough Southwest)" },
+    { code: "ward-21", name: "Ward 21 (Scarborough Centre)" },
+    { code: "ward-22", name: "Ward 22 (Scarborough Agincourt)" },
+    { code: "ward-23", name: "Ward 23 (Scarborough North)" },
+    { code: "ward-24", name: "Ward 24 (Scarborough Guildwood)" },
+    { code: "ward-25", name: "Ward 25 (Scarborough Rouge Park)" },
 ];
 export const mockSuggestions: SearchSuggestion[] = [
     { id: "1", title: "Major pothole hazard at the Kennedy Station bus loop", category: "Roads", location: "Ward 20", type: "report" },

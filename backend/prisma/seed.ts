@@ -48,79 +48,113 @@ const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) })
 
 // ── fixtures ────────────────────────────────────────────────────────
 
-interface MockUpdate {
-  id: string;
-  status: string;
-  title: string;
-  note: string;
-  date: string;
-  actor: string;
+interface MockMedia {
+  type: MediaType;
+  storageKey: string;
+  thumbnailKey: string | null;
+  mimeType: string;
+  /** BigInt, serialized to a string by the API and by the extractor. */
+  sizeBytes: string;
+  durationSecs: number | null;
+  sortOrder: number;
 }
 
-interface MockPost {
+interface MockCategoryRef {
   id: string;
+  name: string;
+  slug: string;
+  icon: string;
+}
+
+interface MockWardRef {
+  id: string;
+  name: string;
   code: string;
-  date: string;
-  tag: string;
-  location: string;
-  title: string;
-  desc: string;
-  likes: number;
-  views: number;
-  image: string;
-  video?: string;
-  isVideo?: boolean;
-  duration?: string;
-  status: string;
-  priority: string;
-  ward: string;
-  department: string;
-  assignedOfficer?: string;
-  reportedBy: string;
-  street?: string;
-  city: string;
-  address: string;
-  postalCode: string;
-  latitude: number | null;
-  longitude: number | null;
-  details: string[];
-  gallery: string[];
-  updates: MockUpdate[];
 }
 
+interface MockNamedRef {
+  id: string;
+  name: string;
+}
+
+interface MockAuthorRef {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
+/**
+ * A post exactly as the API ships it (see frontend/types/report.ts). The
+ * extractor writes this object straight out of mock-data.ts, so the seed reads
+ * the same columns the UI does, with no second vocabulary to keep in step.
+ */
 interface MockReport {
   id: string;
-  trackingId: string;
+  trackingCode: string;
   title: string;
-  category: string;
-  ward: string;
-  location: string;
-  street?: string;
-  city: string;
-  address: string;
-  postalCode?: string;
-  latitude: number | null;
-  longitude: number | null;
+  description: string;
+
   status: string;
   priority: string;
-  date: string;
-  description: string;
-  upvotes: number;
-  commentsCount: number;
-  views: number;
-  department: string;
-  image: string;
-  assignedOfficer?: string;
+  isAnonymous: boolean;
+
+  category: MockCategoryRef;
+  ward: MockWardRef;
+  department: MockNamedRef | null;
+  author: MockAuthorRef | null;
+  assignedOfficer: MockNamedRef | null;
+
+  street: string | null;
+  city: string | null;
+  address: string | null;
+  postalCode: string | null;
+  latitude: number | null;
+  longitude: number | null;
+
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  likedByMe: boolean;
+
+  media: MockMedia[];
+
+  resolvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface MockTimelineEntry {
+  id: string;
+  fromStatus: string | null;
+  toStatus: string;
+  title: string;
+  note: string | null;
+  actor: MockNamedRef | null;
+  createdAt: string;
+}
+
+interface MockTimeline {
+  postId: string;
+  entries: MockTimelineEntry[];
+}
+
+interface MockCommentAuthor {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  role: string;
+  departmentId: string | null;
 }
 
 interface MockComment {
   id: string;
   postId: string;
-  author: string;
-  role: string;
-  time: string;
-  body: string;
-  likes: number;
+  message: string;
+  likeCount: number;
+  likedByMe: boolean;
+  author: MockCommentAuthor;
+  createdAt: string;
+  updatedAt: string;
   replies?: MockComment[];
 }
 
@@ -131,11 +165,18 @@ interface MockCategory {
   isOther?: boolean;
 }
 
+interface MockWard {
+  code: string;
+  name: string;
+}
+
 interface Fixtures {
   categories: MockCategory[];
-  posts: MockPost[];
+  posts: MockReport[];
+  postTimelines: MockTimeline[];
   postComments: MockComment[];
   initialReports: MockReport[];
+  reportWards: MockWard[];
 }
 
 const fixtures: Fixtures = JSON.parse(
@@ -143,20 +184,6 @@ const fixtures: Fixtures = JSON.parse(
 );
 
 // ── value mapping ───────────────────────────────────────────────────
-
-const STATUS: Record<string, PostStatus> = {
-  Pending: "pending",
-  "In Progress": "in_progress",
-  Resolved: "resolved",
-  Rejected: "rejected",
-};
-
-const PRIORITY: Record<string, PostPriority> = {
-  Low: "low",
-  Medium: "medium",
-  High: "high",
-  Critical: "critical",
-};
 
 /**
  * Seed-only roles.
@@ -175,24 +202,6 @@ const DB_ROLE: Record<SeedRole, UserRole> = {
   staff: "user",
   admin: "super_admin",
 };
-
-/** The frontend's commenter labels, mapped onto the seed roles above. */
-const ROLE_FROM_COMMENTER: Record<string, SeedRole> = {
-  Resident: "resident",
-  "Local Business": "resident",
-  "Field Inspector": "staff",
-  "Municipal Officer": "staff",
-  "Ward Councillor": "staff",
-};
-
-/**
- * Fixture category labels to slugs. Built from the category list rather than
- * hand-written, so a renamed category cannot silently fall through to "other".
- * "all" is a UI filter pseudo-entry, not a category.
- */
-const CATEGORY_SLUG = new Map(
-  fixtures.categories.filter((c) => c.id !== "all").map((c) => [c.label, c.id]),
-);
 
 /** Which department handles a category by default. */
 const CATEGORY_DEPARTMENT: Record<string, string> = {
@@ -229,12 +238,6 @@ const CONTACT_CATEGORIES = [
 ];
 
 // ── helpers ─────────────────────────────────────────────────────────
-
-/** "Ward 03 (Sector 4 Bypass)" -> "ward-03" */
-function wardCode(name: string): string {
-  const match = /Ward\s+0*(\d+)/i.exec(name);
-  return match ? `ward-${match[1]!.padStart(2, "0")}` : slugify(name);
-}
 
 function slugify(value: string): string {
   return value
@@ -291,24 +294,6 @@ function emailFor(name: string, taken: Set<string>): string {
   return email;
 }
 
-function mediaTypeFor(path: string): MediaType {
-  return /\.(mp4|webm|mov)$|lorem\.video/i.test(path) ? "video" : "image";
-}
-
-function mimeFor(path: string): string {
-  if (mediaTypeFor(path) === "video") return "video/mp4";
-  if (/\.png$/i.test(path)) return "image/png";
-  return "image/jpeg";
-}
-
-/** "0:32" -> 32 */
-function durationSeconds(value: string | undefined): number | null {
-  if (!value) return null;
-  const [m, s] = value.split(":").map(Number);
-  if (m === undefined || s === undefined || Number.isNaN(m) || Number.isNaN(s)) return null;
-  return m * 60 + s;
-}
-
 /** Deterministic pseudo-random, so repeated seeds produce identical data. */
 function makeRng(seed: number): () => number {
   let state = seed >>> 0;
@@ -349,16 +334,20 @@ async function main(): Promise<void> {
   console.log(`  departments        ${departments.size}`);
 
   // ── wards ─────────────────────────────────────────────────────────
-  // The two fixture sets use different ward vocabularies, so take the union.
-  const wardNames = [
-    ...new Set([
-      ...fixtures.posts.map((p) => p.ward),
-      ...fixtures.initialReports.map((r) => r.ward),
-    ]),
-  ].sort();
+  // The reportWards list is the canonical filter set; the post and report
+  // fixtures then add any ward they use that is not on it. Codes come from
+  // the fixtures, so a rename in the frontend data propagates here.
+  const wardSeeds = new Map<string, string>();
+  for (const ward of fixtures.reportWards) wardSeeds.set(ward.code, ward.name);
+  for (const ward of [
+    ...fixtures.posts.map((p) => p.ward),
+    ...fixtures.initialReports.map((r) => r.ward),
+  ]) {
+    if (!wardSeeds.has(ward.code)) wardSeeds.set(ward.code, ward.name);
+  }
 
   await prisma.ward.createMany({
-    data: wardNames.map((name) => ({ name, code: wardCode(name) })),
+    data: [...wardSeeds.entries()].map(([code, name]) => ({ code, name })),
   });
   const wards = new Map((await prisma.ward.findMany()).map((w) => [w.name, w.id]));
   console.log(`  wards              ${wards.size}`);
@@ -431,24 +420,42 @@ async function main(): Promise<void> {
     userSeeds.set(trimmed, { name: trimmed, role, ...(department ? { department } : {}) });
   };
 
-  addUser("Platform Admin", "admin");
-  for (const post of fixtures.posts) {
-    addUser(post.reportedBy, "resident");
-    if (post.assignedOfficer) addUser(post.assignedOfficer, "staff", post.department);
-    for (const update of post.updates) {
+  // The curated status timelines, keyed for reuse below. Actors on these rows
+  // are the only place some staff names appear, so they feed the user list too.
+  const timelinesByPost = new Map(
+    fixtures.postTimelines.map((timeline) => [timeline.postId, timeline.entries]),
+  );
+
+  const addTimelineActors = (entries: MockTimelineEntry[]): void => {
+    for (const entry of entries) {
+      if (!entry.actor) continue;
       // Some actors are department names or desks rather than people. Those
       // become a null actor on the history row instead of a fake account.
-      if (!DEPARTMENTS.includes(update.actor) && update.actor !== "Intake Desk") {
-        addUser(update.actor, "resident");
+      if (DEPARTMENTS.includes(entry.actor.name) || entry.actor.name === "Intake Desk") {
+        continue;
       }
+      addUser(entry.actor.name, "resident");
     }
+  };
+
+  addUser("Platform Admin", "admin");
+  for (const post of fixtures.posts) {
+    if (post.author) addUser(post.author.name, "resident");
+    if (post.assignedOfficer) {
+      addUser(post.assignedOfficer.name, "staff", post.department?.name);
+    }
+    addTimelineActors(timelinesByPost.get(post.id) ?? []);
   }
   for (const report of fixtures.initialReports) {
-    if (report.assignedOfficer) addUser(report.assignedOfficer, "staff", report.department);
+    if (report.assignedOfficer) {
+      addUser(report.assignedOfficer.name, "staff", report.department?.name);
+    }
   }
   const collectComments = (list: MockComment[]): void => {
     for (const comment of list) {
-      addUser(comment.author, ROLE_FROM_COMMENTER[comment.role] ?? "resident");
+      // The fixtures mark a commenter as belonging to a department; that is
+      // what keeps staff out of the resident pool the seed draws from below.
+      addUser(comment.author.name, comment.author.departmentId ? "staff" : "resident");
       if (comment.replies) collectComments(comment.replies);
     }
   };
@@ -482,120 +489,128 @@ async function main(): Promise<void> {
   let historyCount = 0;
 
   for (const post of fixtures.posts) {
-    const createdAt = parseDate(post.date);
-    const slug = CATEGORY_SLUG.get(post.tag) ?? "other";
-    const status = STATUS[post.status] ?? "pending";
+    const createdAt = parseDate(post.createdAt);
+    const status = post.status as PostStatus;
 
     const created = await prisma.post.create({
       data: {
-        // Both fixture sets now carry the final tracking code, so there is
-        // nothing to normalise here. The UI prints the same string the
-        // database stores.
-        trackingCode: post.code,
+        // Fixtures now carry the final tracking code, so there is nothing to
+        // normalise here. The UI prints the same string the database stores.
+        trackingCode: post.trackingCode,
         title: post.title,
-        description: [post.desc, ...post.details].join("\n\n"),
-        userId: users.get(post.reportedBy)!,
-        categoryId: categories.get(slug)!,
-        wardId: wards.get(post.ward)!,
-        departmentId: departments.get(post.department) ?? null,
-        assignedOfficerId: post.assignedOfficer ? (users.get(post.assignedOfficer) ?? null) : null,
+        description: post.description,
+        userId: users.get(post.author?.name ?? "") ?? residentIds[0]!,
+        categoryId: categories.get(post.category.slug)!,
+        wardId: wards.get(post.ward.name)!,
+        departmentId: post.department
+          ? (departments.get(post.department.name) ?? null)
+          : null,
+        assignedOfficerId: post.assignedOfficer
+          ? (users.get(post.assignedOfficer.name) ?? null)
+          : null,
         status,
-        priority: PRIORITY[post.priority] ?? "medium",
-        street: post.street ?? null,
-        city: post.city,
-        address: post.address,
+        priority: post.priority as PostPriority,
+        isAnonymous: post.isAnonymous,
+        street: post.street,
+        city: post.city ?? "",
+        address: post.address ?? "",
         postalCode: post.postalCode,
         latitude: decimal(post.latitude),
         longitude: decimal(post.longitude),
-        viewCount: post.views,
-        resolvedAt: status === "resolved" ? createdAt : null,
+        viewCount: post.viewCount,
+        // The fixture carries the instant its status timeline reached
+        // "resolved", so there is nothing to infer from the current status.
+        resolvedAt: post.resolvedAt ? parseDate(post.resolvedAt) : null,
         createdAt,
-        updatedAt: createdAt,
+        updatedAt: parseDate(post.updatedAt, createdAt),
       },
     });
     postIdByFixtureId.set(post.id, created.id);
 
-    // media: the hero image, then the gallery, then any video
-    const assets = [...new Set([post.image, ...post.gallery])];
-    if (post.video) assets.push(post.video);
+    // media, straight from the fixture rows: every post carries its own
+    // Media-shaped list, so there is nothing to infer or synthesise here.
     await prisma.media.createMany({
-      data: assets.map((asset, index) => ({
+      data: post.media.map((item) => ({
         postId: created.id,
-        type: mediaTypeFor(asset),
-        // Fixtures hold paths and URLs. Real uploads would store a bucket key.
-        storageKey: asset,
-        thumbnailKey: mediaTypeFor(asset) === "video" ? post.image : null,
-        mimeType: mimeFor(asset),
-        sizeBytes: BigInt(180_000 + Math.floor(rng() * 2_000_000)),
-        durationSecs: mediaTypeFor(asset) === "video" ? durationSeconds(post.duration) : null,
-        sortOrder: index,
+        type: item.type,
+        storageKey: item.storageKey,
+        thumbnailKey: item.thumbnailKey,
+        mimeType: item.mimeType,
+        sizeBytes: BigInt(item.sizeBytes),
+        durationSecs: item.durationSecs,
+        sortOrder: item.sortOrder,
       })),
     });
-    mediaCount += assets.length;
+    mediaCount += post.media.length;
 
-    // status history, straight from the fixture timeline
-    let previous: PostStatus | null = null;
-    for (const update of post.updates) {
-      const to = STATUS[update.status] ?? "pending";
+    // status history, straight from the curated fixture timeline
+    for (const entry of timelinesByPost.get(post.id) ?? []) {
       await prisma.postStatusHistory.create({
         data: {
           postId: created.id,
-          actorId: users.get(update.actor) ?? null,
-          fromStatus: previous,
-          toStatus: to,
-          title: update.title,
-          note: update.note,
-          createdAt: parseDate(update.date, createdAt),
+          actorId: entry.actor ? (users.get(entry.actor.name) ?? null) : null,
+          fromStatus: entry.fromStatus as PostStatus | null,
+          toStatus: entry.toStatus as PostStatus,
+          title: entry.title,
+          note: entry.note,
+          createdAt: parseDate(entry.createdAt, createdAt),
         },
       });
-      previous = to;
       historyCount += 1;
     }
   }
 
   for (const report of fixtures.initialReports) {
-    const createdAt = parseDate(report.date);
-    const slug = CATEGORY_SLUG.get(report.category) ?? "other";
-    const status = STATUS[report.status] ?? "pending";
+    const createdAt = parseDate(report.createdAt);
+    const status = report.status as PostStatus;
     // This fixture set has no reporter, so reports are spread across residents.
     const authorId = residentIds[Math.floor(rng() * residentIds.length)]!;
 
     const created = await prisma.post.create({
       data: {
-        trackingCode: report.trackingId,
+        trackingCode: report.trackingCode,
         title: report.title,
         description: report.description,
         userId: authorId,
-        categoryId: categories.get(slug)!,
-        wardId: wards.get(report.ward)!,
-        departmentId: departments.get(report.department) ?? null,
-        assignedOfficerId: report.assignedOfficer ? (users.get(report.assignedOfficer) ?? null) : null,
+        categoryId: categories.get(report.category.slug)!,
+        wardId: wards.get(report.ward.name)!,
+        departmentId: report.department
+          ? (departments.get(report.department.name) ?? null)
+          : null,
+        assignedOfficerId: report.assignedOfficer
+          ? (users.get(report.assignedOfficer.name) ?? null)
+          : null,
         status,
-        priority: PRIORITY[report.priority] ?? "medium",
-        street: report.street ?? null,
-        city: report.city,
-        address: report.address,
-        postalCode: report.postalCode ?? null,
+        priority: report.priority as PostPriority,
+        isAnonymous: report.isAnonymous,
+        street: report.street,
+        city: report.city ?? "",
+        address: report.address ?? "",
+        postalCode: report.postalCode,
         latitude: decimal(report.latitude),
         longitude: decimal(report.longitude),
-        viewCount: report.views,
-        resolvedAt: status === "resolved" ? createdAt : null,
+        viewCount: report.viewCount,
+        // The fixture set carries no resolved instant, so this stays null;
+        // the schema's resolvedAt is optional.
+        resolvedAt: report.resolvedAt ? parseDate(report.resolvedAt) : null,
         createdAt,
-        updatedAt: createdAt,
+        updatedAt: parseDate(report.updatedAt, createdAt),
       },
     });
 
-    await prisma.media.create({
-      data: {
+    await prisma.media.createMany({
+      data: report.media.map((item) => ({
         postId: created.id,
-        type: "image",
-        storageKey: report.image,
-        mimeType: "image/jpeg",
-        sizeBytes: BigInt(180_000 + Math.floor(rng() * 2_000_000)),
-        sortOrder: 0,
-      },
+        type: item.type,
+        storageKey: item.storageKey,
+        thumbnailKey: item.thumbnailKey,
+        mimeType: item.mimeType,
+        sizeBytes: BigInt(item.sizeBytes),
+        durationSecs: item.durationSecs,
+        sortOrder: item.sortOrder,
+      })),
     });
-    mediaCount += 1;
+    mediaCount += report.media.length;
 
     // No fixture timeline here, so synthesise the minimum that keeps
     // post_status_history the source of truth: a creation row, plus one row
@@ -606,7 +621,9 @@ async function main(): Promise<void> {
       await prisma.postStatusHistory.create({
         data: {
           postId: created.id,
-          actorId: index === 0 ? authorId : (users.get(report.assignedOfficer ?? "") ?? null),
+          actorId: index === 0
+            ? authorId
+            : (users.get(report.assignedOfficer?.name ?? "") ?? null),
           fromStatus: previous,
           toStatus: to,
           title: index === 0 ? "Report submitted" : `Status changed to ${to.replace("_", " ")}`,
@@ -633,16 +650,16 @@ async function main(): Promise<void> {
     const created = await prisma.comment.create({
       data: {
         postId,
-        userId: users.get(comment.author)!,
+        userId: users.get(comment.author.name)!,
         parentId,
-        message: comment.body,
-        createdAt: new Date(Date.now() - Math.floor(rng() * 7 * 86_400_000)),
+        message: comment.message,
+        createdAt: parseDate(comment.createdAt),
       },
     });
     commentCount += 1;
 
     // Real like rows, not a counter. likeCount is recomputed from these below.
-    const likers = [...residentIds].sort(() => rng() - 0.5).slice(0, Math.min(comment.likes, residentIds.length));
+    const likers = [...residentIds].sort(() => rng() - 0.5).slice(0, Math.min(comment.likeCount, residentIds.length));
     if (likers.length > 0) {
       await prisma.commentLike.createMany({
         data: likers.map((userId) => ({ commentId: created.id, userId })),
@@ -667,7 +684,7 @@ async function main(): Promise<void> {
   let likeCount = 0;
   for (const post of fixtures.posts) {
     const postId = postIdByFixtureId.get(post.id)!;
-    const likers = [...residentIds].sort(() => rng() - 0.5).slice(0, Math.min(post.likes, residentIds.length));
+    const likers = [...residentIds].sort(() => rng() - 0.5).slice(0, Math.min(post.likeCount, residentIds.length));
     if (likers.length === 0) continue;
     await prisma.postLike.createMany({
       data: likers.map((userId) => ({ postId, userId })),
@@ -675,9 +692,9 @@ async function main(): Promise<void> {
     likeCount += likers.length;
   }
   for (const report of fixtures.initialReports) {
-    const post = await prisma.post.findUnique({ where: { trackingCode: report.trackingId } });
+    const post = await prisma.post.findUnique({ where: { trackingCode: report.trackingCode } });
     if (!post) continue;
-    const likers = [...residentIds].sort(() => rng() - 0.5).slice(0, Math.min(report.upvotes, residentIds.length));
+    const likers = [...residentIds].sort(() => rng() - 0.5).slice(0, Math.min(report.likeCount, residentIds.length));
     if (likers.length === 0) continue;
     await prisma.postLike.createMany({
       data: likers.map((userId) => ({ postId: post.id, userId })),

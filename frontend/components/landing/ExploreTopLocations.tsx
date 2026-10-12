@@ -24,20 +24,8 @@ export default function ExploreTopLocations({
             }
         >
     >((acc, post) => {
-        const rawWard = post.ward;
-
-        if (!rawWard) return acc;
-
-        const wardName =
-            typeof rawWard === "object"
-                ? rawWard.name || rawWard.code || ""
-                : rawWard;
-
-        const wardCode =
-            typeof rawWard === "object"
-                ? rawWard.code || rawWard.id || rawWard.name || ""
-                : rawWard;
-
+        const wardName = post.ward.name;
+        const wardCode = post.ward.code;
         const key = wardCode || wardName;
 
         if (!key) return acc;
@@ -95,19 +83,14 @@ export default function ExploreTopLocations({
                     {topWards.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
                             {topWards.map((item) => {
-                                const samplePost = item.samplePost as any;
                                 const sampleImage =
-                                    samplePost?.media?.image ||
-                                    (Array.isArray(samplePost?.images) && samplePost.images.length > 0
-                                        ? typeof samplePost.images[0] === "string"
-                                            ? samplePost.images[0]
-                                            : samplePost.images[0]?.url
-                                        : samplePost?.image || "/placeholder.jpg");
+                                    item.samplePost.media.find(
+                                        (m) => m.type === "image",
+                                    )?.url ??
+                                    item.samplePost.media[0]?.url ??
+                                    "/placeholder.jpg";
 
-                                const locationName =
-                                    typeof samplePost.location === "object"
-                                        ? samplePost.location?.address || samplePost.location?.name
-                                        : samplePost.location || item.ward;
+                                const locationName = item.samplePost.address || item.ward;
 
                                 const queryCode = item.wardCode || item.ward;
 

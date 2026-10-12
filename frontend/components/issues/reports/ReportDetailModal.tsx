@@ -9,11 +9,11 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { CivicReport } from "@/types";
+import type { Report } from "@/types/report";
 import Image from "next/image";
 
 interface ReportDetailModalProps {
-    report: CivicReport | null;
+    report: Report | null;
     onClose: () => void;
 }
 
@@ -23,15 +23,23 @@ export default function ReportDetailModal({
 }: ReportDetailModalProps) {
     if (!report) return null;
 
+    const coverImage =
+        report.media.find((media) => media.type === "image")?.url ?? "/placeholder.jpg";
+    const formattedUpdated = new Date(report.updatedAt).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+    });
+
     return (
         <Dialog open={!!report} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="w-[calc(100%-2rem)] max-w-4xl! p-5 sm:p-6 space-y-4 max-h-[94vh] overflow-y-auto rounded-2xl">                <DialogHeader className="space-y-2 text-left">
                 <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="font-mono text-white font-bold">
-                        {report.trackingId}
+                        {report.trackingCode}
                     </Badge>
                     <span className="text-xs font-bold text-muted-foreground">
-                        {report.category}
+                        {report.category.name}
                     </span>
                 </div>
                 <DialogTitle className="text-lg sm:text-xl font-extrabold text-foreground">
@@ -41,7 +49,7 @@ export default function ReportDetailModal({
 
                 <div className="w-full h-56 sm:h-64 rounded-xl overflow-hidden bg-muted border border-border">
                      <Image
-                    src={report.image}
+                    src={coverImage}
                     alt={report.title}
                     fill
                     className="object-cover"
@@ -63,7 +71,7 @@ export default function ReportDetailModal({
                             Location / Ward
                         </span>
                         <span className="font-bold text-foreground mt-0.5 block">
-                            {report.ward}
+                            {report.ward.name}
                         </span>
                     </div>
                     <div className="bg-muted/40 p-3 rounded-xl border border-border">
@@ -71,7 +79,7 @@ export default function ReportDetailModal({
                             Department
                         </span>
                         <span className="font-bold text-primary mt-0.5 block">
-                            {report.department}
+                            {report.department?.name ?? "—"}
                         </span>
                     </div>
                     <div className="bg-muted/40 p-3 rounded-xl border border-border">
@@ -79,14 +87,14 @@ export default function ReportDetailModal({
                             Assigned Officer
                         </span>
                         <span className="font-bold text-foreground mt-0.5 block">
-                            {report.assignedOfficer || "Unassigned"}
+                            {report.assignedOfficer?.name ?? "Unassigned"}
                         </span>
                     </div>
                 </div>
 
                 <div className="pt-4 border-t border-border flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">
-                        Last updated: {report.updatedAt}
+                        Last updated: {formattedUpdated}
                     </span>
                     <Button onClick={onClose} size="sm" className="rounded-md py-5 font-bold">
                         Close Overview

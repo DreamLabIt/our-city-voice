@@ -1,5 +1,3 @@
-import { exportTraceState } from "next/dist/trace";
-
 export type ReportStatus =
     | "pending"
     | "in_progress"
@@ -11,6 +9,8 @@ export type Priority =
     | "medium"
     | "high"
     | "critical";
+
+export type MediaType = "image" | "video";
 
 export interface Category {
     id: string;
@@ -30,57 +30,75 @@ export interface Department {
     name: string;
 }
 
-export interface ReportItem {
-    id: string;
-    title?: string;
-    trackingId?: string;
-    code?: string;
-    status?: string;
-    category?: string | { name?: string; label?: string;[key: string]: any };
-    createdAt?: string;
-    updatedAt?: string;
-    type?: "post" | "comment" | string;
-    [key: string]: any;
-}
-
-export interface RecentActivityCardClientProps {
-    initialReports: ReportItem[];
-}
-
-
 export interface Author {
     id: string;
     name: string;
     avatarUrl: string | null;
 }
 
-export interface Location {
+/** One Media row, mirroring the schema's PostMedia where the frontend needs it. */
+export interface ReportMedia {
+    id: string;
+    type: MediaType;
+    storageKey: string;
+    thumbnailKey: string | null;
+    mimeType: string;
+    /** BigInt serialized as a string. */
+    sizeBytes: string;
+    durationSecs: number | null;
+    sortOrder: number;
+    /** Derived from storageKey at read time. */
+    url: string;
+    thumbnailUrl: string | null;
+}
+
+/**
+ * A report as the API ships it. Mirrors the Post model 1:1: the Post columns
+ * (`street`/`city`/`address`/…, `viewCount`/`likeCount`/`commentCount`) stay
+ * flat under their own names, reduced relation rows appear as the objects
+ * below, and `media` is the Media relation itself — one entry per row — rather
+ * than a summary. The only field that is not a stored column is the computed
+ * `likedByMe`.
+ */
+export interface Report {
+    id: string;
+    trackingCode: string;
+    title: string;
+    description: string;
+
+    status: ReportStatus;
+    priority: Priority;
+
+    isAnonymous: boolean;
+
+    category: Category;
+    ward: Ward;
+
+    department: Department | null;
+    author: Author | null;
+    assignedOfficer: Department | null;
+
+    // Post columns, flat and untranslated.
     street: string | null;
     city: string;
     address: string;
     postalCode: string | null;
     latitude: number | null;
     longitude: number | null;
-}
 
-export interface Counts {
-    views: number;
-    likes: number;
-    comments: number;
-}
+    viewCount: number;
+    likeCount: number;
+    commentCount: number;
 
-export interface Media {
-    image: string | null;
-    video: string | null;
-    durationSecs: number | null;
-    count: number;
-}
+    likedByMe: boolean;
 
-export interface GalleryItem {
-    type: "image" | "video";
-    url: string;
-    thumbnailUrl: string | null;
-    durationSecs: number | null;
+    // The Media relation, one entry per row, in display (sortOrder) order.
+    media: ReportMedia[];
+
+    resolvedAt: string | null;
+
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface TimelineEntry {
@@ -98,42 +116,8 @@ export interface TimelineEntry {
     createdAt: string;
 }
 
-export interface Report {
-    id: string;
-    trackingCode: string;
-    title: string;
-    description: string;
-
-    status: ReportStatus;
-    priority: Priority;
-
-    isAnonymous: boolean;
-
-    category: Category;
-    ward: Ward;
-
-    department: Department | null;
-    author: Author | null;
-    assignedOfficer: Author | null;
-
-    location: Location;
-
-    counts: Counts;
-    likedByMe: boolean;
-
-    media: Media;
-
-    resolvedAt: string | null;
-
-    createdAt: string;
-    updatedAt: string;
-}
-
+/** A `Report` (whose `media` is already the full set of rows) plus the timeline. */
 export interface ReportDetail extends Report {
-    media: Media & {
-        gallery: GalleryItem[];
-    };
-
     timeline: TimelineEntry[];
 }
 
@@ -332,4 +316,3 @@ export interface PlatformInsightsCardProps {
 export interface MostReportedIssuesCardProps {
     Reports?: Report[];
 }
-

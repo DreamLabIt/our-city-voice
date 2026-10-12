@@ -20,6 +20,7 @@ export interface ApiError {
   /** field -> messages, present on validation failures. */
   details?: Record<string, string[]>;
   requestId?: string | null;
+  status?: number
 }
 
 export type ApiResult<T> =

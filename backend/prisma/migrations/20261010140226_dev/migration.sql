@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "user_role" AS ENUM ('citizen', 'officer', 'admin');
+CREATE TYPE "user_role" AS ENUM ('user', 'super_admin');
 
 -- CreateEnum
 CREATE TYPE "post_status" AS ENUM ('pending', 'in_progress', 'resolved', 'rejected');
@@ -17,9 +17,9 @@ CREATE TABLE "users" (
     "email" TEXT NOT NULL,
     "password_hash" TEXT NOT NULL,
     "phone" TEXT,
-    "role" "user_role" NOT NULL DEFAULT 'citizen',
+    "role" "user_role" NOT NULL DEFAULT 'user',
     "department_id" BIGINT,
-    "avatar_key" TEXT,
+    "avatar_url" TEXT,
     "email_verified_at" TIMESTAMPTZ(3),
     "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ(3) NOT NULL,

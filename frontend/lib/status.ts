@@ -6,7 +6,7 @@ import {
     type LucideIcon,
 } from "lucide-react";
 
-import type { ReportStatus } from "@/types";
+import type { ReportStatus } from "@/types/report";
 
 /**
  * One definition of how a status looks, shared by the issues map and the
@@ -18,6 +18,8 @@ import type { ReportStatus } from "@/types";
  * rather than a silently unstyled badge.
  */
 export interface StatusMeta {
+    /** Written label, for a badge or a legend. The enum itself never renders. */
+    label: string;
     icon: LucideIcon;
     /** Tinted pill, for a badge beside a title. */
     badge: string;
@@ -27,29 +29,35 @@ export interface StatusMeta {
     text: string;
 }
 
+// Keyed by the post_status enum values from schema.prisma. Record<ReportStatus,
+// ...> makes a new status a build error rather than a silently unstyled badge.
 export const STATUS_META: Record<ReportStatus, StatusMeta> = {
-    Pending: {
+    pending: {
+        label: "Pending",
         icon: AlertCircle,
         badge:
             "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 hover:bg-blue-500/20",
         fill: "bg-blue-500",
         text: "text-blue-600 dark:text-blue-400",
     },
-    "In Progress": {
+    in_progress: {
+        label: "In Progress",
         icon: Clock,
         badge:
             "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 hover:bg-amber-500/20",
         fill: "bg-amber-500",
         text: "text-amber-600 dark:text-amber-400",
     },
-    Resolved: {
+    resolved: {
+        label: "Resolved",
         icon: CheckCircle2,
         badge:
             "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20",
         fill: "bg-emerald-500",
         text: "text-emerald-600 dark:text-emerald-400",
     },
-    Rejected: {
+    rejected: {
+        label: "Rejected",
         icon: XCircle,
         badge:
             "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20 hover:bg-red-500/20",

@@ -4,16 +4,13 @@ import SectionContainer from "@/components/common/SectionContainer";
 import { CheckCircle2, Clock, FileText, Timer } from "lucide-react";
 
 import { initialReports, posts } from "@/data/mock-data";
-import { buildStatistics, summarisePost, summariseReport, STATUS_ORDER } from "@/lib/statistics";
+import { buildStatistics, STATUS_ORDER } from "@/lib/statistics";
 import { STATUS_META } from "@/lib/status";
 
 // Counted at build time. Nothing on this page is a stored total, so there is
 // no state to refresh and no time-range control: the figures are whatever the
 // published reports add up to.
-const stats = buildStatistics([
-    ...posts.map(summarisePost),
-    ...initialReports.map(summariseReport),
-]);
+const stats = buildStatistics([...posts, ...initialReports]);
 
 const dateFormat = new Intl.DateTimeFormat("en-CA", {
     day: "numeric",
@@ -193,7 +190,7 @@ export default function StatisticsPage(): React.ReactNode {
                                                     <Icon
                                                         className={`w-3.5 h-3.5 shrink-0 ${meta.text}`}
                                                     />
-                                                    {status}
+                                                    {meta.label}
                                                 </span>
                                             }
                                             count={count}

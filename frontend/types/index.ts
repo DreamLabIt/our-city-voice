@@ -1,6 +1,8 @@
 import { LucideIcon } from "lucide-react";
 import type {
     Report,
+    ReportStatus,
+    Priority,
 } from "@/types/report";
 
 // ── Navigation ──────────────────────────────────────────────
@@ -27,79 +29,6 @@ export interface CategoryItem {
     icon?: LucideIcon;
     iconColor?: string;
     isOther?: boolean;
-}
-
-// ── Recent Posts ────────────────────────────────────────────
-export interface PostItem {
-    id: string;
-    code: string;
-    date: string;
-    tag: string;
-    tagBg: string;
-    tagText: string;
-    location: string;
-    title: string;
-    desc: string;
-    comments: number;
-    likes: number;
-    views: number;
-    image: string;
-    video?: string;
-    isVideo?: boolean;
-    duration?: string;
-    category: "Latest" | "Most Commented" | "Nearby" | "Map View";
-
-    // ── Single issue details ──
-    status: ReportStatus;
-    priority: PriorityLevel;
-    ward: string;
-    department: string;
-    assignedOfficer?: string;
-    reportedBy: string;
-    reporterInitials: string;
-
-    // ── Location ──
-    // Mirrors the posts table. `street` and `city` are the clean components a
-    // geocoder can resolve; `address` is the display string, which may carry a
-    // landmark hint ("near Birchmount Rd") that no geocoder handles.
-    // Coordinates are null when the location could not be resolved to a point.
-    street?: string;
-    city: string;
-    address: string;
-    postalCode: string;
-    latitude: number | null;
-    longitude: number | null;
-    updatedAt: string;
-    details: string[];
-    gallery: string[];
-    updates: IssueUpdate[];
-}
-
-// ── Issue Status Timeline ──────────────────────────────────
-export interface IssueUpdate {
-    id: string;
-    status: ReportStatus;
-    title: string;
-    note: string;
-    date: string;
-    actor: string;
-}
-
-// ── Issue Comments ─────────────────────────────────────────
-export type CommenterRole =
-    "Resident" | "Local Business" | "Field Inspector" | "Municipal Officer" | "Ward Councillor";
-
-export interface PostComment {
-    id: string;
-    postId: string;
-    author: string;
-    initials: string;
-    role: CommenterRole;
-    time: string;
-    body: string;
-    likes: number;
-    isOfficial?: boolean;
-    replies?: PostComment[];
 }
 
 // ── Recent Activity ────────────────────────────────────────
@@ -142,34 +71,9 @@ export interface ContactFormData {
 }
 
 // ── Reports ────────────────────────────────────────────────
-export type ReportStatus = "Pending" | "In Progress" | "Resolved" | "Rejected";
-export type PriorityLevel = "Low" | "Medium" | "High" | "Critical";
-
-export interface CivicReport {
-    id: string;
-    trackingId: string;
-    title: string;
-    category: string;
-    ward: string;
-    location: string;
-    street?: string;
-    city: string;
-    address: string;
-    postalCode?: string;
-    latitude: number | null;
-    longitude: number | null;
-    status: ReportStatus;
-    priority: PriorityLevel;
-    date: string;
-    description: string;
-    upvotes: number;
-    commentsCount: number;
-    views: number;
-    department: string;
-    image: string;
-    assignedOfficer?: string;
-    updatedAt: string;
-}
+// The report shapes themselves live in types/report.ts, in line with the
+// backend's API contract. Only derived, presentation-level report types live
+// here.
 
 // ── Statistics ─────────────────────────────────────────────
 // Every figure on the statistics page is counted from the reports themselves,
@@ -179,24 +83,6 @@ export interface CivicReport {
 // Deliberately absent: anything SLA-shaped. The schema has no SLA target
 // column ("SLA statistics were dropped from the UI"), so a rate against a
 // target cannot be derived from a report and would have to be invented.
-
-/** The common shape both fixture sets reduce to. */
-export interface ReportSummary {
-    id: string;
-    code: string;
-    title: string;
-    status: ReportStatus;
-    priority: PriorityLevel;
-    category: string;
-    ward: string;
-    department: string;
-    date: Date;
-    upvotes: number;
-    comments: number;
-    views: number;
-    /** Null unless the report carries a timeline that reaches Resolved. */
-    resolutionHours: number | null;
-}
 
 export interface CountRow {
     label: string;
@@ -242,7 +128,7 @@ export interface PlatformStatistics {
 export interface ReportIssueFormData {
     title: string;
     category: string;
-    priority: PriorityLevel;
+    priority: Priority;
     location: string;
     description: string;
     reporterName?: string;
@@ -286,7 +172,7 @@ export interface StepItem {
 // happens in one place rather than at every call site.
 export interface IssueMapPin {
     id: string;
-    code: string;
+    trackingCode: string;
     title: string;
     category: string;
     address: string;
@@ -364,12 +250,6 @@ export type FormState = {
 
 /** Registration has nothing extra to report. Kept as a name, not a shape. */
 export type RegisterFormState = FormState;
-
-export type TopWardLocation = {
-    ward: string;
-    reportsCount: number;
-    samplePost: PostItem;
-};
 
 export interface ErrorPageProps {
     error: Error & { digest?: string };
