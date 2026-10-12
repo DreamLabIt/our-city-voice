@@ -1,9 +1,5 @@
 import { LucideIcon } from "lucide-react";
-import type {
-    Report,
-    ReportStatus,
-    Priority,
-} from "@/types/report";
+import type { Report, ReportStatus, Priority } from "@/types/report";
 
 // ── Navigation ──────────────────────────────────────────────
 export interface NavItem {
@@ -25,7 +21,7 @@ export interface PageHeaderProps {
 // ── Category Filter ─────────────────────────────────────────
 export interface CategoryItem {
     id: string;
-    label: string;
+    name: string;
     icon?: LucideIcon;
     iconColor?: string;
     isOther?: boolean;
@@ -279,7 +275,6 @@ export interface DataTypeRow {
     purpose: string;
 }
 
-
 export interface HeaderProps {
     isAdmin: boolean;
     user: AuthUser;
@@ -294,7 +289,6 @@ export interface SidebarProps {
     isCollapsed: boolean;
     setIsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
 }
-
 
 export interface DashboardLayoutProps {
     children?: React.ReactNode;
@@ -328,7 +322,6 @@ export interface SearchDialogProps {
     Reports?: Report[];
 }
 
-
 export interface NavbarProps {
     user: AuthUser | null;
     Reports?: Report[];
@@ -339,7 +332,6 @@ export interface ConditionalLayoutProps {
     user: AuthUser | null;
     Reports?: Report[];
 }
-
 
 export interface HeroSectionProps {
     AllPosts?: Report[];

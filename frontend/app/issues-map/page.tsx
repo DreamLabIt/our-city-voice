@@ -4,10 +4,12 @@ import IssuesMapLayout from "@/components/issues-map/IssuesMapLayout";
 import SectionContainer from "@/components/common/SectionContainer";
 import { getReportFilters, getReports } from "../actions/report";
 import type { Report } from "@/types/report";
+import { posts as mockPosts } from "@/data/mock-data";
+
 
 export default async function IssuesMapPage(): Promise<React.ReactNode> {
-    const [AllPostsRes] = await Promise.all([
-        getReports({ page: 1, limit: 100 }).catch(() => ({ posts: [] })),
+    const [PostsRes] = await Promise.all([
+        getReports({ page: 1, limit: 50 }).catch(() => ({ posts: [] })),
         getReportFilters().catch(() => ({
             categories: [],
             wards: [],
@@ -16,7 +18,8 @@ export default async function IssuesMapPage(): Promise<React.ReactNode> {
         })),
     ]);
 
-    const AllPosts: Report[] = AllPostsRes.posts || [];
+    const fetchedPosts: Report[] = PostsRes.posts || [];
+    const AllPosts: Report[] = fetchedPosts.length > 0 ? fetchedPosts : mockPosts;
 
     return (
         <section className="w-full bg-background text-foreground min-h-screen">
