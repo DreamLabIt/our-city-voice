@@ -7,6 +7,8 @@ import ConditionalLayout from "@/components/common/ConditionalLayout";
 import { getCurrentUser } from "@/lib/session";
 import { getReportFilters, getReports } from "./actions/report";
 import type { Report } from "@/types/report";
+import { posts as mockPosts, } from "@/data/mock-data";
+
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 const inter = Inter({ subsets: ["latin"] });
@@ -32,7 +34,9 @@ export default async function RootLayout({
     })),
   ]);
 
-  const Reports: Report[] = PostsRes.posts || [];
+  const allPosts: Report[] = PostsRes.posts || [];
+  const Reports: Report[] = allPosts.length > 0 ? allPosts : mockPosts;
+
 
   return (
     <html lang="en" className={cn("font-sans", geist.variable)}>
