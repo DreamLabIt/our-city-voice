@@ -132,7 +132,6 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
                 },
                 media: uploadedMediaItems,
             };
-            console.log(uploadedFiles, 'd======', payload)
 
             const result = await createReportIssue(payload);
 
