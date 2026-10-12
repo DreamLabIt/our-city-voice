@@ -52,19 +52,28 @@ export const navItems: NavItem[] = [
 
 // ── Category Filter ─────────────────────────────────────────
 export const categories: CategoryItem[] = [
-    { id: "all", label: "All", icon: LayoutGrid, iconColor: "text-primary" },
-    { id: "roads", label: "Roads", icon: Road, iconColor: "text-foreground" },
-    { id: "sidewalks", label: "Sidewalks", icon: Footprints, iconColor: "text-foreground" },
-    { id: "water", label: "Water & Sewer", icon: Droplets, iconColor: "text-primary" },
-    { id: "stormwater", label: "Stormwater & Flooding", icon: CloudRain, iconColor: "text-primary" },
-    { id: "parks", label: "Parks & Recreation", icon: Trees, iconColor: "text-tag-green-text" },
-    { id: "waste", label: "Waste & Recycling", icon: Trash2, iconColor: "text-tag-green-text" },
-    { id: "streetlights", label: "Streetlights & Signals", icon: Lightbulb, iconColor: "text-foreground" },
-    { id: "buildings", label: "Buildings & Facilities", icon: Building2, iconColor: "text-foreground" },
-    { id: "transit", label: "Transit & Mobility", icon: Bus, iconColor: "text-primary" },
-    { id: "environment", label: "Environment", icon: TreePine, iconColor: "text-tag-green-text" },
-    { id: "community", label: "Community & Safety", icon: Users, iconColor: "text-primary" },
-    { id: "other", label: "Other", icon: MoreHorizontal, isOther: true },
+    { id: "roads", name: "Roads", icon: Road, iconColor: "text-foreground" },
+    { id: "sidewalks", name: "Sidewalks", icon: Footprints, iconColor: "text-foreground" },
+    { id: "water", name: "Water & Sewer", icon: Droplets, iconColor: "text-primary" },
+    { id: "stormwater", name: "Stormwater & Flooding", icon: CloudRain, iconColor: "text-primary" },
+    { id: "parks", name: "Parks & Recreation", icon: Trees, iconColor: "text-tag-green-text" },
+    { id: "waste", name: "Waste & Recycling", icon: Trash2, iconColor: "text-tag-green-text" },
+    {
+        id: "streetlights",
+        name: "Streetlights & Signals",
+        icon: Lightbulb,
+        iconColor: "text-foreground",
+    },
+    {
+        id: "buildings",
+        name: "Buildings & Facilities",
+        icon: Building2,
+        iconColor: "text-foreground",
+    },
+    { id: "transit", name: "Transit & Mobility", icon: Bus, iconColor: "text-primary" },
+    { id: "environment", name: "Environment", icon: TreePine, iconColor: "text-tag-green-text" },
+    { id: "community", name: "Community & Safety", icon: Users, iconColor: "text-primary" },
+    { id: "other", name: "Other", icon: MoreHorizontal, isOther: true },
 ];
 
 // ── Feed fixtures to schema-faithful Report rows ───────────
@@ -91,11 +100,15 @@ function toIsoFromRelative(value: string): string {
     const amount = Number(match[1]);
     const unit = match[2];
     const msPerUnit =
-        unit === "second" ? 1_000
-            : unit === "minute" ? 60_000
-            : unit === "hour" ? 3_600_000
-            : unit === "day" ? 86_400_000
-            : 604_800_000;
+        unit === "second"
+            ? 1_000
+            : unit === "minute"
+              ? 60_000
+              : unit === "hour"
+                ? 3_600_000
+                : unit === "day"
+                  ? 86_400_000
+                  : 604_800_000;
 
     return new Date(COMMENT_ANCHOR - amount * msPerUnit).toISOString();
 }
@@ -110,10 +123,10 @@ const CATEGORY_BY_LABEL = new Map(
     categories
         .filter((category) => category.id !== "all")
         .map((category) => [
-            category.label,
+            category.name,
             {
                 id: category.id,
-                name: category.label,
+                name: category.name,
                 slug: category.id,
                 icon: iconName(category.icon),
             },
@@ -531,8 +544,8 @@ const feedPosts = [
         city: "Toronto",
         address: "3150 Kingston Rd, east side of the block",
         postalCode: "M1M 3N8",
-        latitude: 43.728810,
-        longitude: -79.228920,
+        latitude: 43.72881,
+        longitude: -79.22892,
         updatedAt: "1 day ago",
         details: [
             "Blue bins for the whole east side of the block have been skipped on the last two collection days. Residents left them out both Tuesdays and the truck passed without stopping.",
@@ -606,8 +619,8 @@ const feedPosts = [
         city: "Toronto",
         address: "1005 Brimley Rd, north playground area",
         postalCode: "M1P 3E9",
-        latitude: 43.756960,
-        longitude: -79.255910,
+        latitude: 43.75696,
+        longitude: -79.25591,
         updatedAt: "2 days ago",
         details: [
             "One of the four swings at the north playground has a snapped chain on the left side, so the seat hangs at an angle about a foot off the ground.",
@@ -729,7 +742,7 @@ const feedPosts = [
         ],
     },
     {
-id: "8",
+        id: "8",
         trackingCode: "OCV-2024-001238",
         date: "Oct 20, 2026",
         tag: "Transit & Mobility",
@@ -790,7 +803,7 @@ id: "8",
             "The rear panel of the eastbound shelter is shattered, with most of the glass still held in the frame and a spread of fragments across the concrete pad and the grass behind it.",
             "With the panel gone the bench offers no protection from wind or rain, and riders have been standing out at the curb instead of using the shelter.",
             "The pad was swept and a replacement panel was fitted the following week.",
-],
+        ],
         statusHistory: [
             {
                 id: "u8-1",
@@ -894,7 +907,8 @@ const feedComments = [
         initials: "DM",
         role: "Resident",
         createdAt: "4 hours ago",
-        message: "Hit this on Saturday night and bent a rim. There is no warning at all once it rains and the hole fills up. Thanks for filing it with the video, that shows the depth much better than a photo.",
+        message:
+            "Hit this on Saturday night and bent a rim. There is no warning at all once it rains and the hole fills up. Thanks for filing it with the video, that shows the depth much better than a photo.",
         likeCount: 14,
         replies: [
             {
@@ -904,7 +918,8 @@ const feedComments = [
                 initials: "AR",
                 role: "Resident",
                 createdAt: "3 hours ago",
-                message: "Sorry to hear that. Keep the repair invoice — the claims desk asked me for mine when I reported the damage last month.",
+                message:
+                    "Sorry to hear that. Keep the repair invoice — the claims desk asked me for mine when I reported the damage last month.",
                 likeCount: 5,
             },
         ],
@@ -916,7 +931,8 @@ const feedComments = [
         initials: "DO",
         role: "Municipal Officer",
         createdAt: "2 hours ago",
-        message: "Transportation Services has this one. Cones are up as of this afternoon and the section is booked for hot-mix resurfacing in the next dry window rather than another cold patch. I will post here once the crew is on site.",
+        message:
+            "Transportation Services has this one. Cones are up as of this afternoon and the section is booked for hot-mix resurfacing in the next dry window rather than another cold patch. I will post here once the crew is on site.",
         likeCount: 31,
         isOfficial: true,
     },
@@ -927,7 +943,8 @@ const feedComments = [
         initials: "SV",
         role: "Local Business",
         createdAt: "6 hours ago",
-        message: "Our delivery vans use this lane every morning. Could the crew also look at the smaller cracks about ten metres east? They are heading the same way this one did.",
+        message:
+            "Our delivery vans use this lane every morning. Could the crew also look at the smaller cracks about ten metres east? They are heading the same way this one did.",
         likeCount: 9,
         replies: [
             {
@@ -937,7 +954,8 @@ const feedComments = [
                 initials: "LH",
                 role: "Field Inspector",
                 createdAt: "5 hours ago",
-                message: "Noted during the site visit. The whole stretch between the driveway and the bus pad is in the same work order, so those cracks are covered.",
+                message:
+                    "Noted during the site visit. The whole stretch between the driveway and the bus pad is in the same work order, so those cracks are covered.",
                 likeCount: 12,
                 isOfficial: true,
             },
@@ -950,7 +968,8 @@ const feedComments = [
         initials: "OB",
         role: "Resident",
         createdAt: "8 hours ago",
-        message: "Cyclists are swerving into the live lane to get around it, which feels more dangerous than the hole itself. Glad this is moving.",
+        message:
+            "Cyclists are swerving into the live lane to get around it, which feels more dangerous than the hole itself. Glad this is moving.",
         likeCount: 7,
     },
     {
@@ -960,7 +979,8 @@ const feedComments = [
         initials: "MA",
         role: "Ward Councillor",
         createdAt: "1 hour ago",
-        message: "My office is tracking this alongside two similar reports on Finch. If the resurfacing slips past this week, email us and we will push for an interim barrier.",
+        message:
+            "My office is tracking this alongside two similar reports on Finch. If the resurfacing slips past this week, email us and we will push for an interim barrier.",
         likeCount: 22,
         isOfficial: true,
     },
@@ -971,7 +991,8 @@ const feedComments = [
         initials: "HC",
         role: "Resident",
         createdAt: "5 hours ago",
-        message: "Same every storm. I measured it on Sunday and the water sat about 15 cm deep at the low point, right where people step off the sidewalk.",
+        message:
+            "Same every storm. I measured it on Sunday and the water sat about 15 cm deep at the low point, right where people step off the sidewalk.",
         likeCount: 18,
         replies: [
             {
@@ -981,7 +1002,8 @@ const feedComments = [
                 initials: "MD",
                 role: "Resident",
                 createdAt: "4 hours ago",
-                message: "That matches what I saw. If you have photos from Sunday, adding them here would help — the more dates on file, the harder it is to call this a one-off.",
+                message:
+                    "That matches what I saw. If you have photos from Sunday, adding them here would help — the more dates on file, the harder it is to call this a one-off.",
                 likeCount: 6,
             },
         ],
@@ -993,7 +1015,8 @@ const feedComments = [
         initials: "RP",
         role: "Local Business",
         createdAt: "7 hours ago",
-        message: "Customers cannot reach our entrance for a couple of hours after every heavy rain. We have swept the grate ourselves twice, but it clogs again almost immediately.",
+        message:
+            "Customers cannot reach our entrance for a couple of hours after every heavy rain. We have swept the grate ourselves twice, but it clogs again almost immediately.",
         likeCount: 11,
     },
     {
@@ -1003,7 +1026,8 @@ const feedComments = [
         initials: "ID",
         role: "Municipal Officer",
         createdAt: "6 hours ago",
-        message: "Logged as critical because of standing water on an active roadway. A catch basin inspection has been requested; the crew will confirm whether the blockage is at the grate or further down the lateral.",
+        message:
+            "Logged as critical because of standing water on an active roadway. A catch basin inspection has been requested; the crew will confirm whether the blockage is at the grate or further down the lateral.",
         likeCount: 15,
         isOfficial: true,
     },
@@ -1014,7 +1038,8 @@ const feedComments = [
         initials: "NS",
         role: "Resident",
         createdAt: "2 hours ago",
-        message: "Worth checking the basin across the street too. It drains fine, which makes me think the problem is specific to the one on this corner.",
+        message:
+            "Worth checking the basin across the street too. It drains fine, which makes me think the problem is specific to the one on this corner.",
         likeCount: 4,
     },
     {
@@ -1024,7 +1049,8 @@ const feedComments = [
         initials: "AF",
         role: "Resident",
         createdAt: "1 day ago",
-        message: "I catch the 84 here every morning and the lifted slab was easy to miss in the dark. The new surface is level now — much better for anyone boarding with a walker.",
+        message:
+            "I catch the 84 here every morning and the lifted slab was easy to miss in the dark. The new surface is level now — much better for anyone boarding with a walker.",
         likeCount: 13,
         replies: [
             {
@@ -1034,7 +1060,8 @@ const feedComments = [
                 initials: "PM",
                 role: "Municipal Officer",
                 createdAt: "22 hours ago",
-                message: "Thanks for confirming. The slabs were relaid level with the boarding pad and photo proof is attached to the file. Flag it here if any settling shows up over the winter.",
+                message:
+                    "Thanks for confirming. The slabs were relaid level with the boarding pad and photo proof is attached to the file. Flag it here if any settling shows up over the winter.",
                 likeCount: 10,
                 isOfficial: true,
             },
@@ -1047,7 +1074,8 @@ const feedComments = [
         initials: "GT",
         role: "Resident",
         createdAt: "1 day ago",
-        message: "Quick turnaround on this one — reported Saturday morning and the temporary wedge was in by the afternoon. Thank you to the crew.",
+        message:
+            "Quick turnaround on this one — reported Saturday morning and the temporary wedge was in by the afternoon. Thank you to the crew.",
         likeCount: 20,
     },
     {
@@ -1057,7 +1085,8 @@ const feedComments = [
         initials: "LN",
         role: "Resident",
         createdAt: "20 hours ago",
-        message: "Could the same crew look at the stretch two stops east? The cracking pattern there looks like the early stage of this.",
+        message:
+            "Could the same crew look at the stretch two stops east? The cracking pattern there looks like the early stage of this.",
         likeCount: 5,
     },
     {
@@ -1067,7 +1096,8 @@ const feedComments = [
         initials: "JE",
         role: "Resident",
         createdAt: "12 hours ago",
-        message: "Walk past here most evenings and the gap between the two working poles is very dark. I have started crossing at the next intersection instead.",
+        message:
+            "Walk past here most evenings and the gap between the two working poles is very dark. I have started crossing at the next intersection instead.",
         likeCount: 8,
     },
     {
@@ -1077,7 +1107,8 @@ const feedComments = [
         initials: "OS",
         role: "Field Inspector",
         createdAt: "9 hours ago",
-        message: "Circuit tested at pole MK-4471 and the ballast has failed. The replacement part is ordered; once it arrives the swap takes under an hour.",
+        message:
+            "Circuit tested at pole MK-4471 and the ballast has failed. The replacement part is ordered; once it arrives the swap takes under an hour.",
         likeCount: 17,
         isOfficial: true,
     },
@@ -1088,7 +1119,8 @@ const feedComments = [
         initials: "FN",
         role: "Local Business",
         createdAt: "11 hours ago",
-        message: "Our pharmacy closes at nine and staff have asked to be walked to their cars because of this. Appreciate the pole number being in the report.",
+        message:
+            "Our pharmacy closes at nine and staff have asked to be walked to their cars because of this. Appreciate the pole number being in the report.",
         likeCount: 12,
     },
     {
@@ -1098,7 +1130,8 @@ const feedComments = [
         initials: "BL",
         role: "Municipal Officer",
         createdAt: "1 day ago",
-        message: "Collection logs for the Tuesday run are being audited. A catch-up truck is being scheduled for this block, and the overflow bags will be taken at the same time.",
+        message:
+            "Collection logs for the Tuesday run are being audited. A catch-up truck is being scheduled for this block, and the overflow bags will be taken at the same time.",
         likeCount: 21,
         isOfficial: true,
     },
@@ -1109,7 +1142,8 @@ const feedComments = [
         initials: "HO",
         role: "Resident",
         createdAt: "2 days ago",
-        message: "Garbage and organics were both picked up on schedule, so it is only the recycling run skipping us. Third time this year on this block.",
+        message:
+            "Garbage and organics were both picked up on schedule, so it is only the recycling run skipping us. Third time this year on this block.",
         likeCount: 9,
         replies: [
             {
@@ -1119,7 +1153,8 @@ const feedComments = [
                 initials: "SO",
                 role: "Resident",
                 createdAt: "2 days ago",
-                message: "Same on my side. I have been photographing the bins each collection morning so there is a record of the dates.",
+                message:
+                    "Same on my side. I have been photographing the bins each collection morning so there is a record of the dates.",
                 likeCount: 6,
             },
         ],
@@ -1131,7 +1166,8 @@ const feedComments = [
         initials: "PS",
         role: "Resident",
         createdAt: "2 days ago",
-        message: "The new chain and seat are in and the rest of the set was checked at the same time. Two days from report to repair on a playground is a good result.",
+        message:
+            "The new chain and seat are in and the rest of the set was checked at the same time. Two days from report to repair on a playground is a good result.",
         likeCount: 24,
     },
     {
@@ -1141,7 +1177,8 @@ const feedComments = [
         initials: "EM",
         role: "Municipal Officer",
         createdAt: "2 days ago",
-        message: "Swing is back in service. If anything on this structure starts to rattle or sag, report it right away rather than waiting — chain wear tends to show up gradually.",
+        message:
+            "Swing is back in service. If anything on this structure starts to rattle or sag, report it right away rather than waiting — chain wear tends to show up gradually.",
         likeCount: 16,
         isOfficial: true,
     },
@@ -1152,7 +1189,8 @@ const feedComments = [
         initials: "TV",
         role: "Resident",
         createdAt: "5 hours ago",
-        message: "Flow has not stopped since Tuesday and the soft spot in the asphalt is now wide enough that you can feel it through the steering wheel.",
+        message:
+            "Flow has not stopped since Tuesday and the soft spot in the asphalt is now wide enough that you can feel it through the steering wheel.",
         likeCount: 26,
         replies: [
             {
@@ -1162,7 +1200,8 @@ const feedComments = [
                 initials: "HW",
                 role: "Municipal Officer",
                 createdAt: "4 hours ago",
-                message: "The acoustic survey put the break on the 150 mm main under that soft spot, which is why the surface is sinking. Excavation is underway and there will be a short shutoff for the block during the repair.",
+                message:
+                    "The acoustic survey put the break on the 150 mm main under that soft spot, which is why the surface is sinking. Excavation is underway and there will be a short shutoff for the block during the repair.",
                 likeCount: 29,
                 isOfficial: true,
             },
@@ -1175,7 +1214,8 @@ const feedComments = [
         initials: "MI",
         role: "Resident",
         createdAt: "8 hours ago",
-        message: "Our pressure dropped the same morning the water appeared at the curb, so the two are almost certainly the same break.",
+        message:
+            "Our pressure dropped the same morning the water appeared at the curb, so the two are almost certainly the same break.",
         likeCount: 13,
     },
     {
@@ -1185,7 +1225,8 @@ const feedComments = [
         initials: "VL",
         role: "Local Business",
         createdAt: "7 hours ago",
-        message: "Please post the shutoff window here when it is set. We run a cafe on this block and need an hour of notice to fill containers.",
+        message:
+            "Please post the shutoff window here when it is set. We run a cafe on this block and need an hour of notice to fill containers.",
         likeCount: 18,
     },
     {
@@ -1195,7 +1236,8 @@ const feedComments = [
         initials: "MA",
         role: "Ward Councillor",
         createdAt: "3 hours ago",
-        message: "Shutoff notices will be dropped at every address on the block and posted on this thread the day before. Businesses needing a longer window can contact my office.",
+        message:
+            "Shutoff notices will be dropped at every address on the block and posted on this thread the day before. Businesses needing a longer window can contact my office.",
         likeCount: 20,
         isOfficial: true,
     },
@@ -1206,7 +1248,8 @@ const feedComments = [
         initials: "WL",
         role: "Resident",
         createdAt: "5 days ago",
-        message: "Panel is replaced and the pad was swept clean. Riders are using the shelter again instead of standing out at the curb.",
+        message:
+            "Panel is replaced and the pad was swept clean. Riders are using the shelter again instead of standing out at the curb.",
         likeCount: 11,
     },
     {
@@ -1216,7 +1259,8 @@ const feedComments = [
         initials: "FN",
         role: "Municipal Officer",
         createdAt: "5 days ago",
-        message: "Tempered glass is in and the shelter is back in service. Reports of broken glass at transit stops are cleared the same day even when the panel takes longer to arrive.",
+        message:
+            "Tempered glass is in and the shelter is back in service. Reports of broken glass at transit stops are cleared the same day even when the panel takes longer to arrive.",
         likeCount: 14,
         isOfficial: true,
     },
@@ -1369,28 +1413,23 @@ export const yTicks: number[] = [200, 150, 100, 50, 0];
 export const faqs = [
     {
         question: "How do I report an infrastructure issue on this platform?",
-        answer:
-            "Simply click on the 'Report an Issue' button, upload a photo or video of the problem, drop the location pin on the interactive map, add a brief description, and submit. The report will automatically route to the relevant authority.",
+        answer: "Simply click on the 'Report an Issue' button, upload a photo or video of the problem, drop the location pin on the interactive map, add a brief description, and submit. The report will automatically route to the relevant authority.",
     },
     {
         question: "How long does it take for an reported issue to be resolved?",
-        answer:
-            "Initial review and acknowledgement usually happen within 24 to 48 hours. The actual repair timeframe depends on the issue category and priority, but you can track live status updates on your dashboard.",
+        answer: "Initial review and acknowledgement usually happen within 24 to 48 hours. The actual repair timeframe depends on the issue category and priority, but you can track live status updates on your dashboard.",
     },
     {
         question: "Can other citizens support or upvote my report?",
-        answer:
-            "Yes! Neighboring residents can upvote reported issues to highlight urgency. Reports with high community upvotes get prioritized by municipal field inspection teams.",
+        answer: "Yes! Neighboring residents can upvote reported issues to highlight urgency. Reports with high community upvotes get prioritized by municipal field inspection teams.",
     },
     {
         question: "Is my personal identity publicly visible when I post a report?",
-        answer:
-            "You can choose to keep your profile anonymous when submitting reports. Your location and issue details will be public, but your personal contact details remain private and secure.",
+        answer: "You can choose to keep your profile anonymous when submitting reports. Your location and issue details will be public, but your personal contact details remain private and secure.",
     },
     {
         question: "What types of issues can I report here?",
-        answer:
-            "You can report potholes, broken streetlights, illegal waste dumping, blocked drainage lines, damaged water pipes, traffic sign issues, and other public infrastructure problems.",
+        answer: "You can report potholes, broken streetlights, illegal waste dumping, blocked drainage lines, damaged water pipes, traffic sign issues, and other public infrastructure problems.",
     },
 ];
 
@@ -1438,7 +1477,8 @@ const feedReports = [
         media: [
             {
                 type: "image",
-                storageKey: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?q=80&w=600&auto=format&fit=crop",
+                storageKey:
+                    "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?q=80&w=600&auto=format&fit=crop",
                 thumbnailKey: null,
                 mimeType: "image/jpeg",
                 sizeBytes: 1046100,
@@ -1475,7 +1515,8 @@ const feedReports = [
         media: [
             {
                 type: "image",
-                storageKey: "https://images.unsplash.com/photo-1509114397022-ed747cca3f65?q=80&w=600&auto=format&fit=crop",
+                storageKey:
+                    "https://images.unsplash.com/photo-1509114397022-ed747cca3f65?q=80&w=600&auto=format&fit=crop",
                 thumbnailKey: null,
                 mimeType: "image/jpeg",
                 sizeBytes: 982400,
@@ -1512,7 +1553,8 @@ const feedReports = [
         media: [
             {
                 type: "image",
-                storageKey: "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=600&auto=format&fit=crop",
+                storageKey:
+                    "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=600&auto=format&fit=crop",
                 thumbnailKey: null,
                 mimeType: "image/jpeg",
                 sizeBytes: 1215300,
@@ -1571,8 +1613,8 @@ const feedReports = [
         city: "Toronto",
         address: "5555 Steeles Ave E, walkway south of the pond",
         postalCode: "M1V 4P1",
-        latitude: 43.831520,
-        longitude: -79.271160,
+        latitude: 43.83152,
+        longitude: -79.27116,
         status: "pending",
         priority: "low",
         date: "2026-09-29",
@@ -1586,7 +1628,8 @@ const feedReports = [
         media: [
             {
                 type: "image",
-                storageKey: "https://images.unsplash.com/photo-1588880331179-bc9b93a8cb5e?q=80&w=600&auto=format&fit=crop",
+                storageKey:
+                    "https://images.unsplash.com/photo-1588880331179-bc9b93a8cb5e?q=80&w=600&auto=format&fit=crop",
                 thumbnailKey: null,
                 mimeType: "image/jpeg",
                 sizeBytes: 1130840,
@@ -1644,7 +1687,7 @@ export const initialReports: Report[] = feedReports.map(feedReportToReport);
 // no filter value can exist that no row uses.
 export const reportCategories = categories
     .filter((cat) => cat.id !== "all")
-    .map((cat) => ({ slug: cat.id, name: cat.label }));
+    .map((cat) => ({ slug: cat.id, name: cat.name }));
 
 export const reportStatuses = ["pending", "in_progress", "resolved", "rejected"];
 
@@ -1660,20 +1703,77 @@ export const reportWards = [
     { code: "ward-25", name: "Ward 25 (Scarborough Rouge Park)" },
 ];
 export const mockSuggestions: SearchSuggestion[] = [
-    { id: "1", title: "Major pothole hazard at the Kennedy Station bus loop", category: "Roads", location: "Ward 20", type: "report" },
-    { id: "2", title: "Broken LED street lights along Danforth Ave", category: "Streetlights & Signals", location: "Ward 19", type: "report" },
-    { id: "3", title: "Overflowing waste bins at the Cedarbrook Park gate", category: "Waste & Recycling", location: "Ward 24", type: "report" },
-    { id: "4", title: "Flooding during heavy rain", category: "Stormwater & Flooding", location: "Ward 24", type: "post" },
-    { id: "5", title: "Annual Clean City Volunteers Meetup", category: "Community & Safety", location: "Scarborough Civic Centre", type: "announcement" },
-    { id: "6", title: "New Recycling Program Launch", category: "Waste & Recycling", location: "Ward 20", type: "announcement" },
-    { id: "7", title: "Community Safety Awareness Campaign", category: "Community & Safety", location: "Ward 21", type: "post" },
-    { id: "8", title: "Stormwater Drainage Maintenance Schedule", category: "Stormwater & Flooding", location: "Ward 22", type: "post" },
-    { id: "9", title: "Public Park Renovation Updates", category: "Parks & Recreation", location: "Ward 23", type: "announcement" },
-    { id: "10", title: "Streetlight not working", category: "Streetlights & Signals", location: "Ward 24", type: "report" },
+    {
+        id: "1",
+        title: "Major pothole hazard at the Kennedy Station bus loop",
+        category: "Roads",
+        location: "Ward 20",
+        type: "report",
+    },
+    {
+        id: "2",
+        title: "Broken LED street lights along Danforth Ave",
+        category: "Streetlights & Signals",
+        location: "Ward 19",
+        type: "report",
+    },
+    {
+        id: "3",
+        title: "Overflowing waste bins at the Cedarbrook Park gate",
+        category: "Waste & Recycling",
+        location: "Ward 24",
+        type: "report",
+    },
+    {
+        id: "4",
+        title: "Flooding during heavy rain",
+        category: "Stormwater & Flooding",
+        location: "Ward 24",
+        type: "post",
+    },
+    {
+        id: "5",
+        title: "Annual Clean City Volunteers Meetup",
+        category: "Community & Safety",
+        location: "Scarborough Civic Centre",
+        type: "announcement",
+    },
+    {
+        id: "6",
+        title: "New Recycling Program Launch",
+        category: "Waste & Recycling",
+        location: "Ward 20",
+        type: "announcement",
+    },
+    {
+        id: "7",
+        title: "Community Safety Awareness Campaign",
+        category: "Community & Safety",
+        location: "Ward 21",
+        type: "post",
+    },
+    {
+        id: "8",
+        title: "Stormwater Drainage Maintenance Schedule",
+        category: "Stormwater & Flooding",
+        location: "Ward 22",
+        type: "post",
+    },
+    {
+        id: "9",
+        title: "Public Park Renovation Updates",
+        category: "Parks & Recreation",
+        location: "Ward 23",
+        type: "announcement",
+    },
+    {
+        id: "10",
+        title: "Streetlight not working",
+        category: "Streetlights & Signals",
+        location: "Ward 24",
+        type: "report",
+    },
 ];
-
-
-
 
 export const topLocations: LocationItem[] = [
     {
@@ -1714,21 +1814,24 @@ export const steps: StepItem[] = [
     {
         step: "01",
         title: "Report an Issue",
-        description: "Take a picture or video of the issue (pothole, broken light, waste), select location & post it directly.",
+        description:
+            "Take a picture or video of the issue (pothole, broken light, waste), select location & post it directly.",
         icon: Camera,
         badgeText: "Quick Snap & Post",
     },
     {
         step: "02",
         title: "Track & Verify Progress",
-        description: "Citizens upvote the issue while municipal admins and officials review, assign, and update status in real-time.",
+        description:
+            "Citizens upvote the issue while municipal admins and officials review, assign, and update status in real-time.",
         icon: SearchCheck,
         badgeText: "Real-time Tracking",
     },
     {
         step: "03",
         title: "Resolved Together",
-        description: "Once fixed, authority uploads completion proof. The community marks it solved and celebrates a better city.",
+        description:
+            "Once fixed, authority uploads completion proof. The community marks it solved and celebrates a better city.",
         icon: CheckCircle2,
         badgeText: "City Improved",
     },

@@ -6,6 +6,7 @@ import ExploreTopLocations from "@/components/landing/ExploreTopLocations";
 import { getReports, getReportFilters } from "@/app/actions/report";
 import type { Report, FilterOption } from "@/types/report";
 import { posts as mockPosts, categories as mockCategories } from "@/data/mock-data";
+import { CategoryItem } from "@/types";
 
 export const revalidate = 60;
 
@@ -33,21 +34,21 @@ export default async function Home() {
     const recentActivities: Report[] =
         fetchedRecentActivities.length > 0 ? fetchedRecentActivities : mockPosts.slice(0, 4);
 
-    const categoriesList =
+    const categoriesList: CategoryItem[] =
         filtersRes.categories.length > 0
             ? filtersRes.categories
             : mockCategories.map((category) => ({
-                name: category.label,
-                value: category.id,
-            }));
+                  id: category.id,
+                  name: category.name,
+              }));
 
     const categoryTabs = ["Latest", ...categoriesList.map((category) => category.name)];
 
     const allCategory = [
-        { id: "all", label: "All" },
+        { id: "all", name: "All" },
         ...categoriesList.map((category) => ({
-            id: category.value || category.name.toLowerCase().replace(/\s+/g, "-"),
-            label: category.name,
+            id: category.id || category.name.toLowerCase().replace(/\s+/g, "-"),
+            name: category.name,
         })),
     ];
 
@@ -57,14 +58,14 @@ export default async function Home() {
         status:
             filtersRes.statuses.length > 0
                 ? filtersRes.statuses.map((status) => ({
-                    name: status.value,
-                    value: status.value,
-                }))
+                      name: status.value,
+                      value: status.value,
+                  }))
                 : [
-                    { name: "Pending", value: "pending" },
-                    { name: "In Progress", value: "in_progress" },
-                    { name: "Resolved", value: "resolved" },
-                ],
+                      { name: "Pending", value: "pending" },
+                      { name: "In Progress", value: "in_progress" },
+                      { name: "Resolved", value: "resolved" },
+                  ],
     };
 
     return (
