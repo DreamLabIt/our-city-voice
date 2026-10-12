@@ -108,6 +108,53 @@ const CreatePostSchema = z.strictObject({
   media: z.array(CreateMediaSchema).max(6, "Up to 6 attachments are allowed").optional(),
 });
 
+// Editing takes the same fields as filing, all optional, but `city`/`address`
+// stay required when present because their columns are NOT NULL.
+const UpdateLocationSchema = z
+  .object({
+    street: z.string().trim().max(160).nullish(),
+    city: z.string().trim().min(1, "City is required").max(80, "City is too long").optional(),
+    address: z.string().trim().min(1, "Address is required").max(240, "Address is too long").optional(),
+    postalCode: z.string().trim().max(16).nullish(),
+    latitude: z.coerce.number().min(-90, "Latitude must be between -90 and 90").max(90, "Latitude must be between -90 and 90").nullish(),
+    longitude: z.coerce.number().min(-180, "Longitude must be between -180 and 180").max(180, "Longitude must be between -180 and 180").nullish(),
+  })
+  .refine(
+    (location) => {
+      // A null and an absent coordinate both mean "no point"; anything else
+      // must arrive as a pair, so a lone value cannot half-clear the pair.
+      const latitude = location.latitude ?? null;
+      const longitude = location.longitude ?? null;
+      return (latitude === null) === (longitude === null);
+    },
+    { error: "Send latitude and longitude together, or neither", path: ["longitude"] },
+  );
+
+const UpdatePostSchema = z
+  .strictObject({
+    title: z.string().trim().min(6, "Title must be at least 6 characters").max(160, "Title is too long").optional(),
+    description: z.string().trim().min(15, "Description must be at least 15 characters").max(5000, "Description is too long").optional(),
+    category: z.string().trim().min(1, "Category is required").max(80).optional(),
+    ward: z.string().trim().min(1, "Ward is required").max(80).optional(),
+    priority: prioritySchema.optional(),
+    isAnonymous: z.boolean().optional(),
+    location: UpdateLocationSchema.optional(),
+    // Sending media replaces the whole set; omitting it leaves it untouched.
+    media: z.array(CreateMediaSchema).max(6, "Up to 6 attachments are allowed").optional(),
+  })
+  .refine(
+    (body) =>
+      body.title !== undefined ||
+      body.description !== undefined ||
+      body.category !== undefined ||
+      body.ward !== undefined ||
+      body.priority !== undefined ||
+      body.isAnonymous !== undefined ||
+      body.location !== undefined ||
+      body.media !== undefined,
+    { error: "Send at least one field to update", path: ["_"] },
+  );
+
 export async function create(req: Request, res: Response): Promise<void> {
   if (!req.user) throw AppError.unauthorized();
 
@@ -115,6 +162,23 @@ export async function create(req: Request, res: Response): Promise<void> {
   const post = await postService.createPost(req.user.id, input);
 
   res.status(201).json({ post });
+}
+
+export async function update(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw AppError.unauthorized();
+
+  const input = parseBody(UpdatePostSchema, req.body ?? {});
+  const post = await postService.updatePost(req.user, parseIdentifier(req.params.code), input);
+
+  res.status(200).json({ post });
+}
+
+export async function remove(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw AppError.unauthorized();
+
+  await postService.deletePost(req.user, parseIdentifier(req.params.code));
+
+  res.status(204).send();
 }
 
 export async function list(req: Request, res: Response): Promise<void> {

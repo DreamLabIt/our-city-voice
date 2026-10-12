@@ -15,4 +15,8 @@ postRouter.post("/", requireAuth, postController.create);
 
 postRouter.get("/:code", postController.detail);
 
+postRouter.patch("/:code", requireAuth, postController.update);
+
+postRouter.delete("/:code", requireAuth, postController.remove);
+
 postRouter.get("/:code/comments", postController.comments);
