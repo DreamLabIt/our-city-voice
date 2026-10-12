@@ -1,8 +1,9 @@
+
 "use client";
 
-import { useState, ChangeEvent } from "react";
-import { useForm } from "react-hook-form";
-import { useSearchParams } from "next/navigation";
+import { useState, type ChangeEvent } from "react";
+import { Controller, useForm, type SubmitHandler } from "react-hook-form";
+import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Image from "next/image";
 import {
@@ -11,12 +12,14 @@ import {
     X,
     Send,
     Loader2,
-    FileText,
     Video,
     Film,
 } from "lucide-react";
-import { REPORT_CATEGORIES } from "@/data/mock-data";
-import type { ReportIssueFormData } from "@/types";
+
+import { createReportIssue } from "@/app/actions/issues";
+
+import type { ReportIssueFormData, UploadedMediaItem } from "@/types/issues";
+
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,18 +33,51 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { useUploads } from "@/hooks/use-uploads";
 
-export default function ReportForm() {
+interface ReportFormProps {
+    reportFilters: {
+        categories: Array<{ name: string; value: string }>;
+        wards: Array<{ name: string; code?: string; value?: string }>;
+    };
+}
+
+interface FormValues {
+    title: string;
+    description: string;
+    category: string;
+    ward: string;
+    priority: "low" | "medium" | "high" | "critical";
+    isAnonymous: boolean;
+    location: {
+        address: string;
+        city: string;
+        street: string;
+        postalCode: string;
+        latitude: number | null;
+        longitude: number | null;
+    };
+}
+
+const MAX_IMAGE_FILES = 5;
+const MAX_VIDEO_FILES = 2;
+
+export default function ReportForm({ reportFilters }: ReportFormProps) {
+    const router = useRouter();
     const searchParams = useSearchParams();
-    const mediaType = searchParams.get("type");
+    const isVideoMode = searchParams.get("type") === "video";
 
-    const isVideoMode = mediaType === "video";
+    const [uploadingMedia, setUploadingMedia] = useState(false);
 
-    const [selectedImages, setSelectedImages] = useState<File[]>([]);
-    const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+    const maxMediaFiles = isVideoMode
+        ? MAX_VIDEO_FILES
+        : MAX_IMAGE_FILES;
 
-    const [selectedVideos, setSelectedVideos] = useState<File[]>([]);
-    const [videoPreviews, setVideoPreviews] = useState<string[]>([]);
+    const uploads = useUploads({
+        kind: "report-media",
+        multiple: true,
+        maxFiles: maxMediaFiles,
+    });
 
     const {
         register,
@@ -49,104 +85,140 @@ export default function ReportForm() {
         reset,
         watch,
         setValue,
+        control,
         formState: { errors, isSubmitting },
-    } = useForm<ReportIssueFormData>({
+    } = useForm<FormValues>({
         defaultValues: {
             title: "",
-            category: "Roads & Potholes",
-            priority: "Medium",
-            location: "",
             description: "",
-            reporterName: "",
-            reporterEmail: "",
-            reporterPhone: "",
+            category: "",
+            ward: "",
+            priority: "medium",
             isAnonymous: false,
+            location: {
+                address: "",
+                city: "Jamalpur",
+                street: "",
+                postalCode: "",
+                latitude: null,
+                longitude: null,
+            },
         },
     });
 
     const isAnonymous = watch("isAnonymous");
 
-    const handleImageChange = (e: ChangeEvent<HTMLInputElement>): void => {
-        if (e.target.files) {
-            const filesArray = Array.from(e.target.files);
-
-            if (selectedImages.length + filesArray.length > 5) {
-                toast.error("Maximum 5 images allowed");
-                return;
-            }
-
-            const newImages = [...selectedImages, ...filesArray];
-            setSelectedImages(newImages);
-
-            const newPreviews = filesArray.map((file) => URL.createObjectURL(file));
-            setImagePreviews((prev) => [...prev, ...newPreviews]);
+    const handleFileChange = (
+        event: ChangeEvent<HTMLInputElement>,
+    ): void => {
+        if (event.target.files) {
+            uploads.addFiles(event.target.files);
+            event.target.value = "";
         }
     };
 
-    const removeImage = (index: number): void => {
-        setSelectedImages((prev) => prev.filter((_, i) => i !== index));
-        setImagePreviews((prev) => {
-            URL.revokeObjectURL(prev[index]);
-            return prev.filter((_, i) => i !== index);
-        });
-    };
+    const onSubmit: SubmitHandler<FormValues> = async (data) => {
+        setUploadingMedia(true);
 
-    const handleVideoChange = (e: ChangeEvent<HTMLInputElement>): void => {
-        if (e.target.files) {
-            const filesArray = Array.from(e.target.files);
-
-            if (selectedVideos.length + filesArray.length > 2) {
-                toast.error("Maximum 2 video clips allowed");
-                return;
-            }
-
-            const newVideos = [...selectedVideos, ...filesArray];
-            setSelectedVideos(newVideos);
-
-            const newPreviews = filesArray.map((file) => URL.createObjectURL(file));
-            setVideoPreviews((prev) => [...prev, ...newPreviews]);
-        }
-    };
-
-    const removeVideo = (index: number): void => {
-        setSelectedVideos((prev) => prev.filter((_, i) => i !== index));
-        setVideoPreviews((prev) => {
-            URL.revokeObjectURL(prev[index]);
-            return prev.filter((_, i) => i !== index);
-        });
-    };
-
-    const onSubmit = async (data: ReportIssueFormData): Promise<void> => {
         try {
-            const formData = new FormData();
-            formData.append("data", JSON.stringify(data));
+            const uploadedFiles = await uploads.upload();
 
-            if (isVideoMode) {
-                selectedVideos.forEach((file) => formData.append("videos", file));
-            } else {
-                selectedImages.forEach((file) => formData.append("images", file));
+            if (uploadedFiles === null) {
+                toast.error("File upload failed", {
+                    description:
+                        "Your files could not be uploaded. Please check them and try again.",
+                });
+                return;
             }
 
-            await new Promise((resolve) => setTimeout(resolve, 1800));
+            const uploadedMediaItems: UploadedMediaItem[] =
+                uploadedFiles.map((file) => ({
+                    url: file.url,
+                    type: file.resourceType,
+                    sizeBytes: file.bytes,
+                    durationSecs:
+                        file.resourceType === "video"
+                            ? file.durationSeconds
+                            : null,
+                    thumbnailUrl: null,
+                }));
 
-            toast.success("Issue Reported Successfully!", {
-                description:
-                    "Your report ID is #OCV-" +
-                    Math.floor(100000 + Math.random() * 900000) +
-                    ". You can track updates on your dashboard.",
+            const payload: ReportIssueFormData = {
+                title: data.title.trim(),
+                description: data.description.trim(),
+                category: data.category,
+                ward: data.ward,
+                priority: data.priority,
+                isAnonymous: data.isAnonymous,
+                location: {
+                    address: data.location.address.trim(),
+                    city: data.location.city.trim(),
+                    street: data.location.street.trim() || null,
+                    postalCode:
+                        data.location.postalCode.trim() || null,
+                    latitude: data.location.latitude,
+                    longitude: data.location.longitude,
+                },
+                media: uploadedMediaItems,
+            };
+
+
+            const result = await createReportIssue(payload);
+
+            if (!result.success) {
+                if (result.requiresAuth) {
+                    toast.error("Please log in to submit a report.");
+                    router.push("/login?callbackUrl=/report-issue");
+                    return;
+                }
+
+                const fieldError = result.fieldErrors
+                    ? Object.values(result.fieldErrors)
+                        .flat()
+                        .filter(Boolean)
+                        .join(" ")
+                    : "";
+
+                toast.error("Failed to submit report", {
+                    description:
+                        fieldError ||
+                        result.error ||
+                        "Please check the form inputs.",
+                });
+
+                return;
+            }
+
+            const trackingCode = result.data?.trackingCode;
+
+            toast.success("Issue reported successfully!", {
+                description: trackingCode
+                    ? `Your report tracking code is ${trackingCode}`
+                    : "Report submitted.",
             });
 
             reset();
-            setSelectedImages([]);
-            setImagePreviews([]);
-            setSelectedVideos([]);
-            setVideoPreviews([]);
-        } catch (error) {
-            toast.error("Failed to submit report", {
-                description: "Please check your network connection and try again.",
+            uploads.reset();
+
+            router.push(
+                trackingCode
+                    ? `/issues/${trackingCode}`
+                    : "/reports",
+            );
+        } catch (error: unknown) {
+            toast.error("Unable to submit report", {
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : "Please check your network connection and try again.",
             });
+        } finally {
+            setUploadingMedia(false);
         }
     };
+
+    const isBusy =
+        isSubmitting || uploadingMedia || uploads.isUploading;
 
     return (
         <Card className="bg-card border border-border-custom rounded-2xl p-6 sm:p-8 md:p-10 shadow space-y-4">
@@ -156,292 +228,459 @@ export default function ReportForm() {
                         Submit Infrastructure Details
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                        Please fill in accurate information to help field inspectors review and resolve the issue quickly.
+                        Please fill in accurate information to help
+                        field inspectors review and resolve the issue
+                        quickly.
                     </p>
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-7">
+                <form
+                    onSubmit={handleSubmit(onSubmit)}
+                    className="space-y-7"
+                >
                     <div className="space-y-1.5">
-                        <label htmlFor="title" className="text-xs font-bold text-foreground uppercase tracking-wide">
-                            Issue Title <span className="text-primary">*</span>
+                        <label
+                            htmlFor="title"
+                            className="text-xs font-bold text-foreground uppercase tracking-wide"
+                        >
+                            Issue Title{" "}
+                            <span className="text-primary">*</span>
                         </label>
+
                         <Input
                             id="title"
-                            type="text"
                             placeholder="Enter a concise title for the issue"
                             {...register("title", {
-                                required: "Issue title is required",
-                                minLength: { value: 6, message: "Title must be at least 6 characters" },
+                                required: "Issue title is required.",
+                                minLength: {
+                                    value: 6,
+                                    message:
+                                        "Title must be at least 6 characters.",
+                                },
+                                maxLength: {
+                                    value: 160,
+                                    message:
+                                        "Title cannot exceed 160 characters.",
+                                },
                             })}
-                            className="bg-section border-border-custom rounded focus-visible:ring-2 focus-visible:ring-primary/50 mt-2"
+                            className="bg-section border-border-custom rounded mt-2"
                         />
+
                         {errors.title && (
-                            <p className="text-xs text-destructive mt-1">{errors.title.message}</p>
+                            <p className="text-xs text-destructive mt-1">
+                                {errors.title.message}
+                            </p>
                         )}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div className="space-y-1.5">
-                            <label htmlFor="category" className="text-xs font-bold text-foreground uppercase tracking-wide">
-                                Category <span className="text-primary">*</span>
+                            <label className="text-xs font-bold text-foreground uppercase tracking-wide">
+                                Category{" "}
+                                <span className="text-primary">*</span>
                             </label>
-                            <Select
-                                defaultValue="Roads & Potholes"
-                                onValueChange={(val) => setValue("category", val ?? "Roads & Potholes")}
-                            >
-                                <SelectTrigger className="w-full rounded bg-section border-border-custom focus:ring-2 focus:ring-primary/50 mt-2">
-                                    <SelectValue placeholder="Select Category" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {REPORT_CATEGORIES.map((cat) => (
-                                        <SelectItem key={cat} value={cat}>
-                                            {cat}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+
+                            <Controller
+                                name="category"
+                                control={control}
+                                rules={{
+                                    required:
+                                        "Please select a category.",
+                                }}
+                                render={({ field }) => (
+                                    <Select
+                                        value={field.value}
+                                        onValueChange={field.onChange}
+                                    >
+                                        <SelectTrigger className="w-full rounded bg-section border-border-custom mt-2">
+                                            <SelectValue placeholder="Select Category" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {reportFilters.categories.map(
+                                                (category) => (
+                                                    <SelectItem
+                                                        key={category.value}
+                                                        value={category.value}
+                                                    >
+                                                        {category.name}
+                                                    </SelectItem>
+                                                ),
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            />
+
+                            {errors.category && (
+                                <p className="text-xs text-destructive mt-1">
+                                    {errors.category.message}
+                                </p>
+                            )}
                         </div>
 
                         <div className="space-y-1.5">
-                            <label htmlFor="priority" className="text-xs font-bold text-foreground uppercase tracking-wide">
-                                Urgency / Priority Level <span className="text-primary">*</span>
+                            <label className="text-xs font-bold text-foreground uppercase tracking-wide">
+                                Ward{" "}
+                                <span className="text-primary">*</span>
                             </label>
-                            <Select
-                                defaultValue="Medium"
-                                onValueChange={(val) => setValue("priority", (val ?? "Medium") as any)}
-                            >
-                                <SelectTrigger className="w-full rounded bg-section border-border-custom focus:ring-2 focus:ring-primary/50 mt-2">
-                                    <SelectValue placeholder="Select Priority" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Low">Low (Minor aesthetic issues)</SelectItem>
-                                    <SelectItem value="Medium">Medium (General repair needed)</SelectItem>
-                                    <SelectItem value="High">High (Disrupts daily traffic/life)</SelectItem>
-                                    <SelectItem value="Critical">Critical (Immediate public hazard)</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
 
-                    <div className="space-y-1.5">
-                        <label htmlFor="location" className="text-xs font-bold text-foreground uppercase tracking-wide">
-                            Location Address or Pin Landmark <span className="text-primary">*</span>
-                        </label>
-                        <div className="relative mt-2">
-                            <Input
-                                id="location"
-                                type="text"
-                                placeholder="Near Station Road, Ward 4"
-                                {...register("location", { required: "Location details are required" })}
-                                className="pl-10 bg-section rounded border-border-custom focus-visible:ring-2 focus-visible:ring-primary/50"
+                            <Controller
+                                name="ward"
+                                control={control}
+                                rules={{
+                                    required: "Please select a ward.",
+                                }}
+                                render={({ field }) => (
+                                    <Select
+                                        value={field.value}
+                                        onValueChange={field.onChange}
+                                    >
+                                        <SelectTrigger className="w-full rounded bg-section border-border-custom mt-2">
+                                            <SelectValue placeholder="Select Ward" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {reportFilters.wards.map(
+                                                (ward) => {
+                                                    const wardCode =
+                                                        ward.value ||
+                                                        ward.code;
+
+                                                    if (!wardCode) {
+                                                        return null;
+                                                    }
+
+                                                    return (
+                                                        <SelectItem
+                                                            key={wardCode}
+                                                            value={wardCode}
+                                                        >
+                                                            {ward.name}
+                                                        </SelectItem>
+                                                    );
+                                                },
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                )}
                             />
-                            <MapPin className="w-4 h-4 text-primary absolute left-3.5 top-1/2 -translate-y-1/2" />
+
+                            {errors.ward && (
+                                <p className="text-xs text-destructive mt-1">
+                                    {errors.ward.message}
+                                </p>
+                            )}
                         </div>
-                        {errors.location && (
-                            <p className="text-xs text-destructive mt-1">{errors.location.message}</p>
-                        )}
                     </div>
 
                     <div className="space-y-1.5">
-                        <label htmlFor="description" className="text-xs font-bold text-foreground uppercase tracking-wide">
-                            Detailed Description <span className="text-primary">*</span>
+                        <label className="text-xs font-bold text-foreground uppercase tracking-wide">
+                            Urgency / Priority Level{" "}
+                            <span className="text-primary">*</span>
+                        </label>
+
+                        <Controller
+                            name="priority"
+                            control={control}
+                            render={({ field }) => (
+                                <Select
+                                    value={field.value}
+                                    onValueChange={field.onChange}
+                                >
+                                    <SelectTrigger className="w-full rounded bg-section border-border-custom mt-2">
+                                        <SelectValue placeholder="Select Priority" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="low">
+                                            Low (Minor aesthetic issues)
+                                        </SelectItem>
+                                        <SelectItem value="medium">
+                                            Medium (General repair needed)
+                                        </SelectItem>
+                                        <SelectItem value="high">
+                                            High (Disrupts daily traffic/life)
+                                        </SelectItem>
+                                        <SelectItem value="critical">
+                                            Critical (Immediate public hazard)
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div className="space-y-1.5">
+                            <label
+                                htmlFor="city"
+                                className="text-xs font-bold text-foreground uppercase tracking-wide"
+                            >
+                                City{" "}
+                                <span className="text-primary">*</span>
+                            </label>
+
+                            <Input
+                                id="city"
+                                placeholder="Enter city"
+                                {...register("location.city", {
+                                    required: "City is required.",
+                                    maxLength: {
+                                        value: 80,
+                                        message:
+                                            "City cannot exceed 80 characters.",
+                                    },
+                                })}
+                                className="bg-section border-border-custom rounded mt-2"
+                            />
+
+                            {errors.location?.city && (
+                                <p className="text-xs text-destructive mt-1">
+                                    {errors.location.city.message}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label
+                                htmlFor="location"
+                                className="text-xs font-bold text-foreground uppercase tracking-wide"
+                            >
+                                Location Address{" "}
+                                <span className="text-primary">*</span>
+                            </label>
+
+                            <div className="relative mt-2">
+                                <Input
+                                    id="location"
+                                    placeholder="Street address or nearby landmark"
+                                    {...register("location.address", {
+                                        required:
+                                            "Location address is required.",
+                                        maxLength: {
+                                            value: 240,
+                                            message:
+                                                "Address cannot exceed 240 characters.",
+                                        },
+                                    })}
+                                    className="pl-10 bg-section rounded border-border-custom"
+                                />
+                                <MapPin className="w-4 h-4 text-primary absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            </div>
+
+                            {errors.location?.address && (
+                                <p className="text-xs text-destructive mt-1">
+                                    {errors.location.address.message}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div className="space-y-1.5">
+                            <label
+                                htmlFor="street"
+                                className="text-xs font-bold text-foreground uppercase tracking-wide"
+                            >
+                                Street (Optional)
+                            </label>
+                            <Input
+                                id="street"
+                                {...register("location.street", {
+                                    maxLength: {
+                                        value: 160,
+                                        message:
+                                            "Street cannot exceed 160 characters.",
+                                    },
+                                })}
+                                className="bg-section border-border-custom rounded mt-2"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label
+                                htmlFor="postalCode"
+                                className="text-xs font-bold text-foreground uppercase tracking-wide"
+                            >
+                                Postal Code (Optional)
+                            </label>
+                            <Input
+                                id="postalCode"
+                                {...register("location.postalCode", {
+                                    maxLength: {
+                                        value: 16,
+                                        message:
+                                            "Postal code cannot exceed 16 characters.",
+                                    },
+                                })}
+                                className="bg-section border-border-custom rounded mt-2"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor="description"
+                            className="text-xs font-bold text-foreground uppercase tracking-wide"
+                        >
+                            Detailed Description{" "}
+                            <span className="text-primary">*</span>
                         </label>
                         <Textarea
                             id="description"
                             rows={4}
-                            placeholder="Provide context about the problem, estimated size/damage, and how long it has been present..."
+                            placeholder="Provide context about the problem..."
                             {...register("description", {
-                                required: "Description is required",
-                                minLength: { value: 15, message: "Description must be at least 15 characters" },
+                                required:
+                                    "Description is required.",
+                                minLength: {
+                                    value: 15,
+                                    message:
+                                        "Description must be at least 15 characters.",
+                                },
+                                maxLength: {
+                                    value: 5000,
+                                    message:
+                                        "Description cannot exceed 5000 characters.",
+                                },
                             })}
-                            className="bg-section rounded border-border-custom focus-visible:ring-2 focus-visible:ring-primary/50 resize-none mt-2 h-27"
+                            className="bg-section rounded border-border-custom resize-none mt-2 h-27"
                         />
                         {errors.description && (
-                            <p className="text-xs text-destructive mt-1">{errors.description.message}</p>
+                            <p className="text-xs text-destructive mt-1">
+                                {errors.description.message}
+                            </p>
                         )}
                     </div>
 
                     <div className="space-y-2">
-                        {isVideoMode ? (
-                            <>
-                                <label className="text-xs font-bold text-foreground uppercase tracking-wide flex items-center gap-2">
-                                    <Video className="w-4 h-4 text-primary" />
-                                    <span>Attach Video Evidence (Up to 2 Clips)</span>
-                                </label>
+                        <label className="text-xs font-bold text-foreground uppercase tracking-wide flex items-center gap-2">
+                            {isVideoMode ? (
+                                <Video className="w-4 h-4 text-primary" />
+                            ) : (
+                                <UploadCloud className="w-4 h-4 text-primary" />
+                            )}
+                            <span>
+                                {isVideoMode
+                                    ? `Attach Video Evidence (Up to ${MAX_VIDEO_FILES} Clips)`
+                                    : `Attach Photos (Up to ${MAX_IMAGE_FILES})`}
+                            </span>
+                        </label>
 
-                                <div className="border-2 border-dashed border-border-custom rounded-xl p-6 text-center hover:border-primary/50 transition-colors bg-section/50 mt-2">
-                                    <input
-                                        type="file"
-                                        id="video-upload"
-                                        multiple
-                                        accept="video/*"
-                                        onChange={handleVideoChange}
-                                        className="hidden"
-                                    />
-                                    <label htmlFor="video-upload" className="cursor-pointer space-y-2 block">
-                                        <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
-                                            <Film className="w-6 h-6" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-semibold text-foreground">
-                                                Click to upload video <span className="text-muted-foreground font-normal">or drag and drop</span>
-                                            </p>
-                                            <p className="text-xs text-muted-foreground mt-1">MP4, WEBM, MOV up to 50MB each</p>
-                                        </div>
-                                    </label>
+                        <div className="border-2 border-dashed border-border-custom rounded-xl p-6 text-center bg-section/50 mt-2">
+                            <input
+                                type="file"
+                                id="media-upload"
+                                multiple
+                                accept={uploads.accept}
+                                onChange={handleFileChange}
+                                className="hidden"
+                            />
+                            <label
+                                htmlFor="media-upload"
+                                className="cursor-pointer space-y-2 block"
+                            >
+                                <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
+                                    {isVideoMode ? (
+                                        <Film className="w-6 h-6" />
+                                    ) : (
+                                        <UploadCloud className="w-6 h-6" />
+                                    )}
                                 </div>
+                                <p className="text-sm font-semibold">
+                                    Click to upload or drag and drop
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    Maximum {maxMediaFiles} files allowed
+                                </p>
+                            </label>
+                        </div>
 
-                                {videoPreviews.length > 0 && (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                                        {videoPreviews.map((src, index) => (
-                                            <div key={index} className="relative w-full h-60 rounded-lg overflow-hidden border border-border-custom group">
-                                                {/* <video src={src} className="w-full h-full object-cover" controls /> */}
-                                                <video
-                                                    src={src}
-                                                    controls
-                                                    playsInline
-                                                    preload="auto"
-                                                    className="w-full h-full object-contain"
-                                                    onError={(e) => {
-                                                        console.log("Video error:", e.currentTarget.error);
-                                                    }}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeVideo(index)}
-                                                    className="absolute top-1 right-1 p-1 bg-black/70 hover:bg-destructive text-white rounded-full transition-colors cursor-pointer z-10"
-                                                >
-                                                    <X className="w-3.5 h-3.5" />
-                                                </button>
+                        {uploads.batchError && (
+                            <p className="text-xs text-destructive">
+                                {uploads.batchError}
+                            </p>
+                        )}
+
+                        {uploads.slots.length > 0 && (
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                                {uploads.slots.map((slot) => (
+                                    <div
+                                        key={slot.id}
+                                        className="relative w-full h-32 rounded-lg overflow-hidden border border-border-custom bg-muted"
+                                    >
+                                        {slot.previewUrl ? (
+                                            <Image
+                                                src={slot.previewUrl}
+                                                alt={slot.name}
+                                                fill
+                                                unoptimized
+                                                className="object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground p-2 text-center">
+                                                {slot.name}
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </>
-                        ) : (
-                            <>
-                                <label className="text-xs font-bold text-foreground uppercase tracking-wide">
-                                    Attach Photos (Up to 5)
-                                </label>
+                                        )}
 
-                                <div className="border-2 border-dashed border-border-custom rounded-xl p-6 text-center hover:border-primary/50 transition-colors bg-section/50 mt-2">
-                                    <input
-                                        type="file"
-                                        id="image-upload"
-                                        multiple
-                                        accept="image/*"
-                                        onChange={handleImageChange}
-                                        className="hidden"
-                                    />
-                                    <label htmlFor="image-upload" className="cursor-pointer space-y-2 block">
-                                        <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
-                                            <UploadCloud className="w-6 h-6" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-semibold text-foreground">
-                                                Click to upload <span className="text-muted-foreground font-normal">or drag and drop</span>
-                                            </p>
-                                            <p className="text-xs text-muted-foreground mt-1">PNG, JPG, WEBP up to 5MB each</p>
-                                        </div>
-                                    </label>
-                                </div>
-
-                                {imagePreviews.length > 0 && (
-                                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2">
-                                        {imagePreviews.map((src, index) => (
-                                            <div key={index} className="relative w-full h-40 rounded-lg overflow-hidden border border-border-custom group">
-                                                <Image
-                                                    src={src}
-                                                    alt={`Preview ${index + 1}`}
-                                                    fill
-                                                    className="object-cover"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeImage(index)}
-                                                    className="absolute top-1 right-1 p-1 bg-black/70 hover:bg-destructive text-white rounded-full transition-colors cursor-pointer"
-                                                >
-                                                    <X className="w-3.5 h-3.5" />
-                                                </button>
+                                        {slot.status === "uploading" && (
+                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-xs font-bold">
+                                                {slot.progress}%
                                             </div>
-                                        ))}
+                                        )}
+
+                                        {slot.status === "error" && (
+                                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-xs text-center p-2">
+                                                Upload failed
+                                            </div>
+                                        )}
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                uploads.remove(slot.id)
+                                            }
+                                            disabled={isBusy}
+                                            aria-label={`Remove ${slot.name}`}
+                                            className="absolute top-1 right-1 p-1 bg-black/70 hover:bg-destructive text-white rounded-full transition-colors disabled:opacity-50"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
                                     </div>
-                                )}
-                            </>
+                                ))}
+                            </div>
                         )}
                     </div>
 
-                    <div className="border-t border-border-custom pt-6 space-y-5">
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                            <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-                                <FileText className="w-4 h-4 text-primary" />
-                                <span>Reporter Details</span>
-                            </h3>
-
-                            <div className="flex items-center space-x-2">
-                                <Checkbox
-                                    id="isAnonymous"
-                                    checked={isAnonymous}
-                                    onCheckedChange={(checked) => setValue("isAnonymous", !!checked)}
-                                />
-                                <label
-                                    htmlFor="isAnonymous"
-                                    className="text-xs text-muted-foreground cursor-pointer font-medium select-none"
-                                >
-                                    Submit Anonymously
-                                </label>
-                            </div>
+                    <div className="border-t border-border-custom pt-6 flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                            <Checkbox
+                                id="isAnonymous"
+                                checked={isAnonymous}
+                                onCheckedChange={(checked) =>
+                                    setValue("isAnonymous", !!checked)
+                                }
+                            />
+                            <label
+                                htmlFor="isAnonymous"
+                                className="text-xs text-muted-foreground cursor-pointer font-medium"
+                            >
+                                Submit Anonymously
+                            </label>
                         </div>
-
-                        {!isAnonymous && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 animate-in fade-in duration-200">
-                                <div className="space-y-1.5">
-                                    <label htmlFor="reporterName" className="text-xs font-bold text-foreground uppercase tracking-wide">
-                                        Your Full Name
-                                    </label>
-                                    <Input
-                                        id="reporterName"
-                                        type="text"
-                                        placeholder="Enter your name"
-                                        {...register("reporterName")}
-                                        className="bg-section rounded border-border-custom focus-visible:ring-2 focus-visible:ring-primary/50 mt-2"
-                                    />
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <label htmlFor="reporterEmail" className="text-xs font-bold text-foreground uppercase tracking-wide">
-                                        Email (For Resolution Updates) <span className="text-primary">*</span>
-                                    </label>
-                                    <Input
-                                        id="reporterEmail"
-                                        type="email"
-                                        placeholder="example@gmail.com"
-                                        {...register("reporterEmail", {
-                                            required: !isAnonymous ? "Email is required for status notifications" : false,
-                                            pattern: {
-                                                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                                                message: "Invalid email address",
-                                            },
-                                        })}
-                                        className="bg-section rounded border-border-custom focus-visible:ring-2 focus-visible:ring-primary/50 mt-2"
-                                    />
-                                    {errors.reporterEmail && (
-                                        <p className="text-xs text-destructive mt-1">{errors.reporterEmail.message}</p>
-                                    )}
-                                </div>
-                            </div>
-                        )}
                     </div>
 
                     <Button
                         type="submit"
-                        disabled={isSubmitting}
-                        className="w-full sm:w-auto px-8 py-6 bg-primary hover:bg-primary-hover text-white font-semibold text-sm rounded-md flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-md disabled:opacity-70 "
+                        disabled={isBusy}
+                        className="w-full sm:w-auto px-8 py-6 bg-primary text-white font-semibold text-sm rounded-md flex items-center justify-center gap-2"
                     >
-                        {isSubmitting ? (
+                        {isBusy ? (
                             <>
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                <span>Submitting Report...</span>
+                                <span>
+                                    {uploads.isUploading
+                                        ? `Uploading (${uploads.progress}%)...`
+                                        : "Submitting Report..."}
+                                </span>
                             </>
                         ) : (
                             <>

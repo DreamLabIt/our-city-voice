@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { getAccessToken } from "@/lib/session";
 import type { ReportIssueFormData, CreateIssueResult } from "@/types/issues";
 
 const VALID_PRIORITIES = [
@@ -13,11 +13,17 @@ const VALID_PRIORITIES = [
 
 export async function createReportIssue(
     formData: ReportIssueFormData,
-    authToken?: string
 ): Promise<CreateIssueResult> {
+
+    const authToken = await getAccessToken();
     if (!authToken?.trim()) {
-        redirect("/login?callbackUrl=/report-issue");
+        return {
+            success: false,
+            error: "You must be logged in to report an issue.",
+            requiresAuth: true,
+        };
     }
+
     try {
         const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
         if (!API_BASE_URL) {
@@ -226,7 +232,7 @@ export async function createReportIssue(
         }
 
         revalidatePath("/");
-        revalidatePath("/issues");
+        revalidatePath("/reports");
 
         return {
             success: true,

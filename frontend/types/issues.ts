@@ -31,4 +31,5 @@ export interface CreateIssueResult {
     data?: any;
     error?: string;
     fieldErrors?: Record<string, string[] | string>;
+    requiresAuth?: boolean
 }
