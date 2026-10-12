@@ -1,26 +1,19 @@
-
 "use client";
 
 import { useState, type ChangeEvent } from "react";
 import { Controller, useForm, type SubmitHandler } from "react-hook-form";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import Image from "next/image";
 import {
     MapPin,
     UploadCloud,
-    X,
     Send,
     Loader2,
     Video,
     Film,
 } from "lucide-react";
-
 import { createReportIssue } from "@/app/actions/issues";
-
-import type { ReportIssueFormData, UploadedMediaItem } from "@/types/issues";
-
-
+import type { ReportIssueFormData, UploadedMediaItem, ReportFormProps, FormValues } from "@/types/issues";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,30 +27,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { useUploads } from "@/hooks/use-uploads";
-
-interface ReportFormProps {
-    reportFilters: {
-        categories: Array<{ name: string; value: string }>;
-        wards: Array<{ name: string; code?: string; value?: string }>;
-    };
-}
-
-interface FormValues {
-    title: string;
-    description: string;
-    category: string;
-    ward: string;
-    priority: "low" | "medium" | "high" | "critical";
-    isAnonymous: boolean;
-    location: {
-        address: string;
-        city: string;
-        street: string;
-        postalCode: string;
-        latitude: number | null;
-        longitude: number | null;
-    };
-}
+import { MediaSlot } from "./MediaSlot";
 
 const MAX_IMAGE_FILES = 5;
 const MAX_VIDEO_FILES = 2;
@@ -97,7 +67,7 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
             isAnonymous: false,
             location: {
                 address: "",
-                city: "Jamalpur",
+                city: "",
                 street: "",
                 postalCode: "",
                 latitude: null,
@@ -131,6 +101,7 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
                 return;
             }
 
+
             const uploadedMediaItems: UploadedMediaItem[] =
                 uploadedFiles.map((file) => ({
                     url: file.url,
@@ -138,7 +109,7 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
                     sizeBytes: file.bytes,
                     durationSecs:
                         file.resourceType === "video"
-                            ? file.durationSeconds
+                            ? Math.round(file.durationSeconds ?? 0)
                             : null,
                     thumbnailUrl: null,
                 }));
@@ -161,14 +132,14 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
                 },
                 media: uploadedMediaItems,
             };
-
+            console.log(uploadedFiles, 'd======', payload)
 
             const result = await createReportIssue(payload);
 
             if (!result.success) {
                 if (result.requiresAuth) {
                     toast.error("Please log in to submit a report.");
-                    router.push("/login?callbackUrl=/report-issue");
+                    router.push("/login?next=/report-issue");
                     return;
                 }
 
@@ -603,48 +574,12 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
                         {uploads.slots.length > 0 && (
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
                                 {uploads.slots.map((slot) => (
-                                    <div
+                                    <MediaSlot
                                         key={slot.id}
-                                        className="relative w-full h-32 rounded-lg overflow-hidden border border-border-custom bg-muted"
-                                    >
-                                        {slot.previewUrl ? (
-                                            <Image
-                                                src={slot.previewUrl}
-                                                alt={slot.name}
-                                                fill
-                                                unoptimized
-                                                className="object-cover"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground p-2 text-center">
-                                                {slot.name}
-                                            </div>
-                                        )}
-
-                                        {slot.status === "uploading" && (
-                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-xs font-bold">
-                                                {slot.progress}%
-                                            </div>
-                                        )}
-
-                                        {slot.status === "error" && (
-                                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-xs text-center p-2">
-                                                Upload failed
-                                            </div>
-                                        )}
-
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                uploads.remove(slot.id)
-                                            }
-                                            disabled={isBusy}
-                                            aria-label={`Remove ${slot.name}`}
-                                            className="absolute top-1 right-1 p-1 bg-black/70 hover:bg-destructive text-white rounded-full transition-colors disabled:opacity-50"
-                                        >
-                                            <X className="w-3.5 h-3.5" />
-                                        </button>
-                                    </div>
+                                        slot={slot}
+                                        isBusy={isBusy}
+                                        onRemove={uploads.remove}
+                                    />
                                 ))}
                             </div>
                         )}

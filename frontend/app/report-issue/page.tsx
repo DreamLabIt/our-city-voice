@@ -1,10 +1,10 @@
 import PageHeader from "@/components/common/PageHeader";
 import { Loader2 } from "lucide-react";
-import ReportForm from "@/components/report-issu/ReportForm";
-import PlatformInsightsCard from "@/components/report-issu/PlatformInsightsCard";
-import MostReportedIssuesCard from "@/components/report-issu/MostReportedIssuesCard";
-import HowIssuesAreSolvedFaqCard from "@/components/report-issu/HowIssuesAreSolvedFaqCard";
-import QuickReminderCard from "@/components/report-issu/QuickReminderCard";
+import ReportForm from "@/components/report-issue/ReportForm";
+import PlatformInsightsCard from "@/components/report-issue/PlatformInsightsCard";
+import MostReportedIssuesCard from "@/components/report-issue/MostReportedIssuesCard";
+import HowIssuesAreSolvedFaqCard from "@/components/report-issue/HowIssuesAreSolvedFaqCard";
+import QuickReminderCard from "@/components/report-issue/QuickReminderCard";
 import SectionContainer from "@/components/common/SectionContainer";
 import { getReportFilters, getReports } from "../actions/report";
 import type { Report } from "@/types/report";

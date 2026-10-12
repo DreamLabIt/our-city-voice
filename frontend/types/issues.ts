@@ -33,3 +33,27 @@ export interface CreateIssueResult {
     fieldErrors?: Record<string, string[] | string>;
     requiresAuth?: boolean
 }
+
+export interface ReportFormProps {
+    reportFilters: {
+        categories: Array<{ name: string; value: string }>;
+        wards: Array<{ name: string; code?: string; value?: string }>;
+    };
+}
+
+export interface FormValues {
+    title: string;
+    description: string;
+    category: string;
+    ward: string;
+    priority: "low" | "medium" | "high" | "critical";
+    isAnonymous: boolean;
+    location: {
+        address: string;
+        city: string;
+        street: string;
+        postalCode: string;
+        latitude: number | null;
+        longitude: number | null;
+    };
+}

@@ -56,6 +56,7 @@ export const UPLOAD_RULES: Record<UploadKind, KindRules> = {
       "video/mp4",
       "video/webm",
       "video/quicktime",
+      "video/mkv",
     ],
     requiresSession: true,
   },

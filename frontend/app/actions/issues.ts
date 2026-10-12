@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { apiFetch } from "@/lib/api";
+import { clientForwardHeaders } from "@/lib/client-headers";
 import { getAccessToken } from "@/lib/session";
 import type { ReportIssueFormData, CreateIssueResult } from "@/types/issues";
 
@@ -11,10 +13,25 @@ const VALID_PRIORITIES = [
     "critical",
 ] as const;
 
+const MIME_BY_EXT: Record<string, string> = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+    gif: "image/gif",
+    mp4: "video/mp4",
+    mov: "video/quicktime",
+    webm: "video/webm",
+};
+
+function guessMimeType(url: string, type: string): string {
+    const ext = url.split("?")[0].split(".").pop()?.toLowerCase() ?? "";
+    return MIME_BY_EXT[ext] ?? (type === "image" ? "image/jpeg" : "video/mp4");
+}
+
 export async function createReportIssue(
     formData: ReportIssueFormData,
 ): Promise<CreateIssueResult> {
-
     const authToken = await getAccessToken();
     if (!authToken?.trim()) {
         return {
@@ -25,14 +42,6 @@ export async function createReportIssue(
     }
 
     try {
-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
-        if (!API_BASE_URL) {
-            return {
-                success: false,
-                error: "API URL is not configured.",
-            };
-        }
-
         const title = formData.title?.trim() || "";
         const description = formData.description?.trim() || "";
         const categorySlug = formData.category?.trim() || "";
@@ -139,13 +148,11 @@ export async function createReportIssue(
                 url,
                 type: item.type,
                 thumbnailUrl: item.thumbnailUrl || null,
-                mimeType:
-                    item.mimeType ||
-                    (item.type === "image" ? "image/jpeg" : "video/mp4"),
+                mimeType: item.mimeType || guessMimeType(url, item.type),
                 sizeBytes: item.sizeBytes ?? 0,
                 durationSecs:
-                    item.type === "video"
-                        ? (item.durationSecs ?? null)
+                    item.type === "video" && item.durationSecs != null
+                        ? Math.round(item.durationSecs)
                         : null,
             };
         });
@@ -182,49 +189,32 @@ export async function createReportIssue(
                 : {}),
         };
 
-        const response = await fetch(`${API_BASE_URL}/posts`, {
+        console.log("Payload Data", payload)
+
+        const result = await apiFetch<{ post?: unknown }>("/posts", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${authToken.trim()}`,
-            },
-            body: JSON.stringify(payload),
-            cache: "no-store",
+            token: authToken.trim(),
+            forward: await clientForwardHeaders(),
+            body: payload,
         });
 
-        let result: {
-            post?: unknown;
-            message?: string;
-            details?: Record<string, string[] | string>;
-        };
-
-        try {
-            result = await response.json();
-        } catch {
-            return {
-                success: false,
-                error: `The server returned an invalid response (HTTP ${response.status}).`,
-            };
-        }
-
-        if (!response.ok) {
-            const fallbackMessages: Record<number, string> = {
-                400: "Invalid report details. Please check the form.",
-                401: "Your session is invalid or expired. Please log in again.",
-                503: "The report service is temporarily unavailable. Please try again.",
-            };
+        if (!result.ok) {
+            if (result.error.status === 401) {
+                return {
+                    success: false,
+                    error: "Your session is invalid or expired. Please log in again.",
+                    requiresAuth: true,
+                };
+            }
 
             return {
                 success: false,
-                error:
-                    result.message ||
-                    fallbackMessages[response.status] ||
-                    "Failed to submit report.",
-                fieldErrors: result.details || {},
+                error: result.error.message || "Failed to submit report.",
+                fieldErrors: result.error.details ?? {},
             };
         }
 
-        if (!result.post) {
+        if (!result.data.post) {
             return {
                 success: false,
                 error: "The report was submitted, but the server response did not contain the created report.",
@@ -236,7 +226,7 @@ export async function createReportIssue(
 
         return {
             success: true,
-            data: result.post,
+            data: result.data.post,
         };
     } catch (err: unknown) {
         console.error("Error in createReportIssue server action:", err);
