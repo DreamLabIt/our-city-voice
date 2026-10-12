@@ -17,6 +17,8 @@ is why it behaves the way it does.
 | [`POST /posts`](endpoints/create-report.md) | required | file a new report |
 | [`GET /posts/filters`](endpoints/report-filter-options.md) | none | option lists for the filter dropdowns |
 | [`GET /posts/:code`](endpoints/get-report.md) | optional | one report, with timeline and related |
+| [`PATCH /posts/:code`](endpoints/update-report.md) | required | edit a report you filed (or any, as a super admin) |
+| [`DELETE /posts/:code`](endpoints/delete-report.md) | required | soft-delete a report you filed (or any, as a super admin) |
 | [`GET /posts/:code/comments`](endpoints/list-report-comments.md) | optional | a page of comment threads |
 
 "Auth optional" means the endpoint answers a signed-out request and gives a
@@ -45,4 +47,5 @@ code is written to disk.
 
 [not-implemented.md](not-implemented.md) lists what deliberately does not exist
 yet, so nothing here is mistaken for an oversight. The short version: **every read
-the current pages need exists, and no write does.**
+the current pages need exists, plus the writes that own a report — filing one,
+editing it and soft-deleting it. Everything else is still a read.**

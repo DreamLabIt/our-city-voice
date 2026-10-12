@@ -95,10 +95,34 @@ const items = post.media;
 none, and neither does the author's own entry on an anonymous report. The rest of
 the mapping is in [reports-page.md](reports-page.md#how-each-mock-field-maps).
 
-## The buttons do not work yet
+## Edit and delete
 
-Like, reply and comment are still reads away from being writes — only
-[`POST /posts`](../endpoints/create-report.md) accepts a `POST` today, and these
-controls are not it. So they can only update local state, which is what
-`IssueDetails.tsx` already does. See
+The report's own controls now have endpoints behind them. Show "Edit" and "Delete"
+only to the author, or to a super admin — the API enforces the same rule, but hiding
+the buttons saves a round trip. The author is `post.author` for a named report and
+`null` for an anonymous one, so for an anonymous report compare against the
+signed-in account from `GET /me` — the **author still owns an anonymous report** and
+may edit or delete it even though `author` reads `null`.
+
+- **Edit** — `PATCH /posts/:code` with only the changed fields, then replace local
+  state from the returned `post`. See
+  [`update-report.md`](../endpoints/update-report.md). An edit does not change the
+  status, so the timeline does not move.
+- **Delete** — `DELETE /posts/:code` returns `204` with no body; navigate away (to
+  `/reports`, or back) rather than re-rendering. It is a soft delete, so a `404`
+  afterwards is the expected "gone" answer. See
+  [`delete-report.md`](../endpoints/delete-report.md).
+
+`status`, `assignedOfficerId` and `departmentId` are not editable here — status is
+the officer workflow, routing follows the category. An edit form built from the
+create form should drop those fields from its body.
+
+## The rest of the buttons do not work yet
+
+Like, reply and comment are still reads away from being writes: only
+[`POST /posts`](../endpoints/create-report.md),
+[`PATCH /posts/:code`](../endpoints/update-report.md) and
+[`DELETE /posts/:code`](../endpoints/delete-report.md) exist today, and none of
+them is a like, a reply or a comment. So those controls can only update local state,
+which is what `IssueDetails.tsx` already does. See
 [not-implemented.md](../not-implemented.md).

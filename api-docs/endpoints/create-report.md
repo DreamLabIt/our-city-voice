@@ -149,3 +149,5 @@ post is the select's payload.
 - [`GET /posts/filters`](report-filter-options.md) — where the `category` and `ward` values come from
 - [`GET /posts`](list-reports.md) — `mine=true` shows what a person has filed
 - [`GET /posts/:code`](get-report.md) — the created report, once it is listed
+- [`PATCH /posts/:code`](update-report.md) — edit it afterwards
+- [`DELETE /posts/:code`](delete-report.md) — remove it
