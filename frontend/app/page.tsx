@@ -11,7 +11,7 @@ export const revalidate = 60;
 
 export default async function Home() {
     const [recentPostsRes, filtersRes, recentActivitiesRes, allPostsRes] = await Promise.all([
-        getReports({ page: 1, limit: 0 }).catch(() => ({ posts: [] })),
+        getReports({ page: 1, limit: 50 }).catch(() => ({ posts: [] })),
         getReportFilters().catch(() => ({
             categories: [],
             wards: [],
