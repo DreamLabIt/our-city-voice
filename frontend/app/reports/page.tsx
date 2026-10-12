@@ -1,3 +1,4 @@
+
 import Link from "next/link";
 import PageHeader from "@/components/common/PageHeader";
 import SectionContainer from "@/components/common/SectionContainer";
@@ -16,11 +17,16 @@ import {
     PaginationEllipsis,
 } from "@/components/ui/pagination";
 
+import {
+    posts as mockPosts,
+    categories as mockCategories,
+} from "@/data/mock-data";
+
 import type {
     GetReportsParams,
     Report,
     ReportFiltersResponse,
-    PageProps
+    PageProps,
 } from "@/types/report";
 
 function getValidPage(value?: string): number {
@@ -69,7 +75,7 @@ export default async function ReportsPage({
         getReports(queryParams).catch(() => ({
             posts: [],
             total: 0,
-            page: 1,
+            page: currentPage,
             limit,
             pageCount: 0,
         })),
@@ -83,39 +89,77 @@ export default async function ReportsPage({
         ),
     ]);
 
-    const reports: Report[] = reportsData.posts || [];
-    const totalReports = reportsData.total || 0;
+    const fetchedReports: Report[] = reportsData.posts || [];
+    const hasFetchedReports = fetchedReports.length > 0;
 
-    const totalPages =
-        reportsData.pageCount ||
+    const reportsSource: Report[] = hasFetchedReports
+        ? fetchedReports
+        : mockPosts;
+
+    const reports: Report[] = hasFetchedReports
+        ? reportsSource
+        : mockPosts.slice(
+            (currentPage - 1) * limit,
+            currentPage * limit
+        );
+
+    const totalReports = hasFetchedReports
+        ? reportsData.total || fetchedReports.length
+        : mockPosts.length;
+
+    const totalPages = hasFetchedReports
+        ? reportsData.pageCount ||
         Math.ceil(totalReports / limit) ||
-        1;
+        1
+        : Math.ceil(mockPosts.length / limit) || 1;
+
+    const categoriesList =
+        filtersData.categories.length > 0
+            ? filtersData.categories
+            : mockCategories.map((category) => ({
+                name: category.label,
+                value: category.id,
+            }));
 
     const categories = [
         {
             slug: "All",
             name: "All Categories",
         },
-        ...(filtersData.categories?.map((category) => ({
-            slug: category.value,
+        ...categoriesList.map((category) => ({
+            slug:
+                category.value ||
+                category.name.toLowerCase().replace(/\s+/g, "-"),
             name: category.name,
-        })) || []),
+        })),
     ];
 
-    const statuses = [
-        "All",
-        ...(filtersData.statuses?.map((status) => status.value) || []),
-    ];
+    const statusesList =
+        filtersData.statuses.length > 0
+            ? filtersData.statuses.map((status) => status.value)
+            : ["pending", "in_progress", "resolved"];
+
+    const statuses = ["All", ...statusesList];
+
+    const wardsList =
+        filtersData.wards.length > 0
+            ? filtersData.wards.map((ward) => ({
+                code: ward.value || "",
+                name: ward.name,
+            }))
+            : [
+                { code: "ward-1", name: "Ward 1" },
+                { code: "ward-2", name: "Ward 2" },
+                { code: "ward-3", name: "Ward 3" },
+                { code: "ward-4", name: "Ward 4" },
+            ];
 
     const wards = [
         {
             code: "All",
             name: "All Wards",
         },
-        ...(filtersData.wards?.map((ward) => ({
-            code: ward.value,
-            name: ward.name,
-        })) || []),
+        ...wardsList,
     ];
 
     const hasActiveFilters =
@@ -266,8 +310,7 @@ export default async function ReportsPage({
                                                     <PaginationItem
                                                         key={`${page}-${index}`}
                                                     >
-                                                        {page ===
-                                                            "ellipsis" ? (
+                                                        {page === "ellipsis" ? (
                                                             <PaginationEllipsis />
                                                         ) : (
                                                             <PaginationLink
@@ -320,7 +363,7 @@ export default async function ReportsPage({
                             </h3>
 
                             <p className="mx-auto max-w-md text-xs text-muted-foreground">
-                                We couldn't find any reports matching
+                                We couldn&apos;t find any reports matching
                                 your search query or selected filters.
                                 Try clearing your filters.
                             </p>
