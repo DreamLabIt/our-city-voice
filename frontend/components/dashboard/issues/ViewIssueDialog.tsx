@@ -321,9 +321,12 @@ export default function ViewIssueDialog({
                         Close
                     </Button>
                     <Button >
-                        <Link href={`/issues/${issue.trackingCode}`} className="flex gap-1 p-4">
-                            <ExternalLink className="h-4 w-4" />
-                            Open full page
+                        <Link
+                            href={`/issues/${issue.trackingCode}`}
+                            className="flex gap-2 p-2"
+                        >
+                            <span>View Full Details</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
                         </Link>
                     </Button>
                 </DialogFooter>
