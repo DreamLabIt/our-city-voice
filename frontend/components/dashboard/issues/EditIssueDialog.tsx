@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition, type ChangeEvent } from "react";
+import { useRef, useState, useTransition, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Film, Loader2, UploadCloud, X } from "lucide-react";
+import { CheckCircle2, Film, Loader2, UploadCloud, X } from "lucide-react";
 import { toast } from "sonner";
 import { updateReport } from "@/app/actions/issues";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,82 @@ import type { Report, ReportMedia } from "@/types/report";
 import { MediaSlot } from "@/components/report-issue/MediaSlot";
 
 const MAX_MEDIA = 6;
+
+const NOMINATIM_EMAIL = process.env.NEXT_PUBLIC_NOMINATIM_EMAIL;
+
+const ADDRESS_NOT_FOUND_MESSAGE = "We couldn't find this address. Please enter a clearer address.";
+const GEOCODER_UNREACHABLE_MESSAGE = "Could not reach the map service. Please check your connection and try again.";
+
+type Coordinates = { latitude: number; longitude: number };
+
+const sleep = (ms: number) =>
+    new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+const geocodeQuery = async (query: string): Promise<Coordinates | null> => {
+    const params = new URLSearchParams({
+        format: "json",
+        q: query,
+        limit: "1",
+        countrycodes: "bd",
+        "accept-language": "en",
+    });
+
+    if (NOMINATIM_EMAIL) {
+        params.set("email", NOMINATIM_EMAIL);
+    }
+
+    const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+    );
+
+    if (!res.ok) {
+        throw new Error(`Nominatim responded with ${res.status}`);
+    }
+
+    const data: unknown = await res.json();
+
+    if (Array.isArray(data) && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
+
+        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+            return { latitude: lat, longitude: lon };
+        }
+    }
+
+    return null;
+};
+
+const geocodeAddress = async (parts: {
+    address: string;
+    city: string;
+    street?: string;
+    postalCode?: string;
+    wardName?: string;
+}): Promise<Coordinates | null> => {
+    const { address, city, street, postalCode, wardName } = parts;
+
+    const attempts = [
+        [street, address, wardName, city, postalCode, "Bangladesh"],
+        [street, address, city, "Bangladesh"],
+        [address, city, "Bangladesh"],
+    ]
+        .map((list) => list.filter(Boolean).join(", "))
+        .filter(Boolean);
+
+    const uniqueAttempts = [...new Set(attempts)];
+
+    for (let i = 0; i < uniqueAttempts.length; i++) {
+        const result = await geocodeQuery(uniqueAttempts[i]);
+        if (result) return result;
+
+        if (i < uniqueAttempts.length - 1) {
+            await sleep(1100);
+        }
+    }
+
+    return null;
+};
 
 interface EditIssueDialogProps {
     issue: Report;
@@ -218,17 +294,27 @@ export default function EditIssueDialog({
         issue.media ?? [],
     );
 
+    const [coords, setCoords] = useState<Coordinates | null>(null);
+    const [isGeocoding, setIsGeocoding] = useState(false);
+    const [geocodeError, setGeocodeError] = useState<string | undefined>(
+        undefined,
+    );
+    const geocodeRequestRef = useRef(0);
+    const pendingGeocodeRef = useRef<Promise<Coordinates | null> | null>(null);
+
     const uploads = useUploads({
         kind: "report-media",
         multiple: true,
         maxFiles: MAX_MEDIA,
     });
 
-    const isBusy = isPending || uploads.isUploading;
+    const isBusy = isPending || uploads.isUploading || isGeocoding;
 
     const diff = buildDiff(original, form);
     const errors = validate(form);
-    const isValid = Object.keys(errors).length === 0;
+    const isValid = Object.keys(errors).length === 0 && !geocodeError;
+
+    const locationChanged = Boolean(diff.location);
 
     const mediaChanged =
         keptMedia.length !== (issue.media?.length ?? 0) ||
@@ -242,6 +328,96 @@ export default function EditIssueDialog({
         value: EditState[K],
     ): void => {
         setForm((prev) => ({ ...prev, [key]: value }));
+    };
+
+    const getWardName = (wardValue: string): string => {
+        const found = wards.find((w) => w.value === wardValue);
+        return found?.name ?? "";
+    };
+
+    const invalidateCoordinates = (): void => {
+        geocodeRequestRef.current += 1;
+        setIsGeocoding(false);
+        setCoords(null);
+        setGeocodeError(undefined);
+    };
+
+    const setLocationField = <K extends keyof EditState>(
+        key: K,
+        value: EditState[K],
+    ): void => {
+        setField(key, value);
+        invalidateCoordinates();
+    };
+
+    const resolveCoordinates = async (
+        values: EditState,
+    ): Promise<Coordinates | null> => {
+        const address = values.address.trim();
+        const city = values.city.trim();
+
+        if (!address || !city) return null;
+
+        const requestId = ++geocodeRequestRef.current;
+        setIsGeocoding(true);
+
+        try {
+            const result = await geocodeAddress({
+                address,
+                city,
+                street: values.street.trim() || undefined,
+                postalCode: values.postalCode.trim() || undefined,
+                wardName: getWardName(values.ward) || undefined,
+            });
+
+            if (requestId !== geocodeRequestRef.current) return null;
+
+            if (!result) {
+                setCoords(null);
+                setGeocodeError(ADDRESS_NOT_FOUND_MESSAGE);
+                return null;
+            }
+
+            setCoords(result);
+            setGeocodeError(undefined);
+            return result;
+        } catch (err) {
+            console.error("Geocoding error:", err);
+
+            if (requestId === geocodeRequestRef.current) {
+                setCoords(null);
+                setGeocodeError(GEOCODER_UNREACHABLE_MESSAGE);
+            }
+            return null;
+        } finally {
+            if (requestId === geocodeRequestRef.current) {
+                setIsGeocoding(false);
+            }
+        }
+    };
+
+    const runAddressLookup = (
+        values: EditState,
+    ): Promise<Coordinates | null> => {
+        const promise = resolveCoordinates(values);
+        pendingGeocodeRef.current = promise;
+
+        void promise.finally(() => {
+            if (pendingGeocodeRef.current === promise) {
+                pendingGeocodeRef.current = null;
+            }
+        });
+
+        return promise;
+    };
+
+    const handleLocationBlur = (): void => {
+        if (!locationChanged) return;
+        if (coords) return;
+        if (pendingGeocodeRef.current) return;
+        if (!form.address.trim() || !form.city.trim()) return;
+
+        void runAddressLookup(form);
     };
 
     const handleFileChange = (event: ChangeEvent<HTMLInputElement>): void => {
@@ -263,6 +439,32 @@ export default function EditIssueDialog({
 
         startTransition(async () => {
             const payload: UpdateReportInput = { ...diff };
+
+            if (diff.location) {
+                const pendingResult = pendingGeocodeRef.current
+                    ? await pendingGeocodeRef.current
+                    : null;
+
+                let resolved = pendingResult ?? coords;
+
+                if (!resolved) {
+                    resolved = await runAddressLookup(form);
+                }
+
+                if (!resolved) {
+                    toast.error("Location not found", {
+                        description:
+                            "Please correct the address and try again.",
+                    });
+                    return;
+                }
+
+                payload.location = {
+                    ...diff.location,
+                    latitude: resolved.latitude,
+                    longitude: resolved.longitude,
+                };
+            }
 
             if (mediaChanged) {
                 const uploaded =
@@ -381,7 +583,10 @@ export default function EditIssueDialog({
                             <FieldLabel>Ward</FieldLabel>
                             <Select
                                 value={form.ward}
-                                onValueChange={(v) => setField("ward", v ?? "")}
+                                onValueChange={(v) => {
+                                    setField("ward", v ?? "");
+                                    if (locationChanged) invalidateCoordinates();
+                                }}
                             >
                                 <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Select ward" />
@@ -423,7 +628,10 @@ export default function EditIssueDialog({
                             <FieldLabel>City</FieldLabel>
                             <Input
                                 value={form.city}
-                                onChange={(e) => setField("city", e.target.value)}
+                                onChange={(e) =>
+                                    setLocationField("city", e.target.value)
+                                }
+                                onBlur={handleLocationBlur}
                             />
                             <FieldError message={errors.city} />
                         </div>
@@ -433,10 +641,31 @@ export default function EditIssueDialog({
                             <Input
                                 value={form.address}
                                 onChange={(e) =>
-                                    setField("address", e.target.value)
+                                    setLocationField("address", e.target.value)
                                 }
+                                onBlur={handleLocationBlur}
                             />
-                            <FieldError message={errors.address} />
+                            <FieldError
+                                message={errors.address ?? geocodeError}
+                            />
+
+                            {isGeocoding && (
+                                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                    <span>Checking address on map...</span>
+                                </p>
+                            )}
+
+                            {!isGeocoding &&
+                                !errors.address &&
+                                !geocodeError &&
+                                locationChanged &&
+                                coords && (
+                                    <p className="flex items-center gap-1.5 text-xs text-green-600">
+                                        <CheckCircle2 className="h-3 w-3" />
+                                        <span>Location found</span>
+                                    </p>
+                                )}
                         </div>
 
                         <div className="space-y-1.5">
@@ -444,8 +673,9 @@ export default function EditIssueDialog({
                             <Input
                                 value={form.street}
                                 onChange={(e) =>
-                                    setField("street", e.target.value)
+                                    setLocationField("street", e.target.value)
                                 }
+                                onBlur={handleLocationBlur}
                             />
                             <FieldError message={errors.street} />
                         </div>
@@ -455,8 +685,9 @@ export default function EditIssueDialog({
                             <Input
                                 value={form.postalCode}
                                 onChange={(e) =>
-                                    setField("postalCode", e.target.value)
+                                    setLocationField("postalCode", e.target.value)
                                 }
+                                onBlur={handleLocationBlur}
                             />
                             <FieldError message={errors.postalCode} />
                         </div>
@@ -568,7 +799,9 @@ export default function EditIssueDialog({
                         {isBusy && <Loader2 className="h-4 w-4 animate-spin" />}
                         {uploads.isUploading
                             ? `Uploading (${uploads.progress}%)...`
-                            : "Save changes"}
+                            : isGeocoding
+                                ? "Checking address..."
+                                : "Save changes"}
                     </Button>
                 </DialogFooter>
             </DialogContent>
