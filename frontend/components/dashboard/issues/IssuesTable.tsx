@@ -1,8 +1,5 @@
-import Link from "next/link";
-import { Eye, Pencil, Trash2 } from "lucide-react";
 import ReportFilters from "@/components/issues/reports/ReportFilters";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
     Pagination,
@@ -22,16 +19,9 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import type { Report } from "@/types/report";
+import type { IssuesFilters, IssuesEditOptions } from "@/types/issues";
+import IssueRowActions from "./IssueRowActions";
 
-interface IssuesFilters {
-    searchQuery: string;
-    selectedCategory: string;
-    selectedStatus: string;
-    selectedWard: string;
-    categories: Array<{ slug: string; name: string }>;
-    statuses: string[];
-    wards: Array<{ code: string; name: string }>;
-}
 
 interface IssuesTableProps {
     issues: Report[];
@@ -42,6 +32,7 @@ interface IssuesTableProps {
     basePath: string;
     baseQuery: string;
     filters: IssuesFilters;
+    editOptions: IssuesEditOptions;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -120,45 +111,6 @@ function PriorityBadge({ priority }: { priority: string }) {
     );
 }
 
-function RowActions({ issue }: { issue: Report }) {
-    return (
-        <div className="flex items-center justify-end gap-1">
-            <Button
-                variant="ghost"
-                size="icon"
-                className="text-primary hover:bg-primary/10"
-            >
-                <Link
-                    href={`/issues/${issue.trackingCode}`}
-                    aria-label={`View ${issue.title}`}
-                >
-                    <Eye className="h-4 w-4" />
-                </Link>
-            </Button>
-
-            <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={`Edit ${issue.title}`}
-                className="text-amber-600 hover:bg-amber-50"
-            >
-                <Pencil className="h-4 w-4" />
-            </Button>
-
-            <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={`Delete ${issue.title}`}
-                className="text-destructive hover:bg-destructive/10"
-            >
-                <Trash2 className="h-4 w-4" />
-            </Button>
-        </div>
-    );
-}
-
 export default function IssuesTable({
     issues,
     total,
@@ -168,6 +120,7 @@ export default function IssuesTable({
     basePath,
     baseQuery,
     filters,
+    editOptions,
 }: IssuesTableProps) {
     const pageUrl = (page: number): string => {
         const query = new URLSearchParams(baseQuery);
@@ -185,11 +138,10 @@ export default function IssuesTable({
                         {isAdmin ? "All Issues" : "My Issues"}
                     </h1>
                     <p className="text-md text-muted-foreground">
-                        Total <span className="text-primary px-1">{total}</span> {total === 1 ? "Issue" : "Issues"}
+                        Total <span className="text-primary px-1">{total}</span>{" "}
+                        {total === 1 ? "Issue" : "Issues"}
                     </p>
                 </div>
-
-
             </div>
 
             <ReportFilters
@@ -205,7 +157,7 @@ export default function IssuesTable({
             <div className="hidden rounded-xl border border-border bg-card md:block">
                 <Table>
                     <TableHeader>
-                        <TableRow className="border-b border-border ">
+                        <TableRow className="border-b border-border">
                             <TableHead className="pl-4">Code</TableHead>
                             <TableHead>Title</TableHead>
                             <TableHead>Category</TableHead>
@@ -214,7 +166,9 @@ export default function IssuesTable({
                             <TableHead>Status</TableHead>
                             {isAdmin && <TableHead>Reporter</TableHead>}
                             <TableHead>Date</TableHead>
-                            <TableHead className="text-right pr-5">Actions</TableHead>
+                            <TableHead className="pr-5 text-right">
+                                Actions
+                            </TableHead>
                         </TableRow>
                     </TableHeader>
 
@@ -223,7 +177,7 @@ export default function IssuesTable({
                             <TableRow>
                                 <TableCell
                                     colSpan={columnCount}
-                                    className="py-10 text-center text-muted-foreground "
+                                    className="py-10 text-center text-muted-foreground"
                                 >
                                     No issues found.
                                 </TableCell>
@@ -232,36 +186,42 @@ export default function IssuesTable({
                             issues.map((issue) => (
                                 <TableRow key={issue.id}>
                                     <TableCell
-                                        className="font-mono text-xs text-primary border-t border-border pl-4"
+                                        className="border-t border-border pl-4 font-mono text-xs text-primary"
                                         title={issue.trackingCode}
                                     >
                                         {shortCode(issue.trackingCode)}
                                     </TableCell>
-                                    <TableCell className="max-w-60 truncate font-medium border-t border-border ">
+                                    <TableCell className="max-w-60 truncate border-t border-border font-medium">
                                         {issue.title}
                                     </TableCell>
-                                    <TableCell className="border-t border-border ">{issue.category?.name ?? "-"}</TableCell>
-                                    <TableCell className="max-w-40 truncate border-t border-border ">
+                                    <TableCell className="border-t border-border">
+                                        {issue.category?.name ?? "-"}
+                                    </TableCell>
+                                    <TableCell className="max-w-40 truncate border-t border-border">
                                         {issue.ward?.name ?? "-"}
                                     </TableCell>
-                                    <TableCell className="border-t border-border ">
+                                    <TableCell className="border-t border-border">
                                         <PriorityBadge priority={issue.priority} />
                                     </TableCell>
-                                    <TableCell className="border-t border-border ">
+                                    <TableCell className="border-t border-border">
                                         <StatusBadge status={issue.status} />
                                     </TableCell>
                                     {isAdmin && (
-                                        <TableCell className="border-t border-border ">
+                                        <TableCell className="border-t border-border">
                                             {issue.isAnonymous
                                                 ? "Anonymous"
                                                 : (issue.author?.name ?? "-")}
                                         </TableCell>
                                     )}
-                                    <TableCell className="whitespace-nowrap border-t border-border ">
+                                    <TableCell className="whitespace-nowrap border-t border-border">
                                         {formatDate(issue.createdAt)}
                                     </TableCell>
-                                    <TableCell className="border-t border-border ">
-                                        <RowActions issue={issue} />
+                                    <TableCell className="border-t border-border">
+                                        <IssueRowActions
+                                            issue={issue}
+                                            categories={editOptions.categories}
+                                            wards={editOptions.wards}
+                                        />
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -284,16 +244,20 @@ export default function IssuesTable({
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="min-w-0">
                                         <p
-                                            className="font-mono text-xs  text-primary"
+                                            className="font-mono text-xs text-primary"
                                             title={issue.trackingCode}
                                         >
                                             Code : {shortCode(issue.trackingCode)}
                                         </p>
-                                        <h3 className="line-clamp-2 text-sm font-semibold text-foreground pt-2">
+                                        <h3 className="line-clamp-2 pt-2 text-sm font-semibold text-foreground">
                                             {issue.title}
                                         </h3>
                                     </div>
-                                    <RowActions issue={issue} />
+                                    <IssueRowActions
+                                        issue={issue}
+                                        categories={editOptions.categories}
+                                        wards={editOptions.wards}
+                                    />
                                 </div>
 
                                 <div className="flex flex-wrap gap-2">
@@ -314,7 +278,9 @@ export default function IssuesTable({
                                     </div>
                                     {isAdmin && (
                                         <div>
-                                            <dt className="font-semibold">Reporter</dt>
+                                            <dt className="font-semibold">
+                                                Reporter
+                                            </dt>
                                             <dd>
                                                 {issue.isAnonymous
                                                     ? "Anonymous"
@@ -367,7 +333,9 @@ export default function IssuesTable({
 
                         <PaginationItem>
                             <PaginationNext
-                                href={pageUrl(Math.min(totalPages, currentPage + 1))}
+                                href={pageUrl(
+                                    Math.min(totalPages, currentPage + 1),
+                                )}
                                 aria-disabled={currentPage >= totalPages}
                                 className={
                                     currentPage >= totalPages

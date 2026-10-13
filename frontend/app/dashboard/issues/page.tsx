@@ -1,4 +1,3 @@
-
 import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/(layout)/DashboardLayout";
 import IssuesTable from "@/components/dashboard/issues/IssuesTable";
@@ -50,6 +49,7 @@ export default async function IssuesPage({
     const selectedWard = params.ward || "All";
     const currentPage = getValidPage(params.page);
     const isAdmin = user.role === "super_admin";
+
     const queryParams: GetReportsParams = {
         page: currentPage,
         limit: LIMIT,
@@ -180,6 +180,19 @@ export default async function IssuesPage({
         ...wardsList,
     ];
 
+    const editOptions = {
+        categories: categoriesList.map(({ slug, name }) => ({
+            value: slug,
+            name,
+        })),
+        wards: wardsList
+            .filter(({ code }) => code.trim() !== "")
+            .map(({ code, name }) => ({
+                value: code,
+                name,
+            })),
+    };
+
     const baseQuery = new URLSearchParams();
 
     if (searchQuery) {
@@ -196,6 +209,12 @@ export default async function IssuesPage({
 
     if (selectedWard !== "All") {
         baseQuery.set("ward", selectedWard);
+    }
+
+    if (!useMock && issues.length === 0 && currentPage > totalPages) {
+        const query = new URLSearchParams(baseQuery);
+        query.set("page", String(totalPages));
+        redirect(`${BASE_PATH}?${query.toString()}`);
     }
 
     return (
@@ -217,6 +236,7 @@ export default async function IssuesPage({
                     statuses,
                     wards,
                 }}
+                editOptions={editOptions}
             />
         </DashboardLayout>
     );

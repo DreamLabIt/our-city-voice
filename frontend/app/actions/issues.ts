@@ -4,14 +4,7 @@ import { revalidatePath } from "next/cache";
 import { apiFetch } from "@/lib/api";
 import { clientForwardHeaders } from "@/lib/client-headers";
 import { getAccessToken } from "@/lib/session";
-import type { ReportIssueFormData, CreateIssueResult } from "@/types/issues";
-
-const VALID_PRIORITIES = [
-    "low",
-    "medium",
-    "high",
-    "critical",
-] as const;
+import { type ReportIssueFormData, type CreateIssueResult, type UpdateReportInput, type MutationResult, VALID_PRIORITIES } from "@/types/issues";
 
 const MIME_BY_EXT: Record<string, string> = {
     jpg: "image/jpeg",
@@ -27,6 +20,12 @@ const MIME_BY_EXT: Record<string, string> = {
 function guessMimeType(url: string, type: string): string {
     const ext = url.split("?")[0].split(".").pop()?.toLowerCase() ?? "";
     return MIME_BY_EXT[ext] ?? (type === "image" ? "image/jpeg" : "video/mp4");
+}
+
+function revalidateReportPages(): void {
+    revalidatePath("/");
+    revalidatePath("/reports");
+    revalidatePath("/dashboard/issues");
 }
 
 export async function createReportIssue(
@@ -189,8 +188,6 @@ export async function createReportIssue(
                 : {}),
         };
 
-        console.log("Payload Data", payload)
-
         const result = await apiFetch<{ post?: unknown }>("/posts", {
             method: "POST",
             token: authToken.trim(),
@@ -221,8 +218,7 @@ export async function createReportIssue(
             };
         }
 
-        revalidatePath("/");
-        revalidatePath("/reports");
+        revalidateReportPages();
 
         return {
             success: true,
@@ -237,6 +233,128 @@ export async function createReportIssue(
                 err instanceof Error
                     ? err.message
                     : "An unexpected error occurred while submitting the report.",
+        };
+    }
+}
+
+export async function updateReport(
+    code: string,
+    input: UpdateReportInput,
+): Promise<MutationResult> {
+    const token = await getAccessToken();
+
+    if (!token?.trim()) {
+        return {
+            success: false,
+            error: "Please log in again.",
+            requiresAuth: true,
+        };
+    }
+
+    if (Object.keys(input).length === 0) {
+        return { success: false, error: "Nothing to update." };
+    }
+
+    try {
+        const res = await apiFetch<{ post?: unknown }>(
+            `/posts/${encodeURIComponent(code)}`,
+            {
+                method: "PATCH",
+                token: token.trim(),
+                forward: await clientForwardHeaders(),
+                body: input,
+            },
+        );
+
+        if (!res.ok) {
+            if (res.error.status === 401) {
+                return {
+                    success: false,
+                    error: "Your session has expired. Please log in again.",
+                    requiresAuth: true,
+                };
+            }
+
+            const message =
+                res.error.status === 403
+                    ? "You can only edit your own reports."
+                    : res.error.status === 404
+                        ? "This report no longer exists."
+                        : res.error.message || "Failed to update report.";
+
+            return {
+                success: false,
+                error: message,
+                fieldErrors: res.error.details as
+                    | Record<string, string[]>
+                    | undefined,
+            };
+        }
+
+        revalidateReportPages();
+        return { success: true };
+    } catch (err: unknown) {
+        console.error("Error in updateReport server action:", err);
+        return {
+            success: false,
+            error:
+                err instanceof Error
+                    ? err.message
+                    : "An unexpected error occurred.",
+        };
+    }
+}
+
+export async function deleteReport(code: string): Promise<MutationResult> {
+    const token = await getAccessToken();
+
+    if (!token?.trim()) {
+        return {
+            success: false,
+            error: "Please log in again.",
+            requiresAuth: true,
+        };
+    }
+
+    try {
+        const res = await apiFetch<unknown>(
+            `/posts/${encodeURIComponent(code)}`,
+            {
+                method: "DELETE",
+                token: token.trim(),
+                forward: await clientForwardHeaders(),
+            },
+        );
+
+        if (!res.ok) {
+            if (res.error.status === 401) {
+                return {
+                    success: false,
+                    error: "Your session has expired. Please log in again.",
+                    requiresAuth: true,
+                };
+            }
+
+            const message =
+                res.error.status === 403
+                    ? "You can only delete your own reports."
+                    : res.error.status === 404
+                        ? "This report no longer exists."
+                        : res.error.message || "Failed to delete report.";
+
+            return { success: false, error: message };
+        }
+
+        revalidateReportPages();
+        return { success: true };
+    } catch (err: unknown) {
+        console.error("Error in deleteReport server action:", err);
+        return {
+            success: false,
+            error:
+                err instanceof Error
+                    ? err.message
+                    : "An unexpected error occurred.",
         };
     }
 }
