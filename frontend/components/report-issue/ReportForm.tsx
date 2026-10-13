@@ -468,7 +468,7 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
                             id="description"
                             rows={4}
                             placeholder="Provide context about the problem..."
-                            {...register("title", {
+                            {...register("description", {
                                 required: "Description is required.",
                                 validate: (value) =>
                                     value.trim().length >= 16 ||
