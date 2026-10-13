@@ -220,29 +220,29 @@ export default function IssueDetails({
                                     )}
                                 </div>
 
-                                <div className="flex gap-3">
+                                <div className="flex w-full flex-col gap-3 sm:flex-row">
                                     <Button
                                         variant="outline"
-                                        className="rounded-xl border-border-custom bg-card p-6 text-md font-bold hover:bg-background cursor-pointer"
+                                        className="w-full cursor-pointer rounded-xl border-border-custom bg-card p-5 text-sm font-bold hover:bg-background sm:flex-1 sm:p-6 sm:text-base"
                                     >
                                         <Link
                                             href={`/issues-map?trackingCode=${post.trackingCode}`}
-                                            className="flex items-center gap-3"
+                                            className="flex items-center justify-center gap-2 sm:gap-3"
                                         >
-                                            <MapPin className="h-6 w-6 text-primary" />
+                                            <MapPin className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" />
                                             <span>View on issues map</span>
                                         </Link>
                                     </Button>
 
                                     <Button
-                                        className="rounded-xl p-6 text-md font-bold shadow-sm"
+                                        className="w-full rounded-xl p-5 text-sm font-bold shadow-sm sm:flex-1 sm:p-6 sm:text-base"
                                     >
                                         <Link
                                             href="/report-issue"
-                                            className="flex gap-3"
+                                            className="flex items-center justify-center gap-2 sm:gap-3"
                                         >
-                                            <Plus className="h-4 w-4" />
-                                            Report a similar issue
+                                            <Plus className="h-4 w-4 shrink-0" />
+                                            <span>Report a similar issue</span>
                                         </Link>
                                     </Button>
                                 </div>
