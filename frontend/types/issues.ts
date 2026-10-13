@@ -57,3 +57,34 @@ export interface FormValues {
         longitude: number | null;
     };
 }
+
+export interface IssuesPageProps {
+    searchParams: Promise<{
+        page?: string;
+        search?: string;
+        category?: string;
+        status?: string;
+        ward?: string;
+    }>;
+}
+
+export interface IssuesFilters {
+    searchQuery: string;
+    selectedCategory: string;
+    selectedStatus: string;
+    selectedWard: string;
+    categories: Array<{ slug: string; name: string }>;
+    statuses: string[];
+    wards: Array<{ code: string; name: string }>;
+}
+
+export interface IssuesTableProps {
+    issues: Report[];
+    total: number;
+    currentPage: number;
+    totalPages: number;
+    isAdmin: boolean;
+    basePath: string;
+    baseQuery: string;
+    filters: IssuesFilters;
+}
