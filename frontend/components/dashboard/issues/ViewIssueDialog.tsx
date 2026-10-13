@@ -13,6 +13,7 @@ import {
     User,
 } from "lucide-react";
 
+import IssueComments from "@/components/dashboard/issues/IssueComments";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +31,8 @@ interface ViewIssueDialogProps {
     issue: Report;
     onClose: () => void;
 }
+
+type ViewTab = "details" | "comments";
 
 const STATUS_STYLES: Record<string, string> = {
     pending: "bg-tag-amber-bg text-tag-amber-text",
@@ -88,9 +91,23 @@ export default function ViewIssueDialog({
     const [activeIndex, setActiveIndex] = useState(0);
     const active = mediaList[activeIndex];
 
+    const [tab, setTab] = useState<ViewTab>("details");
+    const [commentsVisited, setCommentsVisited] = useState(false);
+
+    const openTab = (next: ViewTab): void => {
+        setTab(next);
+        if (next === "comments") setCommentsVisited(true);
+    };
+
     const addressLine = [issue.address, issue.street, issue.city, issue.postalCode]
         .filter(Boolean)
         .join(", ");
+
+    const tabClass = (value: ViewTab): string =>
+        `inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold transition-colors ${tab === value
+            ? "border-primary text-primary"
+            : "border-transparent text-muted-foreground hover:text-foreground"
+        }`;
 
     return (
         <Dialog
@@ -99,7 +116,7 @@ export default function ViewIssueDialog({
                 if (!open) onClose();
             }}
         >
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl no-scrollbar">
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl no-scrollbar">
                 <DialogHeader className="space-y-2 text-left">
 
 
@@ -109,9 +126,9 @@ export default function ViewIssueDialog({
                     <DialogDescription className="sr-only">
                         Details of report {issue.trackingCode}
                     </DialogDescription>
-                    <div className="flex flex-wrap items-center gap-10">
+                    <div className="flex flex-wrap items-center gap-4">
                         <span className="font-mono text-xs text-primary">
-                            Code : {issue.trackingCode.slice(-4)}
+                            Code : {issue.trackingCode.slice(-6)}
                         </span>
                         <Badge
                             variant="secondary"
@@ -128,7 +145,32 @@ export default function ViewIssueDialog({
                     </div>
                 </DialogHeader>
 
-                <div className="space-y-5">
+                <div
+                    role="tablist"
+                    className="flex gap-1 border-b border-border"
+                >
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={tab === "details"}
+                        onClick={() => openTab("details")}
+                        className={tabClass("details")}
+                    >
+                        Details
+                    </button>
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={tab === "comments"}
+                        onClick={() => openTab("comments")}
+                        className={tabClass("comments")}
+                    >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        Comments ({issue.commentCount ?? 0})
+                    </button>
+                </div>
+
+                <div className={tab === "details" ? "space-y-5" : "hidden"}>
                     {mediaList.length > 0 && active && (
                         <div className="space-y-2">
                             <div className="overflow-hidden rounded-xl border border-border bg-black">
@@ -140,7 +182,6 @@ export default function ViewIssueDialog({
                                         playsInline
                                         className="h-64 sm:h-80 w-full object-cover cursor-pointer"
                                     />
-
                                 ) : (
                                     <Image
                                         src={mediaSrc(active)}
@@ -264,6 +305,15 @@ export default function ViewIssueDialog({
                             {issue.viewCount} views
                         </span>
                     </div>
+                </div>
+
+                <div className={tab === "comments" ? "block" : "hidden"}>
+                    {commentsVisited && (
+                        <IssueComments
+                            issueCode={issue.trackingCode}
+                            issueId={issue.id}
+                        />
+                    )}
                 </div>
 
                 <DialogFooter className="gap-2 sm:justify-between border-t-border">

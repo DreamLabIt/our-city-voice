@@ -21,6 +21,7 @@ import {
 import type { Report } from "@/types/report";
 import type { IssuesFilters, IssuesEditOptions } from "@/types/issues";
 import IssueRowActions from "./IssueRowActions";
+import { MessageSquare } from "lucide-react";
 
 interface IssuesTableProps {
     issues: Report[];
@@ -61,7 +62,7 @@ function formatDate(value: string): string {
 }
 
 function shortCode(code: string): string {
-    return code.slice(-4);
+    return code.slice(-6);
 }
 
 function getPageNumbers(
@@ -110,6 +111,7 @@ function PriorityBadge({ priority }: { priority: string }) {
     );
 }
 
+
 export default function IssuesTable({
     issues,
     total,
@@ -127,7 +129,7 @@ export default function IssuesTable({
         return `${basePath}?${query.toString()}`;
     };
 
-    const columnCount = isAdmin ? 9 : 8;
+    const columnCount = isAdmin ? 10 : 9;
 
     return (
         <div className="space-y-5">
@@ -165,6 +167,7 @@ export default function IssuesTable({
                             <TableHead>Status</TableHead>
                             {isAdmin && <TableHead>Reporter</TableHead>}
                             <TableHead>Date</TableHead>
+                            <TableHead className="text-center">Comments</TableHead>
                             <TableHead className="pr-5 text-right">
                                 Actions
                             </TableHead>
@@ -214,6 +217,12 @@ export default function IssuesTable({
                                     )}
                                     <TableCell className="whitespace-nowrap border-t border-border">
                                         {formatDate(issue.createdAt)}
+                                    </TableCell>
+                                    <TableCell className="border-t border-border text-center">
+                                        <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                                            <MessageSquare className="h-3.5 w-3.5" />
+                                            {issue.commentCount ?? 0}
+                                        </span>
                                     </TableCell>
                                     <TableCell className="border-t border-border">
                                         <IssueRowActions
@@ -287,10 +296,16 @@ export default function IssuesTable({
                                             </dd>
                                         </div>
                                     )}
+
                                     <div>
                                         <dt className="font-semibold">Date</dt>
                                         <dd>{formatDate(issue.createdAt)}</dd>
                                     </div>
+                                    <div>
+                                        <dt className="font-semibold">Comments</dt>
+                                        <dd>{issue.commentCount ?? 0}</dd>
+                                    </div>
+
                                 </dl>
                             </CardContent>
                         </Card>
