@@ -255,6 +255,43 @@ export async function updateReport(
         return { success: false, error: "Nothing to update." };
     }
 
+    const body: UpdateReportInput = { ...input };
+
+    if (input.media) {
+        if (input.media.length > 6) {
+            return {
+                success: false,
+                error: "You can upload a maximum of 6 media files.",
+                fieldErrors: { media: ["You can upload a maximum of 6 media files."] },
+            };
+        }
+
+        const invalidIndex = input.media.findIndex((item) => !item.url?.trim());
+        if (invalidIndex !== -1) {
+            return {
+                success: false,
+                error: "Media URL is required.",
+                fieldErrors: { [`media.${invalidIndex}.url`]: ["Media URL is required."] },
+            };
+        }
+
+        body.media = input.media.map((item) => {
+            const url = item.url.trim();
+
+            return {
+                url,
+                type: item.type,
+                thumbnailUrl: item.thumbnailUrl || null,
+                mimeType: item.mimeType || guessMimeType(url, item.type),
+                sizeBytes: Math.round(item.sizeBytes ?? 0),
+                durationSecs:
+                    item.type === "video" && item.durationSecs != null
+                        ? Math.round(item.durationSecs)
+                        : null,
+            };
+        });
+    }
+
     try {
         const res = await apiFetch<{ post?: unknown }>(
             `/posts/${encodeURIComponent(code)}`,
@@ -262,7 +299,7 @@ export async function updateReport(
                 method: "PATCH",
                 token: token.trim(),
                 forward: await clientForwardHeaders(),
-                body: input,
+                body,
             },
         );
 

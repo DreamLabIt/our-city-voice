@@ -99,6 +99,15 @@ export const VALID_PRIORITIES = [
 export type ReportPriority = (typeof VALID_PRIORITIES)[number];
 
 
+export interface ReportMediaInput {
+    url: string;
+    type: "image" | "video";
+    thumbnailUrl?: string | null;
+    mimeType?: string;
+    sizeBytes: number;
+    durationSecs: number | null;
+}
+
 export interface UpdateReportInput {
     title?: string;
     description?: string;
@@ -114,6 +123,7 @@ export interface UpdateReportInput {
         latitude?: number | null;
         longitude?: number | null;
     };
+    media?: ReportMediaInput[];
 }
 
 export interface MutationResult {
