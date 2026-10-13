@@ -22,7 +22,6 @@ import type { Report } from "@/types/report";
 import type { IssuesFilters, IssuesEditOptions } from "@/types/issues";
 import IssueRowActions from "./IssueRowActions";
 
-
 interface IssuesTableProps {
     issues: Report[];
     total: number;
