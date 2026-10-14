@@ -64,6 +64,21 @@ const ListQuerySchema = z.object({
   includeDeleted: optional(z.stringbool().default(false)),
 });
 
+// A dedicated search is required, unlike a filter: there is no "no opinion"
+// blank. Two characters is the floor — a single letter matches almost every row
+// and cannot be ranked.
+const SearchTermSchema = z
+  .string({ error: "Send a search term" })
+  .trim()
+  .min(2, "Enter at least 2 characters to search")
+  .max(120, "Search is too long");
+
+const SearchQuerySchema = z.object({
+  search: SearchTermSchema,
+  page: optional(z.coerce.number().int().positive().default(1)),
+  limit: optional(z.coerce.number().int().positive().max(100).default(12)),
+});
+
 const CreateMediaSchema = z.object({
   url: mediaUrlSchema,
   type: z.enum(["image", "video"]),
@@ -226,6 +241,17 @@ export async function list(req: Request, res: Response): Promise<void> {
 
 export async function filters(_req: Request, res: Response): Promise<void> {
   res.status(200).json(await postService.listFilterOptions());
+}
+
+export async function search(req: Request, res: Response): Promise<void> {
+  const query = parseBody(SearchQuerySchema, req.query);
+
+  const result = await postService.searchPosts(
+    { search: query.search, page: query.page, limit: query.limit },
+    req.user?.id,
+  );
+
+  res.status(200).json(result);
 }
 
 function parseIdentifier(raw: string | string[] | undefined): postService.PostIdentifier {

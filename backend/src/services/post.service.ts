@@ -130,6 +130,61 @@ export async function listPosts(
   };
 }
 
+/**
+ * The fields a dedicated search reads: the tracking code a person quotes, the
+ * address they are standing in front of, and the title. Deliberately narrower
+ * than the `search` on `listPosts` — which also reads the description and city
+ * — so the two do not quietly become the same query.
+ */
+function searchWhere(search: string): Prisma.PostWhereInput {
+  return {
+    deletedAt: null,
+    OR: [
+      { trackingCode: { contains: search, mode: "insensitive" } },
+      { title: { contains: search, mode: "insensitive" } },
+      { address: { contains: search, mode: "insensitive" } },
+    ],
+  };
+}
+
+export interface SearchPostsOptions {
+  search: string;
+  page: number;
+  limit: number;
+}
+
+export async function searchPosts(
+  options: SearchPostsOptions,
+  viewerId?: bigint | undefined,
+): Promise<ListPostsResult> {
+  const { search, page, limit } = options;
+  const where = searchWhere(search);
+
+  const [rows, total] = await prisma.$transaction([
+    prisma.post.findMany({
+      where,
+      select: PUBLIC_POST_SELECT,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.post.count({ where }),
+  ]);
+
+  const liked = await likedPostIds(
+    viewerId,
+    rows.map((row) => row.id),
+  );
+
+  return {
+    posts: rows.map((row) => toPublicPost(row, liked.has(row.id.toString()))),
+    total,
+    page,
+    limit,
+    pageCount: Math.max(1, Math.ceil(total / limit)),
+  };
+}
+
 export interface FilterOption {
   id: string;
   name: string;
