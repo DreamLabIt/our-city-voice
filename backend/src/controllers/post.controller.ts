@@ -378,3 +378,31 @@ export async function addReply(req: Request, res: Response): Promise<void> {
 
   res.status(201).json({ comment });
 }
+
+export async function likeComment(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw AppError.unauthorized();
+
+  res
+    .status(200)
+    .json(
+      await postService.likeComment(
+        req.user,
+        parseIdentifier(req.params.code),
+        parseCommentId(req.params.commentId),
+      ),
+    );
+}
+
+export async function unlikeComment(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw AppError.unauthorized();
+
+  res
+    .status(200)
+    .json(
+      await postService.unlikeComment(
+        req.user,
+        parseIdentifier(req.params.code),
+        parseCommentId(req.params.commentId),
+      ),
+    );
+}

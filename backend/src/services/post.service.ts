@@ -965,3 +965,85 @@ export async function createReply(
 
   return toPublicComment(created, false);
 }
+
+// ── comment likes ───────────────────────────────────────────────────
+
+/**
+ * The comment a like targets, once its report is known visible. A reply can be
+ * liked too — the frontend shows the same button on one — so there is no depth
+ * check here, unlike a reply. A comment that is missing, belongs to another
+ * report, or was moderated away is a `404`.
+ */
+async function findCommentForWrite(
+  identifier: PostIdentifier,
+  commentId: bigint,
+): Promise<bigint> {
+  const postId = await findPostForComment(identifier);
+
+  const comment = await prisma.comment.findFirst({
+    where: { id: commentId, postId },
+    select: { id: true, deletedAt: true },
+  });
+
+  if (!comment || comment.deletedAt !== null) {
+    throw AppError.notFound("No comment with that id on this report");
+  }
+
+  return comment.id;
+}
+
+/**
+ * The comment twin of `likePost`, idempotent for the same reason: the
+ * `(commentId, userId)` unique index means a repeated like is a no-op that still
+ * answers `200`, and only a genuinely new row moves `comments.like_count`.
+ */
+export async function likeComment(
+  actor: PostActor,
+  identifier: PostIdentifier,
+  commentId: bigint,
+): Promise<LikeResult> {
+  const id = await findCommentForWrite(identifier, commentId);
+
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.commentLike.createMany({
+      data: [{ commentId: id, userId: actor.id }],
+      skipDuplicates: true,
+    });
+
+    const updated =
+      count > 0
+        ? await tx.comment.update({
+            where: { id },
+            data: { likeCount: { increment: 1 } },
+            select: { likeCount: true },
+          })
+        : await tx.comment.findUniqueOrThrow({ where: { id }, select: { likeCount: true } });
+
+    return { likedByMe: true, likeCount: updated.likeCount };
+  });
+}
+
+export async function unlikeComment(
+  actor: PostActor,
+  identifier: PostIdentifier,
+  commentId: bigint,
+): Promise<LikeResult> {
+  const id = await findCommentForWrite(identifier, commentId);
+
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.commentLike.deleteMany({
+      where: { commentId: id, userId: actor.id },
+    });
+
+    const updated =
+      count > 0
+        ? await tx.comment.update({
+            where: { id },
+            data: { likeCount: { decrement: 1 } },
+            select: { likeCount: true },
+          })
+        : await tx.comment.findUniqueOrThrow({ where: { id }, select: { likeCount: true } });
+
+    return { likedByMe: false, likeCount: updated.likeCount };
+  });
+}
