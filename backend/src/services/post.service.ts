@@ -15,10 +15,14 @@ import {
 import {
   PUBLIC_POST_DETAIL_SELECT,
   PUBLIC_POST_SELECT,
+  PUBLIC_SUGGESTION_SELECT,
   toPublicPost,
   toPublicPostDetail,
+  toPublicSuggestion,
   type PublicPost,
   type PublicPostDetail,
+  type ReportSuggestion,
+  type SuggestionRow,
 } from "../lib/public-post.js";
 
 export type PostSort =
@@ -183,6 +187,61 @@ export async function searchPosts(
     limit,
     pageCount: Math.max(1, Math.ceil(total / limit)),
   };
+}
+
+/** The dropdown shows at most this many candidates. */
+const SUGGESTION_LIMIT = 6;
+
+// Ranking happens in memory, so it needs a bounded candidate set. Fifty most
+// recent matches is plenty for a dropdown; an older report outside that window
+// is still reachable through search.
+const SUGGESTION_SCAN_LIMIT = 50;
+
+/**
+ * How well a row matches, higher is better. A tracking code beats a title beats
+ * an address, and an exact or prefix hit beats one in the middle — so typing a
+ * full code puts that report first, and typing the start of a street puts the
+ * reports on it above one that merely mentions it.
+ */
+function matchScore(row: SuggestionRow, query: string): number {
+  const q = query.toLowerCase();
+  const trackingCode = row.trackingCode.toLowerCase();
+  const title = row.title.toLowerCase();
+  const address = row.address.toLowerCase();
+
+  let score = 0;
+
+  if (trackingCode === q) score += 100;
+  else if (trackingCode.startsWith(q)) score += 50;
+  else if (trackingCode.includes(q)) score += 25;
+
+  if (title.startsWith(q)) score += 20;
+  else if (title.includes(q)) score += 10;
+
+  if (address.startsWith(q)) score += 8;
+  else if (address.includes(q)) score += 4;
+
+  return score;
+}
+
+/**
+ * The six best matches, most relevant first. Ties keep the query's own order —
+ * newest first — because `Array.prototype.sort` is stable, so equal scores read
+ * as a recency tiebreak rather than an arbitrary one.
+ */
+export async function suggestPosts(search: string): Promise<ReportSuggestion[]> {
+  const rows = await prisma.post.findMany({
+    where: searchWhere(search),
+    select: PUBLIC_SUGGESTION_SELECT,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: SUGGESTION_SCAN_LIMIT,
+  });
+
+  return rows
+    .map((row) => ({ row, score: matchScore(row, search) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, SUGGESTION_LIMIT)
+    .map(({ row }) => toPublicSuggestion(row));
 }
 
 export interface FilterOption {

@@ -79,6 +79,10 @@ const SearchQuerySchema = z.object({
   limit: optional(z.coerce.number().int().positive().max(100).default(12)),
 });
 
+const SuggestQuerySchema = z.object({
+  search: SearchTermSchema,
+});
+
 const CreateMediaSchema = z.object({
   url: mediaUrlSchema,
   type: z.enum(["image", "video"]),
@@ -252,6 +256,12 @@ export async function search(req: Request, res: Response): Promise<void> {
   );
 
   res.status(200).json(result);
+}
+
+export async function suggestions(req: Request, res: Response): Promise<void> {
+  const query = parseBody(SuggestQuerySchema, req.query);
+
+  res.status(200).json({ suggestions: await postService.suggestPosts(query.search) });
 }
 
 function parseIdentifier(raw: string | string[] | undefined): postService.PostIdentifier {

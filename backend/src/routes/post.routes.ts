@@ -9,9 +9,11 @@ postRouter.use(optionalAuth);
 
 postRouter.get("/filters", postController.filters);
 
-// Registered before "/:code" so the static path is not read as a tracking code.
-// It is lower-case and a code is "OCV-…", so the two could never collide.
+// Registered before "/:code" so these static paths are not read as a tracking
+// code. Both are lower-case and a code is "OCV-…", so they could never collide.
 postRouter.get("/search", postController.search);
+
+postRouter.get("/suggestions", postController.suggestions);
 
 postRouter.get("/", postController.list);
 
