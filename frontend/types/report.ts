@@ -182,7 +182,7 @@ export interface ReportComment {
 }
 
 export interface ReportCommentThread extends ReportComment {
-    replies: ReportComment[];
+    replies?: ReportComment[];
 }
 
 export interface ReportCommentsResponse {

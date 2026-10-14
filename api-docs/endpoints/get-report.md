@@ -104,6 +104,7 @@ Prisma issues one query per relation by default; see
 ## See also
 
 - [`GET /posts/:code/comments`](list-report-comments.md) — the discussion, a separate call
+- [`POST /posts/:code/like`](like-report.md) — set or clear your like on this report
 - [`PATCH /posts/:code`](update-report.md) — edit the report this returns
 - [`DELETE /posts/:code`](delete-report.md) — soft-delete it
 - [guides/report-detail-page.md](../guides/report-detail-page.md)

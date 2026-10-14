@@ -117,12 +117,31 @@ may edit or delete it even though `author` reads `null`.
 the officer workflow, routing follows the category. An edit form built from the
 create form should drop those fields from its body.
 
-## The rest of the buttons do not work yet
+## Likes, comments and replies
 
-Like, reply and comment are still reads away from being writes: only
-[`POST /posts`](../endpoints/create-report.md),
-[`PATCH /posts/:code`](../endpoints/update-report.md) and
-[`DELETE /posts/:code`](../endpoints/delete-report.md) exist today, and none of
-them is a like, a reply or a comment. So those controls can only update local state,
-which is what `IssueDetails.tsx` already does. See
-[not-implemented.md](../not-implemented.md).
+The engagement controls now have endpoints behind them. Each returns exactly what
+the control needs, so none of them requires a refetch.
+
+- **Like a report** — `POST /posts/:code/like`, and `DELETE` to remove it. Both
+  return `{ likedByMe, likeCount }`, which replaces those two fields in local
+  state. Both are idempotent, so a double tap is safe. See
+  [`like-report.md`](../endpoints/like-report.md).
+- **Post a comment** — `POST /posts/:code/comments` with `{ message }` returns
+  `201 { comment }`; prepend it to the list. See
+  [`create-comment.md`](../endpoints/create-comment.md).
+- **Reply** — `POST /posts/:code/comments/:commentId/replies` with `{ message }`
+  returns `201 { comment }`, a plain `Comment` to append to `parent.replies`. The
+  frontend already offers Reply only on top-level comments, which matches the
+  one-level cap. See [`reply-to-comment.md`](../endpoints/reply-to-comment.md).
+- **Like a comment** — `POST`/`DELETE /posts/:code/comments/:commentId/like`,
+  returning the same `{ likedByMe, likeCount }` shape as the report pair. See
+  [`like-comment.md`](../endpoints/like-comment.md).
+
+Every one of these needs a token, so it runs through the Next server (a server
+action), not from client JavaScript — see
+[conventions.md](../conventions.md#how-the-frontend-calls-the-api). `comment.id` is
+a BigInt-as-string; pass it through as-is, never parse it into a number.
+
+The one control still without an endpoint is **deleting a comment**: there is no
+self-delete and no moderation delete yet, so `IssueDetails.tsx` should not offer
+one. See [not-implemented.md](../not-implemented.md).

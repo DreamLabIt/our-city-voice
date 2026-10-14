@@ -5,7 +5,11 @@ The shapes that come back. Endpoint files link here rather than repeating them.
 - [`User`](#user)
 - [`Report`](#report) — a list item
 - [`ReportDetail`](#reportdetail) — a `Report` plus the timeline
+- [`ReportSuggestion`](#reportsuggestion) — a search candidate
 - [`Comment` and `CommentThread`](#comment-and-commentthread)
+- [`LikeResult`](#likeresult) — the answer to a like or unlike
+- [`ContactCategory`](#contactcategory) — a contact-form option
+- [`ContactMessage`](#contactmessage) — a contact-form submission
 - [`FilterOptions`](#filteroptions)
 
 See [conventions.md](conventions.md) for the rules behind ids, dates and enums.
@@ -117,6 +121,10 @@ Whether the caller has liked it. Always `false` for a signed-out reader, which i
 also what the like button should show them. `likeCount` is the public total and
 is unaffected by who is asking.
 
+Set it through [`POST`/`DELETE /posts/:code/like`](endpoints/like-report.md) for a
+report and [`POST`/`DELETE /posts/:code/comments/:commentId/like`](endpoints/like-comment.md)
+for a comment; both return the updated pair in a [`LikeResult`](#likeresult).
+
 ---
 
 ## `ReportDetail`
@@ -156,9 +164,41 @@ officially.
 
 ---
 
+## `ReportSuggestion`
+
+Returned by [`GET /posts/suggestions`](endpoints/suggest-reports.md). A trimmed
+[`Report`](#report): enough for a dropdown row and a link, without the media,
+counts or description a card does not need. At most six come back, most relevant
+first.
+
+```json
+{
+  "id": "28",
+  "trackingCode": "OCV-2026-VID001",
+  "title": "Sinkhole opening up at the intersection",
+  "status": "pending",
+  "category": { "id": "1", "name": "Roads", "slug": "roads", "icon": "Road" },
+  "ward":     { "id": "1", "name": "Ward 10 (Spadina Fort York)", "code": "ward-10" },
+  "address": "400 Front St W"
+}
+```
+
+`id`, `trackingCode`, `title`, `category`, `ward`, `address` and `status` are the
+same fields with the same shapes as on `Report` — `category` and `ward` are the
+full reduced objects, not names — so a suggestion can be swapped into any place
+that already reads those fields. What is dropped is the rest: `description`,
+`priority`, `author`, `media`, the counts and the timestamps. Link with
+`trackingCode`; there is nothing here to build a detail page from, and you would
+not want to — the suggestion is a hop, not a render.
+
+---
+
 ## `Comment` and `CommentThread`
 
-Returned by [`GET /posts/:code/comments`](endpoints/list-report-comments.md).
+Returned by [`GET /posts/:code/comments`](endpoints/list-report-comments.md), and
+the bare `Comment` is what [`POST …/comments`](endpoints/create-comment.md) and
+[`POST …/comments/:commentId/replies`](endpoints/reply-to-comment.md) return for
+the row they just created.
 
 ```json
 {
@@ -196,6 +236,71 @@ const isOfficial = comment.author.departmentId !== null || comment.author.role =
 
 `time: "4 hours ago"` is `createdAt` formatted on the client, and `initials` comes
 from `author.name`.
+
+---
+
+## `LikeResult`
+
+Returned by the four like/unlike endpoints — [`POST`/`DELETE /posts/:code/like`](endpoints/like-report.md)
+and [`POST`/`DELETE /posts/:code/comments/:commentId/like`](endpoints/like-comment.md).
+Just enough to update a button in place; it is not a [`Report`](#report) or a
+[`Comment`](#comment-and-commentthread).
+
+```json
+{ "likedByMe": true, "likeCount": 15 }
+```
+
+`likedByMe` is `true` after a like and `false` after an unlike — the state the
+caller asked for, not a fresh read. `likeCount` is the new public total. Because
+both directions are idempotent, this pair is safe to merge into whatever the page
+already holds: it is the truth after the call, whether or not anything changed.
+
+---
+
+## `ContactCategory`
+
+One option in the contact form's dropdown, from
+[`GET /contact/categories`](endpoints/list-contact-categories.md).
+
+```json
+{ "id": "2", "name": "Report a Problem" }
+```
+
+`name` is what you show; `id` is what you send back as `categoryId` on
+[`POST /contact/messages`](endpoints/create-contact-message.md). There is no slug
+on a contact category — unlike a report `category`, it is never used as a filter —
+so the id is the value, not the name.
+
+---
+
+## `ContactMessage`
+
+A stored contact-form submission. Returned by
+[`POST /contact/messages`](endpoints/create-contact-message.md) for the row just
+created, and listed by [`GET /contact/messages`](endpoints/list-contact-messages.md).
+
+```json
+{
+  "id": "12",
+  "category": { "id": "2", "name": "Report a Problem" },
+  "name": "Jane Rivera",
+  "email": "jane@example.com",
+  "phone": "+1 416 555 0134",
+  "subject": "Broken street light on my block",
+  "message": "The light at the corner has been out for…",
+  "handledAt": null,
+  "createdAt": "2026-10-14T09:12:04.512Z",
+  "updatedAt": "2026-10-14T09:12:04.512Z"
+}
+```
+
+`category` is a full reduced object, not a name, so the dashboard can render the
+badge without a second lookup. `phone` is `null` when the sender left it blank.
+`email` is lowercased.
+
+**`handledAt` is always `null` today** — the column and the field exist for a
+New/Handled state, but nothing sets it. See
+[not-implemented.md](not-implemented.md).
 
 ---
 

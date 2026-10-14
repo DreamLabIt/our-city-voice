@@ -242,3 +242,52 @@ export function toPublicPostDetail(post: PostDetailRow, likedByMe = false): Publ
     })),
   };
 }
+
+/**
+ * A `Post` reduced to what a search dropdown renders: the code to link with, the
+ * title and the two labels a row shows. Not a `PublicPost` — no media, counts,
+ * description or timestamps — because a suggestion is a hop to a report, not a
+ * render of one.
+ */
+export interface ReportSuggestion {
+  id: string;
+  trackingCode: string;
+  title: string;
+  status: PostStatus;
+  category: { id: string; name: string; slug: string; icon: string };
+  ward: { id: string; name: string; code: string };
+  address: string;
+}
+
+export const PUBLIC_SUGGESTION_SELECT = {
+  id: true,
+  trackingCode: true,
+  title: true,
+  status: true,
+  address: true,
+  category: { select: { id: true, name: true, slug: true, icon: true } },
+  ward: { select: { id: true, name: true, code: true } },
+} satisfies Prisma.PostSelect;
+
+export type SuggestionRow = Prisma.PostGetPayload<{ select: typeof PUBLIC_SUGGESTION_SELECT }>;
+
+export function toPublicSuggestion(row: SuggestionRow): ReportSuggestion {
+  return {
+    id: row.id.toString(),
+    trackingCode: row.trackingCode,
+    title: row.title,
+    status: row.status,
+    category: {
+      id: row.category.id.toString(),
+      name: row.category.name,
+      slug: row.category.slug,
+      icon: row.category.icon,
+    },
+    ward: {
+      id: row.ward.id.toString(),
+      name: row.ward.name,
+      code: row.ward.code,
+    },
+    address: row.address,
+  };
+}

@@ -64,6 +64,25 @@ const ListQuerySchema = z.object({
   includeDeleted: optional(z.stringbool().default(false)),
 });
 
+// A dedicated search is required, unlike a filter: there is no "no opinion"
+// blank. Two characters is the floor — a single letter matches almost every row
+// and cannot be ranked.
+const SearchTermSchema = z
+  .string({ error: "Send a search term" })
+  .trim()
+  .min(2, "Enter at least 2 characters to search")
+  .max(120, "Search is too long");
+
+const SearchQuerySchema = z.object({
+  search: SearchTermSchema,
+  page: optional(z.coerce.number().int().positive().default(1)),
+  limit: optional(z.coerce.number().int().positive().max(100).default(12)),
+});
+
+const SuggestQuerySchema = z.object({
+  search: SearchTermSchema,
+});
+
 const CreateMediaSchema = z.object({
   url: mediaUrlSchema,
   type: z.enum(["image", "video"]),
@@ -228,6 +247,23 @@ export async function filters(_req: Request, res: Response): Promise<void> {
   res.status(200).json(await postService.listFilterOptions());
 }
 
+export async function search(req: Request, res: Response): Promise<void> {
+  const query = parseBody(SearchQuerySchema, req.query);
+
+  const result = await postService.searchPosts(
+    { search: query.search, page: query.page, limit: query.limit },
+    req.user?.id,
+  );
+
+  res.status(200).json(result);
+}
+
+export async function suggestions(req: Request, res: Response): Promise<void> {
+  const query = parseBody(SuggestQuerySchema, req.query);
+
+  res.status(200).json({ suggestions: await postService.suggestPosts(query.search) });
+}
+
 function parseIdentifier(raw: string | string[] | undefined): postService.PostIdentifier {
   if (typeof raw !== "string" || raw.length === 0 || raw.length > 64) {
     throw AppError.badRequest("Give a report's tracking code, such as OCV-2026-000123");
@@ -240,6 +276,19 @@ function parseIdentifier(raw: string | string[] | undefined): postService.PostId
   }
 
   return { trackingCode: raw.toUpperCase() };
+}
+
+/**
+ * A comment is addressed by its numeric id alone — it has no public string
+ * handle the way a report has a tracking code. A non-numeric segment is a `400`
+ * before any query runs, not a `404`.
+ */
+function parseCommentId(raw: string | string[] | undefined): bigint {
+  if (typeof raw !== "string" || !/^\d{1,19}$/.test(raw)) {
+    throw AppError.badRequest("Give a comment id, such as 42");
+  }
+
+  return BigInt(raw);
 }
 
 const DetailQuerySchema = z.object({
@@ -266,6 +315,16 @@ const CommentsQuerySchema = z.object({
   limit: optional(z.coerce.number().int().positive().max(100).default(20)),
 });
 
+// One body shape for both a comment and a reply: they differ only in where the
+// parent comes from — the URL for a reply, nothing for a top-level comment.
+const CommentBodySchema = z.strictObject({
+  message: z
+    .string()
+    .trim()
+    .min(1, "Write something before posting")
+    .max(2000, "Comment is too long"),
+});
+
 export async function comments(req: Request, res: Response): Promise<void> {
   const query = parseBody(CommentsQuerySchema, req.query);
 
@@ -279,4 +338,71 @@ export async function comments(req: Request, res: Response): Promise<void> {
   );
 
   res.status(200).json(result);
+}
+
+export async function like(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw AppError.unauthorized();
+
+  res.status(200).json(await postService.likePost(req.user, parseIdentifier(req.params.code)));
+}
+
+export async function unlike(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw AppError.unauthorized();
+
+  res.status(200).json(await postService.unlikePost(req.user, parseIdentifier(req.params.code)));
+}
+
+export async function addComment(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw AppError.unauthorized();
+
+  const input = parseBody(CommentBodySchema, req.body ?? {});
+  const comment = await postService.createComment(
+    req.user,
+    parseIdentifier(req.params.code),
+    input,
+  );
+
+  res.status(201).json({ comment });
+}
+
+export async function addReply(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw AppError.unauthorized();
+
+  const input = parseBody(CommentBodySchema, req.body ?? {});
+  const comment = await postService.createReply(
+    req.user,
+    parseIdentifier(req.params.code),
+    parseCommentId(req.params.commentId),
+    input,
+  );
+
+  res.status(201).json({ comment });
+}
+
+export async function likeComment(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw AppError.unauthorized();
+
+  res
+    .status(200)
+    .json(
+      await postService.likeComment(
+        req.user,
+        parseIdentifier(req.params.code),
+        parseCommentId(req.params.commentId),
+      ),
+    );
+}
+
+export async function unlikeComment(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw AppError.unauthorized();
+
+  res
+    .status(200)
+    .json(
+      await postService.unlikeComment(
+        req.user,
+        parseIdentifier(req.params.code),
+        parseCommentId(req.params.commentId),
+      ),
+    );
 }

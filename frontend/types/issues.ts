@@ -14,10 +14,10 @@ export interface ReportIssueFormData {
     ward: string;
     priority?: "low" | "medium" | "high" | "critical" | string;
     isAnonymous?: boolean;
-    location: {
-        street?: string | null;
+    location?: {
         city?: string;
-        address: string;
+        address?: string;
+        street?: string | null;
         postalCode?: string | null;
         latitude?: number | null;
         longitude?: number | null;

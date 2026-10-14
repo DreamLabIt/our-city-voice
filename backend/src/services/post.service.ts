@@ -15,10 +15,14 @@ import {
 import {
   PUBLIC_POST_DETAIL_SELECT,
   PUBLIC_POST_SELECT,
+  PUBLIC_SUGGESTION_SELECT,
   toPublicPost,
   toPublicPostDetail,
+  toPublicSuggestion,
   type PublicPost,
   type PublicPostDetail,
+  type ReportSuggestion,
+  type SuggestionRow,
 } from "../lib/public-post.js";
 
 export type PostSort =
@@ -128,6 +132,116 @@ export async function listPosts(
     limit,
     pageCount: Math.max(1, Math.ceil(total / limit)),
   };
+}
+
+/**
+ * The fields a dedicated search reads: the tracking code a person quotes, the
+ * address they are standing in front of, and the title. Deliberately narrower
+ * than the `search` on `listPosts` — which also reads the description and city
+ * — so the two do not quietly become the same query.
+ */
+function searchWhere(search: string): Prisma.PostWhereInput {
+  return {
+    deletedAt: null,
+    OR: [
+      { trackingCode: { contains: search, mode: "insensitive" } },
+      { title: { contains: search, mode: "insensitive" } },
+      { address: { contains: search, mode: "insensitive" } },
+    ],
+  };
+}
+
+export interface SearchPostsOptions {
+  search: string;
+  page: number;
+  limit: number;
+}
+
+export async function searchPosts(
+  options: SearchPostsOptions,
+  viewerId?: bigint | undefined,
+): Promise<ListPostsResult> {
+  const { search, page, limit } = options;
+  const where = searchWhere(search);
+
+  const [rows, total] = await prisma.$transaction([
+    prisma.post.findMany({
+      where,
+      select: PUBLIC_POST_SELECT,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.post.count({ where }),
+  ]);
+
+  const liked = await likedPostIds(
+    viewerId,
+    rows.map((row) => row.id),
+  );
+
+  return {
+    posts: rows.map((row) => toPublicPost(row, liked.has(row.id.toString()))),
+    total,
+    page,
+    limit,
+    pageCount: Math.max(1, Math.ceil(total / limit)),
+  };
+}
+
+/** The dropdown shows at most this many candidates. */
+const SUGGESTION_LIMIT = 6;
+
+// Ranking happens in memory, so it needs a bounded candidate set. Fifty most
+// recent matches is plenty for a dropdown; an older report outside that window
+// is still reachable through search.
+const SUGGESTION_SCAN_LIMIT = 50;
+
+/**
+ * How well a row matches, higher is better. A tracking code beats a title beats
+ * an address, and an exact or prefix hit beats one in the middle — so typing a
+ * full code puts that report first, and typing the start of a street puts the
+ * reports on it above one that merely mentions it.
+ */
+function matchScore(row: SuggestionRow, query: string): number {
+  const q = query.toLowerCase();
+  const trackingCode = row.trackingCode.toLowerCase();
+  const title = row.title.toLowerCase();
+  const address = row.address.toLowerCase();
+
+  let score = 0;
+
+  if (trackingCode === q) score += 100;
+  else if (trackingCode.startsWith(q)) score += 50;
+  else if (trackingCode.includes(q)) score += 25;
+
+  if (title.startsWith(q)) score += 20;
+  else if (title.includes(q)) score += 10;
+
+  if (address.startsWith(q)) score += 8;
+  else if (address.includes(q)) score += 4;
+
+  return score;
+}
+
+/**
+ * The six best matches, most relevant first. Ties keep the query's own order —
+ * newest first — because `Array.prototype.sort` is stable, so equal scores read
+ * as a recency tiebreak rather than an arbitrary one.
+ */
+export async function suggestPosts(search: string): Promise<ReportSuggestion[]> {
+  const rows = await prisma.post.findMany({
+    where: searchWhere(search),
+    select: PUBLIC_SUGGESTION_SELECT,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: SUGGESTION_SCAN_LIMIT,
+  });
+
+  return rows
+    .map((row) => ({ row, score: matchScore(row, search) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, SUGGESTION_LIMIT)
+    .map(({ row }) => toPublicSuggestion(row));
 }
 
 export interface FilterOption {
@@ -679,4 +793,257 @@ export async function listComments(
     limit,
     pageCount: Math.max(1, Math.ceil(total / limit)),
   };
+}
+
+// ── engagement writes ───────────────────────────────────────────────
+
+/**
+ * The like state a button needs after a change: the caller's own state and the
+ * new public total. A dedicated shape rather than the whole `Report`, because a
+ * like button should not have to re-render a card from a full report payload.
+ */
+export interface LikeResult {
+  likedByMe: boolean;
+  likeCount: number;
+}
+
+/**
+ * Liking is idempotent: a double tap, a retry, or two tabs racing each other all
+ * land on "liked" with the count moved once. The `(postId, userId)` unique index
+ * is what makes that safe — `createMany` with `skipDuplicates` inserts only when
+ * the row is genuinely new, and the cached count follows the insert, not the
+ * request.
+ */
+export async function likePost(actor: PostActor, identifier: PostIdentifier): Promise<LikeResult> {
+  const post = await findPostForWrite(identifier);
+
+  // A moderated-away report is gone as far as the public surface is concerned.
+  if (post.deletedAt !== null) throw AppError.notFound("No report with that tracking code");
+
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.postLike.createMany({
+      data: [{ postId: post.id, userId: actor.id }],
+      skipDuplicates: true,
+    });
+
+    const updated =
+      count > 0
+        ? await tx.post.update({
+            where: { id: post.id },
+            data: { likeCount: { increment: 1 } },
+            select: { likeCount: true },
+          })
+        : await tx.post.findUniqueOrThrow({ where: { id: post.id }, select: { likeCount: true } });
+
+    return { likedByMe: true, likeCount: updated.likeCount };
+  });
+}
+
+/**
+ * The mirror of `likePost`, idempotent the same way: unliking something that was
+ * never liked is a `200` with the count unchanged, not a `404`. `deleteMany`
+ * reports how many rows went, so the decrement stays paired with a real removal
+ * and the count cannot drift from a no-op call.
+ */
+export async function unlikePost(
+  actor: PostActor,
+  identifier: PostIdentifier,
+): Promise<LikeResult> {
+  const post = await findPostForWrite(identifier);
+
+  if (post.deletedAt !== null) throw AppError.notFound("No report with that tracking code");
+
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.postLike.deleteMany({
+      where: { postId: post.id, userId: actor.id },
+    });
+
+    const updated =
+      count > 0
+        ? await tx.post.update({
+            where: { id: post.id },
+            data: { likeCount: { decrement: 1 } },
+            select: { likeCount: true },
+          })
+        : await tx.post.findUniqueOrThrow({ where: { id: post.id }, select: { likeCount: true } });
+
+    return { likedByMe: false, likeCount: updated.likeCount };
+  });
+}
+
+// ── comments ────────────────────────────────────────────────────────
+
+export interface CreateCommentInput {
+  message: string;
+}
+
+/**
+ * The report a comment write targets. A moderated-away report is gone as far as
+ * the public surface goes, so commenting on one is a `404`, exactly like reading
+ * it.
+ */
+async function findPostForComment(identifier: PostIdentifier): Promise<bigint> {
+  const post = await findPostForWrite(identifier);
+  if (post.deletedAt !== null) throw AppError.notFound("No report with that tracking code");
+
+  return post.id;
+}
+
+export async function createComment(
+  actor: PostActor,
+  identifier: PostIdentifier,
+  input: CreateCommentInput,
+): Promise<PublicComment> {
+  const postId = await findPostForComment(identifier);
+
+  const created = await prisma.$transaction(async (tx) => {
+    const comment = await tx.comment.create({
+      data: { postId, userId: actor.id, parentId: null, message: input.message },
+      select: PUBLIC_COMMENT_SELECT,
+    });
+
+    // commentCount is the all-in number — top-level comments and replies both
+    // move it — which is how the seed reconciles it (every non-deleted row).
+    await tx.post.update({ where: { id: postId }, data: { commentCount: { increment: 1 } } });
+
+    return comment;
+  });
+
+  logger.info(
+    { postId: postId.toString(), commentId: created.id.toString(), actorId: actor.id.toString() },
+    "comment created",
+  );
+
+  return toPublicComment(created, false);
+}
+
+export async function createReply(
+  actor: PostActor,
+  identifier: PostIdentifier,
+  commentId: bigint,
+  input: CreateCommentInput,
+): Promise<PublicComment> {
+  const postId = await findPostForComment(identifier);
+
+  const parent = await prisma.comment.findFirst({
+    where: { id: commentId, postId },
+    select: { id: true, parentId: true, deletedAt: true },
+  });
+
+  // Wrong report, never existed, or moderated away — all a `404`, the same
+  // answer a read gives.
+  if (!parent || parent.deletedAt !== null) {
+    throw AppError.notFound("No comment with that id on this report");
+  }
+
+  // One level only. The frontend offers "Reply" on top-level comments, and a
+  // reply to a reply would have nowhere to render depth-wise.
+  if (parent.parentId !== null) {
+    throw AppError.badRequest("Replies go one level deep. Reply to the original comment instead.");
+  }
+
+  const created = await prisma.$transaction(async (tx) => {
+    const reply = await tx.comment.create({
+      data: { postId, userId: actor.id, parentId: parent.id, message: input.message },
+      select: PUBLIC_COMMENT_SELECT,
+    });
+
+    await tx.post.update({ where: { id: postId }, data: { commentCount: { increment: 1 } } });
+
+    return reply;
+  });
+
+  logger.info(
+    {
+      postId: postId.toString(),
+      commentId: created.id.toString(),
+      parentId: parent.id.toString(),
+      actorId: actor.id.toString(),
+    },
+    "reply created",
+  );
+
+  return toPublicComment(created, false);
+}
+
+// ── comment likes ───────────────────────────────────────────────────
+
+/**
+ * The comment a like targets, once its report is known visible. A reply can be
+ * liked too — the frontend shows the same button on one — so there is no depth
+ * check here, unlike a reply. A comment that is missing, belongs to another
+ * report, or was moderated away is a `404`.
+ */
+async function findCommentForWrite(
+  identifier: PostIdentifier,
+  commentId: bigint,
+): Promise<bigint> {
+  const postId = await findPostForComment(identifier);
+
+  const comment = await prisma.comment.findFirst({
+    where: { id: commentId, postId },
+    select: { id: true, deletedAt: true },
+  });
+
+  if (!comment || comment.deletedAt !== null) {
+    throw AppError.notFound("No comment with that id on this report");
+  }
+
+  return comment.id;
+}
+
+/**
+ * The comment twin of `likePost`, idempotent for the same reason: the
+ * `(commentId, userId)` unique index means a repeated like is a no-op that still
+ * answers `200`, and only a genuinely new row moves `comments.like_count`.
+ */
+export async function likeComment(
+  actor: PostActor,
+  identifier: PostIdentifier,
+  commentId: bigint,
+): Promise<LikeResult> {
+  const id = await findCommentForWrite(identifier, commentId);
+
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.commentLike.createMany({
+      data: [{ commentId: id, userId: actor.id }],
+      skipDuplicates: true,
+    });
+
+    const updated =
+      count > 0
+        ? await tx.comment.update({
+            where: { id },
+            data: { likeCount: { increment: 1 } },
+            select: { likeCount: true },
+          })
+        : await tx.comment.findUniqueOrThrow({ where: { id }, select: { likeCount: true } });
+
+    return { likedByMe: true, likeCount: updated.likeCount };
+  });
+}
+
+export async function unlikeComment(
+  actor: PostActor,
+  identifier: PostIdentifier,
+  commentId: bigint,
+): Promise<LikeResult> {
+  const id = await findCommentForWrite(identifier, commentId);
+
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.commentLike.deleteMany({
+      where: { commentId: id, userId: actor.id },
+    });
+
+    const updated =
+      count > 0
+        ? await tx.comment.update({
+            where: { id },
+            data: { likeCount: { decrement: 1 } },
+            select: { likeCount: true },
+          })
+        : await tx.comment.findUniqueOrThrow({ where: { id }, select: { likeCount: true } });
+
+    return { likedByMe: false, likeCount: updated.likeCount };
+  });
 }

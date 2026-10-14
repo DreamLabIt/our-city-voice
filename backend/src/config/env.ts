@@ -44,6 +44,11 @@ const EnvSchema = z.object({
   
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
   AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(15 * 60_000),
+
+  // Contact form submissions per IP per window. Counts every request, not just
+  // failures: the endpoint is open, so a successful spam run is the risk.
+  CONTACT_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+  CONTACT_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60 * 60_000),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

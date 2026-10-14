@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, type ChangeEvent } from "react";
-import { Controller, useForm, type SubmitHandler } from "react-hook-form";
+import { useRef, useState, type ChangeEvent } from "react";
+import { useForm, type SubmitHandler } from "react-hook-form";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-    MapPin,
     UploadCloud,
     Send,
     Loader2,
@@ -15,22 +14,92 @@ import {
 import { createReportIssue } from "@/app/actions/issues";
 import type { ReportIssueFormData, UploadedMediaItem, ReportFormProps, FormValues } from "@/types/issues";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { useUploads } from "@/hooks/use-uploads";
 import { MediaSlot } from "./MediaSlot";
+import IssueDetailsFields from "./IssueDetailsFields";
+import LocationFields from "./LocationFields";
 
 const MAX_IMAGE_FILES = 5;
 const MAX_VIDEO_FILES = 2;
+
+const NOMINATIM_EMAIL = process.env.NEXT_PUBLIC_NOMINATIM_EMAIL;
+
+const ADDRESS_NOT_FOUND_MESSAGE = "We couldn't find this address. Please enter a clearer address.";
+const GEOCODER_UNREACHABLE_MESSAGE = "Could not reach the map service. Please check your connection and try again.";
+
+type Coordinates = { latitude: number; longitude: number };
+
+const sleep = (ms: number) =>
+    new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+const geocodeQuery = async (query: string): Promise<Coordinates | null> => {
+    const params = new URLSearchParams({
+        format: "json",
+        q: query,
+        limit: "1",
+        countrycodes: "bd",
+        "accept-language": "en",
+    });
+
+    if (NOMINATIM_EMAIL) {
+        params.set("email", NOMINATIM_EMAIL);
+    }
+
+    const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+    );
+
+    if (!res.ok) {
+        throw new Error(`Nominatim responded with ${res.status}`);
+    }
+
+    const data: unknown = await res.json();
+
+    if (Array.isArray(data) && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
+
+        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+            return { latitude: lat, longitude: lon };
+        }
+    }
+
+    return null;
+};
+
+const geocodeAddress = async (parts: {
+    address: string;
+    city: string;
+    street?: string;
+    postalCode?: string;
+    wardName?: string;
+}): Promise<Coordinates | null> => {
+    const { address, city, street, postalCode, wardName } = parts;
+
+    const attempts = [
+        [street, address, wardName, city, postalCode, "Bangladesh"],
+        [street, address, city, "Bangladesh"],
+        [address, city, "Bangladesh"],
+    ]
+        .map((list) => list.filter(Boolean).join(", "))
+        .filter(Boolean);
+
+    const uniqueAttempts = [...new Set(attempts)];
+
+    for (let i = 0; i < uniqueAttempts.length; i++) {
+        const result = await geocodeQuery(uniqueAttempts[i]);
+        if (result) return result;
+
+        if (i < uniqueAttempts.length - 1) {
+            await sleep(1100);
+        }
+    }
+
+    return null;
+};
 
 export default function ReportForm({ reportFilters }: ReportFormProps) {
     const router = useRouter();
@@ -38,6 +107,9 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
     const isVideoMode = searchParams.get("type") === "video";
 
     const [uploadingMedia, setUploadingMedia] = useState(false);
+    const [isGeocoding, setIsGeocoding] = useState(false);
+    const geocodeRequestRef = useRef(0);
+    const pendingGeocodeRef = useRef<Promise<boolean> | null>(null);
 
     const maxMediaFiles = isVideoMode
         ? MAX_VIDEO_FILES
@@ -55,6 +127,10 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
         reset,
         watch,
         setValue,
+        getValues,
+        setError,
+        clearErrors,
+        setFocus,
         control,
         formState: { errors, isSubmitting },
     } = useForm<FormValues>({
@@ -77,6 +153,13 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
     });
 
     const isAnonymous = watch("isAnonymous");
+    const watchedLatitude = watch("location.latitude");
+    const watchedLongitude = watch("location.longitude");
+    const hasCoordinates =
+        typeof watchedLatitude === "number" &&
+        typeof watchedLongitude === "number" &&
+        Number.isFinite(watchedLatitude) &&
+        Number.isFinite(watchedLongitude);
 
     const handleFileChange = (
         event: ChangeEvent<HTMLInputElement>,
@@ -87,7 +170,153 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
         }
     };
 
+    const getWardName = (wardValue: string): string => {
+        const found = reportFilters.wards.find(
+            (w) => (w.value || w.code) === wardValue,
+        );
+        return found?.name ?? "";
+    };
+
+    const clearCoordinates = () => {
+        setValue("location.latitude", null);
+        setValue("location.longitude", null);
+    };
+
+    const resolveAddressCoordinates = async (): Promise<boolean> => {
+        const values = getValues();
+        const address = values.location.address?.trim() ?? "";
+        const city = values.location.city?.trim() ?? "";
+
+        if (!address || !city) return false;
+
+        const requestId = ++geocodeRequestRef.current;
+        setIsGeocoding(true);
+
+        try {
+            const result = await geocodeAddress({
+                address,
+                city,
+                street: values.location.street?.trim() || undefined,
+                postalCode: values.location.postalCode?.trim() || undefined,
+                wardName: getWardName(values.ward) || undefined,
+            });
+
+            if (requestId !== geocodeRequestRef.current) return false;
+
+            if (!result) {
+                clearCoordinates();
+                setError("location.address", {
+                    type: "manual",
+                    message: ADDRESS_NOT_FOUND_MESSAGE,
+                });
+                return false;
+            }
+
+            setValue("location.latitude", result.latitude);
+            setValue("location.longitude", result.longitude);
+            clearErrors("location.address");
+            return true;
+        } catch (err) {
+            console.error("Geocoding error:", err);
+
+            if (requestId === geocodeRequestRef.current) {
+                clearCoordinates();
+                setError("location.address", {
+                    type: "manual",
+                    message: GEOCODER_UNREACHABLE_MESSAGE,
+                });
+            }
+            return false;
+        } finally {
+            if (requestId === geocodeRequestRef.current) {
+                setIsGeocoding(false);
+            }
+        }
+    };
+
+    const runAddressLookup = (): Promise<boolean> => {
+        const promise = resolveAddressCoordinates();
+        pendingGeocodeRef.current = promise;
+
+        void promise.finally(() => {
+            if (pendingGeocodeRef.current === promise) {
+                pendingGeocodeRef.current = null;
+            }
+        });
+
+        return promise;
+    };
+
+    const handleAddressChange = () => {
+        geocodeRequestRef.current += 1;
+        setIsGeocoding(false);
+        clearErrors("location.address");
+        clearCoordinates();
+    };
+
+    const invalidateAddressCoordinates = () => {
+        geocodeRequestRef.current += 1;
+        setIsGeocoding(false);
+        clearCoordinates();
+    };
+
+    const handleLocationBlur = () => {
+        if (pendingGeocodeRef.current) return;
+
+        const lat = getValues("location.latitude");
+        const lng = getValues("location.longitude");
+        if (lat !== null && lng !== null) return;
+
+        const address = getValues("location.address")?.trim();
+        const city = getValues("location.city")?.trim();
+        if (!address || !city) return;
+
+        void runAddressLookup();
+    };
+
     const onSubmit: SubmitHandler<FormValues> = async (data) => {
+        if (pendingGeocodeRef.current) {
+            await pendingGeocodeRef.current;
+        }
+
+        let finalLat = getValues("location.latitude");
+        let finalLng = getValues("location.longitude");
+
+        if (
+            finalLat === null ||
+            finalLng === null ||
+            !Number.isFinite(finalLat) ||
+            !Number.isFinite(finalLng)
+        ) {
+            const found = await runAddressLookup();
+
+            if (!found) {
+                setFocus("location.address");
+                toast.error("Location not found", {
+                    description:
+                        "Please correct the address and try again.",
+                });
+                return;
+            }
+
+            finalLat = getValues("location.latitude");
+            finalLng = getValues("location.longitude");
+        }
+
+        if (
+            finalLat === null ||
+            finalLng === null ||
+            !Number.isFinite(finalLat) ||
+            !Number.isFinite(finalLng)
+        ) {
+            setError("location.address", {
+                type: "manual",
+                message: ADDRESS_NOT_FOUND_MESSAGE,
+            });
+            setFocus("location.address");
+            return;
+        }
+
         setUploadingMedia(true);
 
         try {
@@ -100,7 +329,6 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
                 });
                 return;
             }
-
 
             const uploadedMediaItems: UploadedMediaItem[] =
                 uploadedFiles.map((file) => ({
@@ -124,11 +352,10 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
                 location: {
                     address: data.location.address.trim(),
                     city: data.location.city.trim(),
-                    street: data.location.street.trim() || null,
-                    postalCode:
-                        data.location.postalCode.trim() || null,
-                    latitude: data.location.latitude,
-                    longitude: data.location.longitude,
+                    street: data.location.street?.trim() || null,
+                    postalCode: data.location.postalCode?.trim() || null,
+                    latitude: finalLat,
+                    longitude: finalLng,
                 },
                 media: uploadedMediaItems,
             };
@@ -188,7 +415,10 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
     };
 
     const isBusy =
-        isSubmitting || uploadingMedia || uploads.isUploading;
+        isSubmitting ||
+        uploadingMedia ||
+        uploads.isUploading ||
+        isGeocoding;
 
     return (
         <Card className="bg-card border border-border-custom rounded-2xl p-6 sm:p-8 md:p-10 shadow space-y-4">
@@ -208,283 +438,23 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
                     onSubmit={handleSubmit(onSubmit)}
                     className="space-y-7"
                 >
-                    <div className="space-y-1.5">
-                        <label
-                            htmlFor="title"
-                            className="text-xs font-bold text-foreground uppercase tracking-wide"
-                        >
-                            Issue Title{" "}
-                            <span className="text-primary">*</span>
-                        </label>
+                    <IssueDetailsFields
+                        register={register}
+                        control={control}
+                        errors={errors}
+                        reportFilters={reportFilters}
+                        invalidateAddressCoordinates={invalidateAddressCoordinates}
+                    />
 
-                        <Input
-                            id="title"
-                            placeholder="Enter a concise title for the issue"
-                            {...register("title", {
-                                required: "Issue title is required.",
-                                minLength: {
-                                    value: 6,
-                                    message:
-                                        "Title must be at least 6 characters.",
-                                },
-                                maxLength: {
-                                    value: 160,
-                                    message:
-                                        "Title cannot exceed 160 characters.",
-                                },
-                            })}
-                            className="bg-section border-border-custom rounded mt-2"
-                        />
-
-                        {errors.title && (
-                            <p className="text-xs text-destructive mt-1">
-                                {errors.title.message}
-                            </p>
-                        )}
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-foreground uppercase tracking-wide">
-                                Category{" "}
-                                <span className="text-primary">*</span>
-                            </label>
-
-                            <Controller
-                                name="category"
-                                control={control}
-                                rules={{
-                                    required:
-                                        "Please select a category.",
-                                }}
-                                render={({ field }) => (
-                                    <Select
-                                        value={field.value}
-                                        onValueChange={field.onChange}
-                                    >
-                                        <SelectTrigger className="w-full rounded bg-section border-border-custom mt-2">
-                                            <SelectValue placeholder="Select Category" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {reportFilters.categories.map(
-                                                (category) => (
-                                                    <SelectItem
-                                                        key={category.value}
-                                                        value={category.value}
-                                                    >
-                                                        {category.name}
-                                                    </SelectItem>
-                                                ),
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                )}
-                            />
-
-                            {errors.category && (
-                                <p className="text-xs text-destructive mt-1">
-                                    {errors.category.message}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-foreground uppercase tracking-wide">
-                                Ward{" "}
-                                <span className="text-primary">*</span>
-                            </label>
-
-                            <Controller
-                                name="ward"
-                                control={control}
-                                rules={{
-                                    required: "Please select a ward.",
-                                }}
-                                render={({ field }) => (
-                                    <Select
-                                        value={field.value}
-                                        onValueChange={field.onChange}
-                                    >
-                                        <SelectTrigger className="w-full rounded bg-section border-border-custom mt-2">
-                                            <SelectValue placeholder="Select Ward" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {reportFilters.wards.map(
-                                                (ward) => {
-                                                    const wardCode =
-                                                        ward.value ||
-                                                        ward.code;
-
-                                                    if (!wardCode) {
-                                                        return null;
-                                                    }
-
-                                                    return (
-                                                        <SelectItem
-                                                            key={wardCode}
-                                                            value={wardCode}
-                                                        >
-                                                            {ward.name}
-                                                        </SelectItem>
-                                                    );
-                                                },
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                )}
-                            />
-
-                            {errors.ward && (
-                                <p className="text-xs text-destructive mt-1">
-                                    {errors.ward.message}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-foreground uppercase tracking-wide">
-                            Urgency / Priority Level{" "}
-                            <span className="text-primary">*</span>
-                        </label>
-
-                        <Controller
-                            name="priority"
-                            control={control}
-                            render={({ field }) => (
-                                <Select
-                                    value={field.value}
-                                    onValueChange={field.onChange}
-                                >
-                                    <SelectTrigger className="w-full rounded bg-section border-border-custom mt-2">
-                                        <SelectValue placeholder="Select Priority" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="low">
-                                            Low (Minor aesthetic issues)
-                                        </SelectItem>
-                                        <SelectItem value="medium">
-                                            Medium (General repair needed)
-                                        </SelectItem>
-                                        <SelectItem value="high">
-                                            High (Disrupts daily traffic/life)
-                                        </SelectItem>
-                                        <SelectItem value="critical">
-                                            Critical (Immediate public hazard)
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            )}
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        <div className="space-y-1.5">
-                            <label
-                                htmlFor="city"
-                                className="text-xs font-bold text-foreground uppercase tracking-wide"
-                            >
-                                City{" "}
-                                <span className="text-primary">*</span>
-                            </label>
-
-                            <Input
-                                id="city"
-                                placeholder="Enter city"
-                                {...register("location.city", {
-                                    required: "City is required.",
-                                    maxLength: {
-                                        value: 80,
-                                        message:
-                                            "City cannot exceed 80 characters.",
-                                    },
-                                })}
-                                className="bg-section border-border-custom rounded mt-2"
-                            />
-
-                            {errors.location?.city && (
-                                <p className="text-xs text-destructive mt-1">
-                                    {errors.location.city.message}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <label
-                                htmlFor="location"
-                                className="text-xs font-bold text-foreground uppercase tracking-wide"
-                            >
-                                Location Address{" "}
-                                <span className="text-primary">*</span>
-                            </label>
-
-                            <div className="relative mt-2">
-                                <Input
-                                    id="location"
-                                    placeholder="Street address or nearby landmark"
-                                    {...register("location.address", {
-                                        required:
-                                            "Location address is required.",
-                                        maxLength: {
-                                            value: 240,
-                                            message:
-                                                "Address cannot exceed 240 characters.",
-                                        },
-                                    })}
-                                    className="pl-10 bg-section rounded border-border-custom"
-                                />
-                                <MapPin className="w-4 h-4 text-primary absolute left-3.5 top-1/2 -translate-y-1/2" />
-                            </div>
-
-                            {errors.location?.address && (
-                                <p className="text-xs text-destructive mt-1">
-                                    {errors.location.address.message}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        <div className="space-y-1.5">
-                            <label
-                                htmlFor="street"
-                                className="text-xs font-bold text-foreground uppercase tracking-wide"
-                            >
-                                Street (Optional)
-                            </label>
-                            <Input
-                                id="street"
-                                {...register("location.street", {
-                                    maxLength: {
-                                        value: 160,
-                                        message:
-                                            "Street cannot exceed 160 characters.",
-                                    },
-                                })}
-                                className="bg-section border-border-custom rounded mt-2"
-                            />
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <label
-                                htmlFor="postalCode"
-                                className="text-xs font-bold text-foreground uppercase tracking-wide"
-                            >
-                                Postal Code (Optional)
-                            </label>
-                            <Input
-                                id="postalCode"
-                                {...register("location.postalCode", {
-                                    maxLength: {
-                                        value: 16,
-                                        message:
-                                            "Postal code cannot exceed 16 characters.",
-                                    },
-                                })}
-                                className="bg-section border-border-custom rounded mt-2"
-                            />
-                        </div>
-                    </div>
+                    <LocationFields
+                        register={register}
+                        errors={errors}
+                        isGeocoding={isGeocoding}
+                        hasCoordinates={hasCoordinates}
+                        invalidateAddressCoordinates={invalidateAddressCoordinates}
+                        handleAddressChange={handleAddressChange}
+                        handleLocationBlur={handleLocationBlur}
+                    />
 
                     <div className="space-y-1.5">
                         <label
@@ -499,17 +469,13 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
                             rows={4}
                             placeholder="Provide context about the problem..."
                             {...register("description", {
-                                required:
-                                    "Description is required.",
-                                minLength: {
-                                    value: 15,
-                                    message:
-                                        "Description must be at least 15 characters.",
-                                },
+                                required: "Description is required.",
+                                validate: (value) =>
+                                    value.trim().length >= 16 ||
+                                    "Description must be at least 16 characters.",
                                 maxLength: {
                                     value: 5000,
-                                    message:
-                                        "Description cannot exceed 5000 characters.",
+                                    message: "Description cannot exceed 5000 characters.",
                                 },
                             })}
                             className="bg-section rounded border-border-custom resize-none mt-2 h-27"
@@ -613,7 +579,9 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
                                 <span>
                                     {uploads.isUploading
                                         ? `Uploading (${uploads.progress}%)...`
-                                        : "Submitting Report..."}
+                                        : isGeocoding
+                                            ? "Checking address..."
+                                            : "Submitting Report..."}
                                 </span>
                             </>
                         ) : (

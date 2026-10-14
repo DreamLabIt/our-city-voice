@@ -16,10 +16,21 @@ is why it behaves the way it does.
 | [`GET /posts`](endpoints/list-reports.md) | optional | the filtered, paginated feed of reports |
 | [`POST /posts`](endpoints/create-report.md) | required | file a new report |
 | [`GET /posts/filters`](endpoints/report-filter-options.md) | none | option lists for the filter dropdowns |
+| [`GET /posts/search`](endpoints/search-reports.md) | optional | full results for a term, by code, title or address |
+| [`GET /posts/suggestions`](endpoints/suggest-reports.md) | none | up to six best matches for a search box |
 | [`GET /posts/:code`](endpoints/get-report.md) | optional | one report, with timeline and related |
 | [`PATCH /posts/:code`](endpoints/update-report.md) | required | edit a report you filed (or any, as a super admin) |
 | [`DELETE /posts/:code`](endpoints/delete-report.md) | required | soft-delete a report you filed (or any, as a super admin) |
 | [`GET /posts/:code/comments`](endpoints/list-report-comments.md) | optional | a page of comment threads |
+| [`POST /posts/:code/like`](endpoints/like-report.md) | required | like a report |
+| [`DELETE /posts/:code/like`](endpoints/unlike-report.md) | required | remove your like from a report |
+| [`POST /posts/:code/comments`](endpoints/create-comment.md) | required | add a top-level comment |
+| [`POST /posts/:code/comments/:commentId/replies`](endpoints/reply-to-comment.md) | required | reply to a comment |
+| [`POST /posts/:code/comments/:commentId/like`](endpoints/like-comment.md) | required | like a comment or reply |
+| [`DELETE /posts/:code/comments/:commentId/like`](endpoints/unlike-comment.md) | required | remove your like from a comment |
+| [`GET /contact/categories`](endpoints/list-contact-categories.md) | none | the contact form's category options |
+| [`POST /contact/messages`](endpoints/create-contact-message.md) | none | store a contact-form submission |
+| [`GET /contact/messages`](endpoints/list-contact-messages.md) | required | the contact inbox, paginated (super admin only) |
 
 "Auth optional" means the endpoint answers a signed-out request and gives a
 signed-in one more: `likedByMe`, and in some cases extra parameters.
@@ -48,4 +59,6 @@ code is written to disk.
 [not-implemented.md](not-implemented.md) lists what deliberately does not exist
 yet, so nothing here is mistaken for an oversight. The short version: **every read
 the current pages need exists, plus the writes that own a report — filing one,
-editing it and soft-deleting it. Everything else is still a read.**
+editing it and soft-deleting it — the engagement controls the detail page shows:
+liking a report, posting a comment, replying, and liking a comment; and the
+contact form, which can submit a message and list it back in the admin inbox.**
