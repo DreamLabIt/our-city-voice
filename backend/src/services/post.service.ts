@@ -870,3 +870,98 @@ export async function unlikePost(
     return { likedByMe: false, likeCount: updated.likeCount };
   });
 }
+
+// ── comments ────────────────────────────────────────────────────────
+
+export interface CreateCommentInput {
+  message: string;
+}
+
+/**
+ * The report a comment write targets. A moderated-away report is gone as far as
+ * the public surface goes, so commenting on one is a `404`, exactly like reading
+ * it.
+ */
+async function findPostForComment(identifier: PostIdentifier): Promise<bigint> {
+  const post = await findPostForWrite(identifier);
+  if (post.deletedAt !== null) throw AppError.notFound("No report with that tracking code");
+
+  return post.id;
+}
+
+export async function createComment(
+  actor: PostActor,
+  identifier: PostIdentifier,
+  input: CreateCommentInput,
+): Promise<PublicComment> {
+  const postId = await findPostForComment(identifier);
+
+  const created = await prisma.$transaction(async (tx) => {
+    const comment = await tx.comment.create({
+      data: { postId, userId: actor.id, parentId: null, message: input.message },
+      select: PUBLIC_COMMENT_SELECT,
+    });
+
+    // commentCount is the all-in number — top-level comments and replies both
+    // move it — which is how the seed reconciles it (every non-deleted row).
+    await tx.post.update({ where: { id: postId }, data: { commentCount: { increment: 1 } } });
+
+    return comment;
+  });
+
+  logger.info(
+    { postId: postId.toString(), commentId: created.id.toString(), actorId: actor.id.toString() },
+    "comment created",
+  );
+
+  return toPublicComment(created, false);
+}
+
+export async function createReply(
+  actor: PostActor,
+  identifier: PostIdentifier,
+  commentId: bigint,
+  input: CreateCommentInput,
+): Promise<PublicComment> {
+  const postId = await findPostForComment(identifier);
+
+  const parent = await prisma.comment.findFirst({
+    where: { id: commentId, postId },
+    select: { id: true, parentId: true, deletedAt: true },
+  });
+
+  // Wrong report, never existed, or moderated away — all a `404`, the same
+  // answer a read gives.
+  if (!parent || parent.deletedAt !== null) {
+    throw AppError.notFound("No comment with that id on this report");
+  }
+
+  // One level only. The frontend offers "Reply" on top-level comments, and a
+  // reply to a reply would have nowhere to render depth-wise.
+  if (parent.parentId !== null) {
+    throw AppError.badRequest("Replies go one level deep. Reply to the original comment instead.");
+  }
+
+  const created = await prisma.$transaction(async (tx) => {
+    const reply = await tx.comment.create({
+      data: { postId, userId: actor.id, parentId: parent.id, message: input.message },
+      select: PUBLIC_COMMENT_SELECT,
+    });
+
+    await tx.post.update({ where: { id: postId }, data: { commentCount: { increment: 1 } } });
+
+    return reply;
+  });
+
+  logger.info(
+    {
+      postId: postId.toString(),
+      commentId: created.id.toString(),
+      parentId: parent.id.toString(),
+      actorId: actor.id.toString(),
+    },
+    "reply created",
+  );
+
+  return toPublicComment(created, false);
+}

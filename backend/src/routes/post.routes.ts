@@ -27,6 +27,10 @@ postRouter.delete("/:code", requireAuth, postController.remove);
 
 postRouter.get("/:code/comments", postController.comments);
 
+postRouter.post("/:code/comments", requireAuth, postController.addComment);
+
+postRouter.post("/:code/comments/:commentId/replies", requireAuth, postController.addReply);
+
 postRouter.post("/:code/like", requireAuth, postController.like);
 
 postRouter.delete("/:code/like", requireAuth, postController.unlike);
