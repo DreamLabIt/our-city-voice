@@ -89,3 +89,9 @@ the other mock fields is covered in
 9 SQL statements signed in, 8 signed out — constant whether the page holds one
 thread or twenty. Replies and comment likes are each one batched query, not one per
 parent.
+
+## See also
+
+- [`POST /posts/:code/comments`](create-comment.md) — add a top-level comment
+- [`POST /posts/:code/comments/:commentId/replies`](reply-to-comment.md) — reply to one
+- [`POST`/`DELETE /posts/:code/comments/:commentId/like`](like-comment.md) — like a comment

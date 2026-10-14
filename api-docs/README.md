@@ -22,6 +22,12 @@ is why it behaves the way it does.
 | [`PATCH /posts/:code`](endpoints/update-report.md) | required | edit a report you filed (or any, as a super admin) |
 | [`DELETE /posts/:code`](endpoints/delete-report.md) | required | soft-delete a report you filed (or any, as a super admin) |
 | [`GET /posts/:code/comments`](endpoints/list-report-comments.md) | optional | a page of comment threads |
+| [`POST /posts/:code/like`](endpoints/like-report.md) | required | like a report |
+| [`DELETE /posts/:code/like`](endpoints/unlike-report.md) | required | remove your like from a report |
+| [`POST /posts/:code/comments`](endpoints/create-comment.md) | required | add a top-level comment |
+| [`POST /posts/:code/comments/:commentId/replies`](endpoints/reply-to-comment.md) | required | reply to a comment |
+| [`POST /posts/:code/comments/:commentId/like`](endpoints/like-comment.md) | required | like a comment or reply |
+| [`DELETE /posts/:code/comments/:commentId/like`](endpoints/unlike-comment.md) | required | remove your like from a comment |
 
 "Auth optional" means the endpoint answers a signed-out request and gives a
 signed-in one more: `likedByMe`, and in some cases extra parameters.
@@ -50,4 +56,5 @@ code is written to disk.
 [not-implemented.md](not-implemented.md) lists what deliberately does not exist
 yet, so nothing here is mistaken for an oversight. The short version: **every read
 the current pages need exists, plus the writes that own a report — filing one,
-editing it and soft-deleting it. Everything else is still a read.**
+editing it and soft-deleting it — and the engagement controls the detail page
+shows: liking a report, posting a comment, replying, and liking a comment.**

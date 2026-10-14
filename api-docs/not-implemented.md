@@ -2,28 +2,36 @@
 
 Called out so nothing in these docs is mistaken for an oversight.
 
-**The short version: every read the current pages need exists, plus the three
-writes that concern a report's own existence — filing it, editing it and
-soft-deleting it. Everything else is still a read.**
+**The short version: every read the current pages need exists, plus the writes
+that concern a report's own existence — filing it, editing it and soft-deleting it
+— and the engagement controls on the detail page: liking a report, posting a
+comment, replying, and liking a comment. Everything else is still a read.**
 
 ## Writes
 
 **A report can be created, edited and soft-deleted by its author** (or a super
 admin): [`POST /posts`](endpoints/create-report.md),
 [`PATCH /posts/:code`](endpoints/update-report.md) and
-[`DELETE /posts/:code`](endpoints/delete-report.md). Everything else below still
-has no `POST`, `PUT` or `DELETE`:
+[`DELETE /posts/:code`](endpoints/delete-report.md). The detail page's engagement
+controls are live too:
 
-- **Liking a report**, and **unliking one**. `likedByMe` can be read, not set.
-- **Posting a comment or a reply**, and **liking a comment**. The controls in
-  `IssueDetails.tsx` can only update local state.
+- **Liking a report**, and unliking it —
+  [`POST`/`DELETE /posts/:code/like`](endpoints/like-report.md).
+- **Posting a comment, replying, and liking a comment** —
+  [`POST /posts/:code/comments`](endpoints/create-comment.md),
+  [`POST /posts/:code/comments/:commentId/replies`](endpoints/reply-to-comment.md)
+  and [`POST`/`DELETE /posts/:code/comments/:commentId/like`](endpoints/like-comment.md).
+
+Everything else below still has no `POST`, `PUT` or `DELETE`:
+
 - **Changing a status.** Which also means nothing writes to the timeline that
   [`GET /posts/:code`](endpoints/get-report.md) reads. Status is absent from the
   edit schema on purpose; an edit is not a status change.
 - **Restoring a soft-deleted report.** `DELETE /posts/:code` sets `deleted_at` and
   keeps the row, so the data to reverse it is there, but no endpoint clears it.
-- **Soft-deleting a comment.** It is readable with a super admin token and is not
-  settable. A comment's report can be soft-deleted as a whole.
+- **Deleting a comment.** A comment cannot be removed on its own — there is no
+  self-delete and no moderation delete. It survives until the report it belongs to
+  is soft-deleted, which hides the whole thread at once.
 - **Changing a password.** `PATCH /me` will not set a new one; it needs its own
   endpoint, because a new password has a minimum length that *confirming* an
   existing one must not be held to, and changing it should end every other session.

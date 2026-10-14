@@ -7,6 +7,7 @@ The shapes that come back. Endpoint files link here rather than repeating them.
 - [`ReportDetail`](#reportdetail) — a `Report` plus the timeline
 - [`ReportSuggestion`](#reportsuggestion) — a search candidate
 - [`Comment` and `CommentThread`](#comment-and-commentthread)
+- [`LikeResult`](#likeresult) — the answer to a like or unlike
 - [`FilterOptions`](#filteroptions)
 
 See [conventions.md](conventions.md) for the rules behind ids, dates and enums.
@@ -118,6 +119,10 @@ Whether the caller has liked it. Always `false` for a signed-out reader, which i
 also what the like button should show them. `likeCount` is the public total and
 is unaffected by who is asking.
 
+Set it through [`POST`/`DELETE /posts/:code/like`](endpoints/like-report.md) for a
+report and [`POST`/`DELETE /posts/:code/comments/:commentId/like`](endpoints/like-comment.md)
+for a comment; both return the updated pair in a [`LikeResult`](#likeresult).
+
 ---
 
 ## `ReportDetail`
@@ -188,7 +193,10 @@ not want to — the suggestion is a hop, not a render.
 
 ## `Comment` and `CommentThread`
 
-Returned by [`GET /posts/:code/comments`](endpoints/list-report-comments.md).
+Returned by [`GET /posts/:code/comments`](endpoints/list-report-comments.md), and
+the bare `Comment` is what [`POST …/comments`](endpoints/create-comment.md) and
+[`POST …/comments/:commentId/replies`](endpoints/reply-to-comment.md) return for
+the row they just created.
 
 ```json
 {
@@ -226,6 +234,24 @@ const isOfficial = comment.author.departmentId !== null || comment.author.role =
 
 `time: "4 hours ago"` is `createdAt` formatted on the client, and `initials` comes
 from `author.name`.
+
+---
+
+## `LikeResult`
+
+Returned by the four like/unlike endpoints — [`POST`/`DELETE /posts/:code/like`](endpoints/like-report.md)
+and [`POST`/`DELETE /posts/:code/comments/:commentId/like`](endpoints/like-comment.md).
+Just enough to update a button in place; it is not a [`Report`](#report) or a
+[`Comment`](#comment-and-commentthread).
+
+```json
+{ "likedByMe": true, "likeCount": 15 }
+```
+
+`likedByMe` is `true` after a like and `false` after an unlike — the state the
+caller asked for, not a fresh read. `likeCount` is the new public total. Because
+both directions are idempotent, this pair is safe to merge into whatever the page
+already holds: it is the truth after the call, whether or not anything changed.
 
 ---
 
