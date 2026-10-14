@@ -8,6 +8,8 @@ The shapes that come back. Endpoint files link here rather than repeating them.
 - [`ReportSuggestion`](#reportsuggestion) — a search candidate
 - [`Comment` and `CommentThread`](#comment-and-commentthread)
 - [`LikeResult`](#likeresult) — the answer to a like or unlike
+- [`ContactCategory`](#contactcategory) — a contact-form option
+- [`ContactMessage`](#contactmessage) — a contact-form submission
 - [`FilterOptions`](#filteroptions)
 
 See [conventions.md](conventions.md) for the rules behind ids, dates and enums.
@@ -252,6 +254,53 @@ Just enough to update a button in place; it is not a [`Report`](#report) or a
 caller asked for, not a fresh read. `likeCount` is the new public total. Because
 both directions are idempotent, this pair is safe to merge into whatever the page
 already holds: it is the truth after the call, whether or not anything changed.
+
+---
+
+## `ContactCategory`
+
+One option in the contact form's dropdown, from
+[`GET /contact/categories`](endpoints/list-contact-categories.md).
+
+```json
+{ "id": "2", "name": "Report a Problem" }
+```
+
+`name` is what you show; `id` is what you send back as `categoryId` on
+[`POST /contact/messages`](endpoints/create-contact-message.md). There is no slug
+on a contact category — unlike a report `category`, it is never used as a filter —
+so the id is the value, not the name.
+
+---
+
+## `ContactMessage`
+
+A stored contact-form submission. Returned by
+[`POST /contact/messages`](endpoints/create-contact-message.md) for the row just
+created, and listed by [`GET /contact/messages`](endpoints/list-contact-messages.md).
+
+```json
+{
+  "id": "12",
+  "category": { "id": "2", "name": "Report a Problem" },
+  "name": "Jane Rivera",
+  "email": "jane@example.com",
+  "phone": "+1 416 555 0134",
+  "subject": "Broken street light on my block",
+  "message": "The light at the corner has been out for…",
+  "handledAt": null,
+  "createdAt": "2026-10-14T09:12:04.512Z",
+  "updatedAt": "2026-10-14T09:12:04.512Z"
+}
+```
+
+`category` is a full reduced object, not a name, so the dashboard can render the
+badge without a second lookup. `phone` is `null` when the sender left it blank.
+`email` is lowercased.
+
+**`handledAt` is always `null` today** — the column and the field exist for a
+New/Handled state, but nothing sets it. See
+[not-implemented.md](not-implemented.md).
 
 ---
 

@@ -28,6 +28,9 @@ is why it behaves the way it does.
 | [`POST /posts/:code/comments/:commentId/replies`](endpoints/reply-to-comment.md) | required | reply to a comment |
 | [`POST /posts/:code/comments/:commentId/like`](endpoints/like-comment.md) | required | like a comment or reply |
 | [`DELETE /posts/:code/comments/:commentId/like`](endpoints/unlike-comment.md) | required | remove your like from a comment |
+| [`GET /contact/categories`](endpoints/list-contact-categories.md) | none | the contact form's category options |
+| [`POST /contact/messages`](endpoints/create-contact-message.md) | none | store a contact-form submission |
+| [`GET /contact/messages`](endpoints/list-contact-messages.md) | required | the contact inbox, paginated (super admin only) |
 
 "Auth optional" means the endpoint answers a signed-out request and gives a
 signed-in one more: `likedByMe`, and in some cases extra parameters.
@@ -56,5 +59,6 @@ code is written to disk.
 [not-implemented.md](not-implemented.md) lists what deliberately does not exist
 yet, so nothing here is mistaken for an oversight. The short version: **every read
 the current pages need exists, plus the writes that own a report — filing one,
-editing it and soft-deleting it — and the engagement controls the detail page
-shows: liking a report, posting a comment, replying, and liking a comment.**
+editing it and soft-deleting it — the engagement controls the detail page shows:
+liking a report, posting a comment, replying, and liking a comment; and the
+contact form, which can submit a message and list it back in the admin inbox.**
