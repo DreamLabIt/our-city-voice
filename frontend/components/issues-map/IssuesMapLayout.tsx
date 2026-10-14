@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -14,6 +14,7 @@ import {
     CheckCircle2,
     XCircle,
     HelpCircle,
+    Loader2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import dynamic from "next/dynamic";
 import type { IssueMapPin } from "@/types";
 import type { Report } from "@/types/report";
+import { getSearchResults } from "@/app/actions/search";
 
 const IssueMap = dynamic(
     () => import("./IssueMap"),
@@ -38,6 +40,8 @@ const IssueMap = dynamic(
     }
 );
 
+const PAGE_LIMIT = 6;
+const MAX_WINDOW_ITEMS = PAGE_LIMIT * 3;
 const getStatusBadge = (status: string) => {
     const normalizeStatus = status.toLowerCase().replace("_", " ").replace("-", " ");
 
@@ -111,15 +115,224 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
     const queryTrackingCode = searchParams.get("trackingCode");
     const queryId = searchParams.get("id");
 
+    const [searchQuery, setSearchQuery] = useState<string>("");
+    const [debouncedQuery, setDebouncedQuery] = useState<string>("");
+
+    const [firstVisiblePage, setFirstVisiblePage] = useState<number>(1);
+    const [lastVisiblePage, setLastVisiblePage] = useState<number>(1);
+
+    const [hasMoreNext, setHasMoreNext] = useState<boolean>(true);
+    const [isLoadingNext, setIsLoadingNext] = useState<boolean>(false);
+    const [isLoadingPrev, setIsLoadingPrev] = useState<boolean>(false);
+
+    const [visiblePosts, setVisiblePosts] = useState<Report[]>([]);
+    const [selectedPin, setSelectedPin] = useState<IssueMapPin | null>(null);
+
+    const cacheRef = useRef<Map<number, Report[]>>(new Map());
+    const requestIdRef = useRef<number>(0);
+
+    const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+    const topSentinelRef = useRef<HTMLDivElement | null>(null);
+    const bottomSentinelRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedQuery(searchQuery);
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    const loadPageData = useCallback(async (pageNum: number, query: string) => {
+        if (cacheRef.current.has(pageNum)) {
+            return cacheRef.current.get(pageNum) || [];
+        }
+
+        const trimmedQuery = query.trim();
+
+        if (trimmedQuery.length >= 2) {
+            const res = await getSearchResults(trimmedQuery, pageNum, PAGE_LIMIT);
+            if (res && res.posts) {
+                cacheRef.current.set(pageNum, res.posts);
+                return res.posts;
+            } else {
+                return [];
+            }
+        } else {
+            const start = (pageNum - 1) * PAGE_LIMIT;
+            const end = start + PAGE_LIMIT;
+            const sliced = AllPosts.slice(start, end);
+            cacheRef.current.set(pageNum, sliced);
+            return sliced;
+        }
+    }, [AllPosts]);
+
+    useEffect(() => {
+        const currentReqId = ++requestIdRef.current;
+        const query = debouncedQuery.trim();
+
+        cacheRef.current.clear();
+        setFirstVisiblePage(1);
+        setLastVisiblePage(1);
+        setHasMoreNext(true);
+        setIsLoadingNext(true);
+
+        loadPageData(1, query).then((initialPosts) => {
+            if (currentReqId === requestIdRef.current) {
+                setVisiblePosts(initialPosts);
+                setHasMoreNext(initialPosts.length === PAGE_LIMIT);
+                setIsLoadingNext(false);
+            }
+        });
+    }, [debouncedQuery, loadPageData]);
+
+    const loadNextPage = useCallback(async () => {
+        if (isLoadingNext || !hasMoreNext) return;
+
+        setIsLoadingNext(true);
+        const nextPageNum = lastVisiblePage + 1;
+        const newPosts = await loadPageData(nextPageNum, debouncedQuery);
+
+        if (newPosts.length > 0) {
+            setVisiblePosts((prev) => {
+                const combined = [...prev, ...newPosts];
+                if (combined.length > MAX_WINDOW_ITEMS) {
+                    return combined.slice(PAGE_LIMIT);
+                }
+                return combined;
+            });
+
+            if (lastVisiblePage - firstVisiblePage + 1 >= 3) {
+                setFirstVisiblePage((prev) => prev + 1);
+            }
+            setLastVisiblePage(nextPageNum);
+
+            if (newPosts.length < PAGE_LIMIT) {
+                setHasMoreNext(false);
+            }
+        } else {
+            setHasMoreNext(false);
+        }
+        setIsLoadingNext(false);
+    }, [lastVisiblePage, firstVisiblePage, isLoadingNext, hasMoreNext, debouncedQuery, loadPageData]);
+
+    const loadPreviousPage = useCallback(async () => {
+        if (isLoadingPrev || firstVisiblePage <= 1) return;
+
+        const viewport = scrollContainerRef.current?.querySelector(
+            "[data-radix-scroll-area-viewport]",
+        ) as HTMLDivElement | null;
+
+        if (!viewport) return;
+
+        setIsLoadingPrev(true);
+
+        const previousScrollHeight = viewport.scrollHeight;
+        const previousScrollTop = viewport.scrollTop;
+        const targetPageNum = firstVisiblePage - 1;
+
+        try {
+            const previousPosts = await loadPageData(targetPageNum, debouncedQuery);
+
+            if (previousPosts.length > 0) {
+                setVisiblePosts((currentPosts) => {
+                    const merged = [...previousPosts, ...currentPosts];
+                    if (merged.length > MAX_WINDOW_ITEMS) {
+                        return merged.slice(0, MAX_WINDOW_ITEMS);
+                    }
+                    return merged;
+                });
+
+                setFirstVisiblePage(targetPageNum);
+                if (lastVisiblePage - targetPageNum + 1 > 3) {
+                    setLastVisiblePage((prev) => prev - 1);
+                }
+                setHasMoreNext(true);
+
+                requestAnimationFrame(() => {
+                    const updatedViewport = scrollContainerRef.current?.querySelector(
+                        "[data-radix-scroll-area-viewport]",
+                    ) as HTMLDivElement | null;
+
+                    if (updatedViewport) {
+                        const heightDifference = updatedViewport.scrollHeight - previousScrollHeight;
+                        updatedViewport.scrollTop = previousScrollTop + heightDifference;
+                    }
+                    setIsLoadingPrev(false);
+                });
+            } else {
+                setIsLoadingPrev(false);
+            }
+        } catch (error) {
+            console.error("Failed to load previous page:", error);
+            setIsLoadingPrev(false);
+        }
+    }, [firstVisiblePage, lastVisiblePage, isLoadingPrev, debouncedQuery, loadPageData]);
+
+    useEffect(() => {
+        const target = bottomSentinelRef.current;
+        if (!target) return;
+
+        const viewportContainer = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMoreNext && !isLoadingNext && !isLoadingPrev) {
+                    loadNextPage();
+                }
+            },
+            {
+                root: viewportContainer || null,
+                rootMargin: "150px",
+                threshold: 0.1,
+            }
+        );
+
+        observer.observe(target);
+
+        return () => {
+            observer.disconnect();
+        };
+    }, [hasMoreNext, isLoadingNext, isLoadingPrev, loadNextPage]);
+
+    useEffect(() => {
+        const target = topSentinelRef.current;
+        const viewport = scrollContainerRef.current?.querySelector(
+            "[data-radix-scroll-area-viewport]",
+        );
+
+        if (!target || !viewport) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (
+                    entries[0]?.isIntersecting &&
+                    firstVisiblePage > 1 &&
+                    !isLoadingPrev &&
+                    !isLoadingNext
+                ) {
+                    void loadPreviousPage();
+                }
+            },
+            {
+                root: viewport,
+                rootMargin: "150px 0px 0px 0px",
+                threshold: 0.01,
+            },
+        );
+
+        observer.observe(target);
+
+        return () => observer.disconnect();
+    }, [firstVisiblePage, isLoadingPrev, isLoadingNext, loadPreviousPage]);
+
     const pins = useMemo<IssueMapPin[]>(() => {
         const mapped: IssueMapPin[] = [];
 
-        for (const report of AllPosts) {
+        for (const report of visiblePosts) {
             const lat = report.latitude;
             const lng = report.longitude;
 
-            // A report with no resolvable point still belongs in the list and
-            // the feed; it just cannot be drawn.
             if (lat === null || lng === null) continue;
             if (lat < -90 || lat > 90 || lng < -180 || lng > 180) continue;
             if (lat === 0 && lng === 0) continue;
@@ -129,8 +342,8 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
                 trackingCode: report.trackingCode,
                 title: report.title,
                 address: report.address || "Location not specified",
-                ward: report.ward.name,
-                category: report.category.name,
+                ward: report.ward?.name || "N/A",
+                category: report.category?.name || "N/A",
                 status: report.status,
                 lat,
                 lng,
@@ -139,25 +352,7 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
         }
 
         return mapped;
-    }, [AllPosts]);
-
-    const unmappedCount = AllPosts.length - pins.length;
-    const [searchQuery, setSearchQuery] = useState<string>("");
-    const [selectedPin, setSelectedPin] = useState<IssueMapPin | null>(null);
-
-    const filteredPins = useMemo(() => {
-        const query = searchQuery.trim().toLowerCase();
-        if (!query) return pins;
-
-        return pins.filter(
-            (pin) =>
-                pin.title.toLowerCase().includes(query) ||
-                pin.address.toLowerCase().includes(query) ||
-                pin.ward.toLowerCase().includes(query) ||
-                pin.category.toLowerCase().includes(query) ||
-                pin.trackingCode.toLowerCase().includes(query)
-        );
-    }, [pins, searchQuery]);
+    }, [visiblePosts]);
 
     useEffect(() => {
         const targetCode = queryTrackingCode || queryId;
@@ -174,11 +369,13 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
         }
     }, [queryTrackingCode, queryId, pins]);
 
+    console.log(pins)
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-180px)] min-h-150">
             <div className="lg:col-span-4 xl:col-span-4 flex flex-col bg-card border border-border rounded-2xl shadow-sm overflow-hidden h-full">
 
-                <div className="p-3 sm:p-4 border-b border-border space-y-3 bg-muted/30">
+                <div className="p-3 sm:p-4 border-b border-border space-y-3 bg-muted/30 shrink-0">
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
                             <div className="p-2 bg-primary/10 text-primary rounded-lg shrink-0">
@@ -188,9 +385,6 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
                                 Reported Issues
                             </h2>
                         </div>
-                        <Badge variant="outline" className="font-semibold text-xs px-2.5 py-4 rounded-sm whitespace-nowrap shrink-0">
-                            Total : {filteredPins.length}
-                        </Badge>
                     </div>
 
                     <div className="relative">
@@ -203,65 +397,78 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
                             className="pl-9 bg-background border-border h-10 sm:h-11 text-sm"
                         />
                     </div>
-
-                    {unmappedCount > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                            {unmappedCount} report{unmappedCount === 1 ? "" : "s"} have no
-                            confirmed coordinates yet and are not shown on the map.
-                        </p>
-                    )}
                 </div>
 
-                <ScrollArea className="h-190 w-full p-3 sm:p-4">
-                    <div className="space-y-4">
-                        {filteredPins.length > 0 ? (
-                            filteredPins.map((pin) => {
-                                const isSelected = selectedPin?.id === pin.id;
+                <div ref={scrollContainerRef} className="flex-1 min-h-0 w-full overflow-hidden">
+                    <ScrollArea className="h-full w-full">
+                        <div className="p-3 sm:p-4 space-y-4">
+                            {visiblePosts.length > 0 ? (
+                                visiblePosts.map((post) => {
+                                    const isSelected = selectedPin?.id === post.id;
+                                    const categoryName = post.category?.name || "N/A";
+                                    const addressText = post.address || "Location not specified";
+                                    const timeAgoText = getTimeAgo(post.updatedAt);
 
-                                return (
-                                    <Card
-                                        key={pin.id}
-                                        onClick={() => setSelectedPin(pin)}
-                                        className={`cursor-pointer transition-all duration-200 border hover:border-primary/50 ${isSelected
-                                            ? "border-primary bg-primary/5 shadow-sm"
-                                            : "border-border bg-card hover:bg-muted/30"
-                                            }`}
-                                    >
-                                        <CardContent className="p-3 sm:p-4 space-y-3">
-                                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5">
-                                                <h3 className="font-semibold text-sm sm:text-base text-foreground line-clamp-2 leading-snug flex-1">
-                                                    {pin.title}
-                                                </h3>
+                                    return (
+                                        <Card
+                                            key={post.id}
+                                            onClick={() => {
+                                                const matched = pins.find(p => p.id === post.id);
+                                                if (matched) setSelectedPin(matched);
+                                            }}
+                                            className={`cursor-pointer transition-all duration-200 border hover:border-primary/50 ${isSelected
+                                                ? "border-primary bg-primary/5 shadow-sm"
+                                                : "border-border bg-card hover:bg-muted/30"
+                                                }`}
+                                        >
+                                            <CardContent className="p-3 sm:p-4 space-y-3">
+                                                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5">
+                                                    <h3 className="font-semibold text-sm sm:text-base text-foreground line-clamp-2 leading-snug flex-1">
+                                                        {post.title}
+                                                    </h3>
 
-                                                <div className="flex items-center flex-wrap gap-1.5 shrink-0">
-                                                    <Badge className="bg-sky-600 hover:bg-sky-700 text-white text-[11px] sm:text-xs font-medium rounded-full px-2.5 py-0.5 border-none shadow-2xs">
-                                                        {pin.category}
-                                                    </Badge>
-                                                    {getStatusBadge(pin.status)}
+                                                    <div className="flex items-center flex-wrap gap-1.5 shrink-0">
+                                                        <Badge className="bg-sky-600 hover:bg-sky-700 text-white text-[11px] sm:text-xs font-medium rounded-full px-2.5 py-0.5 border-none shadow-2xs">
+                                                            {categoryName}
+                                                        </Badge>
+                                                        {getStatusBadge(post.status)}
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-muted-foreground pt-2.5 border-t border-border/50 gap-1.5 sm:gap-2">
-                                                <div className="flex items-center gap-1 min-w-0">
-                                                    <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-                                                    <span className="truncate">{pin.address}</span>
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-muted-foreground pt-2.5 border-t border-border/50 gap-1.5 sm:gap-2">
+                                                    <div className="flex items-center gap-1 min-w-0">
+                                                        <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                                                        <span className="truncate">{addressText}</span>
+                                                    </div>
+                                                    <span className="shrink-0 text-muted-foreground/80 text-[11px] sm:text-xs">
+                                                        {timeAgoText}
+                                                    </span>
                                                 </div>
-                                                <span className="shrink-0 text-muted-foreground/80 text-[11px] sm:text-xs">
-                                                    {pin.updatedAt}
-                                                </span>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                );
-                            })
-                        ) : (
-                            <div className="text-center py-12 px-4 space-y-3">
-                                <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto" />
-                                <p className="text-sm text-muted-foreground">No issues found matching your criteria.</p>
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                })
+                            ) : (
+                                !isLoadingNext && !isLoadingPrev && (
+                                    <div className="text-center py-12 px-4 space-y-3">
+                                        <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto" />
+                                        <p className="text-sm text-muted-foreground">No issues found matching your criteria.</p>
+                                    </div>
+                                )
+                            )}
+
+                            <div ref={bottomSentinelRef} className="py-2 text-center min-h-10 flex items-center justify-center">
+                                {isLoadingNext && (
+                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                        <span>Loading page {lastVisiblePage + 1}...</span>
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
-                </ScrollArea>
+
+                        </div>
+                    </ScrollArea>
+                </div>
             </div>
 
             <div className="lg:col-span-8 xl:col-span-8 relative bg-card border border-border rounded-2xl overflow-hidden flex flex-col h-full shadow-sm">
@@ -280,8 +487,9 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
                 </div>
 
                 <div className="w-full h-full bg-muted/40 relative">
+
                     <IssueMap
-                        pins={filteredPins}
+                        pins={pins}
                         selectedPin={selectedPin}
                         onSelectPin={setSelectedPin}
                     />
@@ -340,4 +548,4 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
             </div>
         </div>
     );
-}
+} 
