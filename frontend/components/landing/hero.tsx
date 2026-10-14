@@ -4,9 +4,8 @@ import { Video, ChevronRight, ImageUp } from "lucide-react";
 import IssueSearchBar from "../Search/IssueSearchBar";
 import { Button } from "@/components/ui/button";
 import SectionContainer from "../common/SectionContainer";
-import type { HeroSectionProps } from "@/types";
 
-export default function HeroSection({ AllPosts = [] }: HeroSectionProps): React.ReactNode {
+export default function HeroSection(): React.ReactNode {
     return (
         <section className="relative w-full min-h-80 lg:min-h-100 flex items-center justify-center">
             <div className="absolute inset-0 z-0">
@@ -77,7 +76,7 @@ export default function HeroSection({ AllPosts = [] }: HeroSectionProps): React.
                         </div>
 
                         <div className="lg:col-span-6">
-                            <IssueSearchBar AllPosts={AllPosts} />
+                            <IssueSearchBar />
                         </div>
                     </div>
                 </div>

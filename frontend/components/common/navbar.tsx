@@ -11,7 +11,7 @@ import SearchDialog from "../Dialog/SearchDialog";
 import SectionContainer from "./SectionContainer";
 import UserMenu from "./UserMenu";
 
-export default function Navbar({ user, Reports = [] }: NavbarProps): React.ReactNode {
+export default function Navbar({ user }: NavbarProps): React.ReactNode {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
     const pathname = usePathname();
 
@@ -66,7 +66,7 @@ export default function Navbar({ user, Reports = [] }: NavbarProps): React.React
                     </nav>
 
                     <div className="flex items-center gap-2 sm:gap-4">
-                        <SearchDialog Reports={Reports} />
+                        <SearchDialog />
 
                         {user ? (
                             <UserMenu user={user} />

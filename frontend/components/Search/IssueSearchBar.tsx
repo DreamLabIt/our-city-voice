@@ -1,72 +1,15 @@
 "use client";
 
-import React, { useState, useMemo, useRef, useEffect } from "react";
-import { Search, MapPin, Tag, ArrowRight } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
+import React from "react";
+import { Search, MapPin, Tag, ArrowRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { IssueSearchBarProps } from "@/types";
+import { useReportSearch } from "@/hooks/use-report-search";
+import { SEARCH_MAX_LENGTH } from "@/lib/search-config";
 
-export default function IssueSearchBar({ onSearch, AllPosts = [] }: IssueSearchBarProps): React.JSX.Element {
-    const [searchQuery, setSearchQuery] = useState<string>("");
-    const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
-    const searchContainerRef = useRef<HTMLDivElement | null>(null);
-    const router = useRouter();
-
-    const filteredSuggestions = useMemo(() => {
-        if (!searchQuery.trim()) return [];
-        const query = searchQuery.toLowerCase();
-
-        return AllPosts.filter((report) => {
-            const title = report.title || "";
-            const trackingCode = report.trackingCode || "";
-            const id = report.id || "";
-
-            const categoryName = report.category.name;
-            const locationName = report.address;
-            const wardName = report.ward.name;
-
-            return (
-                title.toLowerCase().includes(query) ||
-                trackingCode.toLowerCase().includes(query) ||
-                id.toLowerCase().includes(query) ||
-                categoryName.toLowerCase().includes(query) ||
-                locationName.toLowerCase().includes(query) ||
-                wardName.toLowerCase().includes(query)
-            );
-        });
-    }, [AllPosts, searchQuery]);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
-                setIsDropdownOpen(false);
-            }
-        };
-
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, []);
-
-    const handleSearchSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsDropdownOpen(false);
-        if (onSearch) {
-            onSearch(searchQuery);
-        }
-    };
-
-    const handleSelectSuggestion = (trackingCode: string) => {
-        setIsDropdownOpen(false);
-        setSearchQuery("");
-        if (trackingCode) {
-            router.push(`/issues/${trackingCode}`);
-        }
-    };
+export default function IssueSearchBar(): React.JSX.Element {
+    const search = useReportSearch();
 
     return (
         <div className="bg-card/80 backdrop-blur-md p-6 sm:p-7 rounded-2xl sm:rounded-3xl space-y-3 border border-border/50 shadow-lg">
@@ -74,68 +17,81 @@ export default function IssueSearchBar({ onSearch, AllPosts = [] }: IssueSearchB
                 Find Issues
             </h2>
 
-            <form onSubmit={handleSearchSubmit} className="flex items-center gap-3 relative">
-                <div ref={searchContainerRef} className="relative flex-1 flex items-center">
+            <form
+                onSubmit={search.handleSubmit}
+                className="flex items-center gap-3 relative"
+            >
+                <div
+                    ref={search.containerRef}
+                    className="relative flex-1 flex items-center"
+                >
                     <Search className="absolute left-3.5 sm:left-4 w-5 h-5 text-muted-foreground pointer-events-none stroke-2 z-10" />
 
                     <Input
                         type="text"
-                        value={searchQuery}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                            setSearchQuery(e.target.value);
-                            setIsDropdownOpen(true);
-                        }}
-                        onFocus={() => {
-                            if (searchQuery.trim()) setIsDropdownOpen(true);
-                        }}
+                        value={search.query}
+                        maxLength={SEARCH_MAX_LENGTH}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            search.handleInputChange(e.target.value)
+                        }
+                        onFocus={search.openDropdown}
                         placeholder="Search by ID number, address, road, ward or keyword..."
                         className="w-full pl-11 pr-4 py-7 rounded-xl sm:rounded-2xl border-border bg-card text-foreground placeholder:text-muted-foreground text-sm sm:text-base focus-visible:ring-2 focus-visible:ring-primary shadow-xs"
                     />
 
-                    {isDropdownOpen && searchQuery.trim().length > 0 && (
-                        <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden z-50">
-                            <ScrollArea className="max-h-100 w-full p-2 overflow-hidden">
-                                {filteredSuggestions.length > 0 ? (
+                    {search.showDropdown && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-2xl shadow-xl overflow-hidden z-50">
+                            <ScrollArea className="max-h-88 w-full p-2 overflow-hidden">
+                                {search.status === "loading" ? (
+                                    <div className="p-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Searching...
+                                    </div>
+                                ) : search.suggestions.length > 0 ? (
                                     <div className="space-y-1">
-                                        {filteredSuggestions.map((report) => {
-                                            const categoryName = report.category.name || "General";
-                                            const locationName = report.address || "City Area";
-                                            const statusName = report.status;
+                                        {search.suggestions.map((suggestion) => (
+                                            <button
+                                                key={suggestion.trackingCode}
+                                                type="button"
+                                                onClick={() =>
+                                                    search.openIssue(
+                                                        suggestion.trackingCode,
+                                                    )
+                                                }
+                                                className="w-full text-left flex items-center justify-between p-3 rounded-xl hover:bg-muted transition cursor-pointer group"
+                                            >
+                                                <div className="space-y-1 min-w-0 pr-2">
+                                                    <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                                                        {suggestion.title ||
+                                                            `Report #${suggestion.trackingCode}`}
+                                                    </p>
 
-                                            return (
-                                                <div
-                                                    key={report.id || report.trackingCode}
-                                                    onClick={() => handleSelectSuggestion(report.trackingCode)}
-                                                    className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/60 transition cursor-pointer group"
-                                                >
-                                                    <div className="space-y-1 min-w-0 pr-2">
-                                                        <div className="flex items-center gap-2">
-                                                            <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                                                                {report.title || `Report #${report.trackingCode}`}
-                                                            </p>
-                                                        </div>
-                                                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                                            <span className="flex items-center gap-1 shrink-0">
-                                                                <Tag className="w-3.5 h-3.5 text-primary" /> {categoryName}
+                                                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                                        <span className="flex items-center gap-1 shrink-0">
+                                                            <Tag className="w-3.5 h-3.5 text-primary" />{" "}
+                                                            {suggestion.trackingCode}
+                                                        </span>
+                                                        <span className="flex items-center gap-1 truncate">
+                                                            <MapPin className="w-3.5 h-3.5 shrink-0" />{" "}
+                                                            <span className="truncate">
+                                                                {suggestion.address ||
+                                                                    "City Area"}
                                                             </span>
-                                                            <span className="flex items-center gap-1 truncate">
-                                                                <MapPin className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">{locationName}</span>
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 shrink-0">
-                                                        <Badge variant="secondary" className="capitalize text-[11px] font-medium">
-                                                            {statusName}
-                                                        </Badge>
-                                                        <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                                                        </span>
                                                     </div>
                                                 </div>
-                                            );
-                                        })}
+
+                                                <ArrowRight className="w-4 h-4 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                                            </button>
+                                        ))}
                                     </div>
                                 ) : (
                                     <div className="p-6 text-center text-sm text-muted-foreground">
-                                        No results found for &quot;<span className="text-foreground font-medium">{searchQuery}</span>&quot;
+                                        No results found for &quot;
+                                        <span className="text-primary font-medium">
+                                            {search.query.trim()}
+                                        </span>
+                                        &quot;
                                     </div>
                                 )}
                             </ScrollArea>
@@ -145,14 +101,19 @@ export default function IssueSearchBar({ onSearch, AllPosts = [] }: IssueSearchB
 
                 <Button
                     type="submit"
+                    disabled={search.isNavigating}
                     className="h-full px-6 sm:px-7 py-4 rounded-xl sm:rounded-2xl text-sm sm:text-base font-semibold shadow-md shrink-0 cursor-pointer"
                 >
-                    Search
+                    {search.isNavigating ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                        "Search"
+                    )}
                 </Button>
             </form>
 
             <p className="text-xs sm:text-[13px] text-muted-foreground font-medium">
-                Example: #1024, Finch Ave, Ward 5, M1B 3J4
+                Example: #00123, Flooding during, Sheppard Ave
             </p>
         </div>
     );
