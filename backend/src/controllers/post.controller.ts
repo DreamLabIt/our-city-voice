@@ -316,3 +316,15 @@ export async function comments(req: Request, res: Response): Promise<void> {
 
   res.status(200).json(result);
 }
+
+export async function like(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw AppError.unauthorized();
+
+  res.status(200).json(await postService.likePost(req.user, parseIdentifier(req.params.code)));
+}
+
+export async function unlike(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw AppError.unauthorized();
+
+  res.status(200).json(await postService.unlikePost(req.user, parseIdentifier(req.params.code)));
+}

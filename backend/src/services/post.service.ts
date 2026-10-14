@@ -794,3 +794,79 @@ export async function listComments(
     pageCount: Math.max(1, Math.ceil(total / limit)),
   };
 }
+
+// ── engagement writes ───────────────────────────────────────────────
+
+/**
+ * The like state a button needs after a change: the caller's own state and the
+ * new public total. A dedicated shape rather than the whole `Report`, because a
+ * like button should not have to re-render a card from a full report payload.
+ */
+export interface LikeResult {
+  likedByMe: boolean;
+  likeCount: number;
+}
+
+/**
+ * Liking is idempotent: a double tap, a retry, or two tabs racing each other all
+ * land on "liked" with the count moved once. The `(postId, userId)` unique index
+ * is what makes that safe — `createMany` with `skipDuplicates` inserts only when
+ * the row is genuinely new, and the cached count follows the insert, not the
+ * request.
+ */
+export async function likePost(actor: PostActor, identifier: PostIdentifier): Promise<LikeResult> {
+  const post = await findPostForWrite(identifier);
+
+  // A moderated-away report is gone as far as the public surface is concerned.
+  if (post.deletedAt !== null) throw AppError.notFound("No report with that tracking code");
+
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.postLike.createMany({
+      data: [{ postId: post.id, userId: actor.id }],
+      skipDuplicates: true,
+    });
+
+    const updated =
+      count > 0
+        ? await tx.post.update({
+            where: { id: post.id },
+            data: { likeCount: { increment: 1 } },
+            select: { likeCount: true },
+          })
+        : await tx.post.findUniqueOrThrow({ where: { id: post.id }, select: { likeCount: true } });
+
+    return { likedByMe: true, likeCount: updated.likeCount };
+  });
+}
+
+/**
+ * The mirror of `likePost`, idempotent the same way: unliking something that was
+ * never liked is a `200` with the count unchanged, not a `404`. `deleteMany`
+ * reports how many rows went, so the decrement stays paired with a real removal
+ * and the count cannot drift from a no-op call.
+ */
+export async function unlikePost(
+  actor: PostActor,
+  identifier: PostIdentifier,
+): Promise<LikeResult> {
+  const post = await findPostForWrite(identifier);
+
+  if (post.deletedAt !== null) throw AppError.notFound("No report with that tracking code");
+
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.postLike.deleteMany({
+      where: { postId: post.id, userId: actor.id },
+    });
+
+    const updated =
+      count > 0
+        ? await tx.post.update({
+            where: { id: post.id },
+            data: { likeCount: { decrement: 1 } },
+            select: { likeCount: true },
+          })
+        : await tx.post.findUniqueOrThrow({ where: { id: post.id }, select: { likeCount: true } });
+
+    return { likedByMe: false, likeCount: updated.likeCount };
+  });
+}

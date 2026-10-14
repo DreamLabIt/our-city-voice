@@ -26,3 +26,7 @@ postRouter.patch("/:code", requireAuth, postController.update);
 postRouter.delete("/:code", requireAuth, postController.remove);
 
 postRouter.get("/:code/comments", postController.comments);
+
+postRouter.post("/:code/like", requireAuth, postController.like);
+
+postRouter.delete("/:code/like", requireAuth, postController.unlike);
