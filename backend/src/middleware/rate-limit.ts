@@ -14,6 +14,14 @@ export interface RateLimitOptions {
   windowMs: number;
   
   name: string;
+  
+  // By default only failures count, which is what an auth endpoint wants: a
+  // correct password never spends the quota. An open write endpoint (the contact
+  // form) has no failure to count, so it sets this to charge every request.
+  countAll?: boolean;
+
+  // Overrides the default "Too many attempts" wording on the 429.
+  message?: string;
 }
 
 const buckets = new Map<string, Window>();
@@ -38,14 +46,15 @@ export function rateLimit(options: RateLimitOptions): RequestHandler {
       res.setHeader("Retry-After", retryAfterSeconds);
       next(
         AppError.tooManyRequests(
-          `Too many attempts. Try again in ${Math.ceil(retryAfterSeconds / 60)} minute(s).`,
+          options.message ??
+            `Too many attempts. Try again in ${Math.ceil(retryAfterSeconds / 60)} minute(s).`,
         ),
       );
       return;
     }
 
     res.on("finish", () => {
-      if (res.statusCode < 400) return;
+      if (!options.countAll && res.statusCode < 400) return;
 
       const current = buckets.get(key);
       if (!current || current.resetAt <= Date.now()) {
