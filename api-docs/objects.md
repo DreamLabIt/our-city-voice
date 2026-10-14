@@ -5,6 +5,7 @@ The shapes that come back. Endpoint files link here rather than repeating them.
 - [`User`](#user)
 - [`Report`](#report) — a list item
 - [`ReportDetail`](#reportdetail) — a `Report` plus the timeline
+- [`ReportSuggestion`](#reportsuggestion) — a search candidate
 - [`Comment` and `CommentThread`](#comment-and-commentthread)
 - [`FilterOptions`](#filteroptions)
 
@@ -153,6 +154,35 @@ last one matters: the first entry is almost always "Report submitted" by the
 author, so naming them would print the name `author: null` just withheld. Staff
 steps on an anonymous report are still named, because those people are acting
 officially.
+
+---
+
+## `ReportSuggestion`
+
+Returned by [`GET /posts/suggestions`](endpoints/suggest-reports.md). A trimmed
+[`Report`](#report): enough for a dropdown row and a link, without the media,
+counts or description a card does not need. At most six come back, most relevant
+first.
+
+```json
+{
+  "id": "28",
+  "trackingCode": "OCV-2026-VID001",
+  "title": "Sinkhole opening up at the intersection",
+  "status": "pending",
+  "category": { "id": "1", "name": "Roads", "slug": "roads", "icon": "Road" },
+  "ward":     { "id": "1", "name": "Ward 10 (Spadina Fort York)", "code": "ward-10" },
+  "address": "400 Front St W"
+}
+```
+
+`id`, `trackingCode`, `title`, `category`, `ward`, `address` and `status` are the
+same fields with the same shapes as on `Report` — `category` and `ward` are the
+full reduced objects, not names — so a suggestion can be swapped into any place
+that already reads those fields. What is dropped is the rest: `description`,
+`priority`, `author`, `media`, the counts and the timestamps. Link with
+`trackingCode`; there is nothing here to build a detail page from, and you would
+not want to — the suggestion is a hop, not a render.
 
 ---
 

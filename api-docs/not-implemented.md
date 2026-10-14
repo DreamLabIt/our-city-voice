@@ -75,9 +75,12 @@ has no `POST`, `PUT` or `DELETE`:
 
 ## Scaling
 
-- **`search` does not scale.** A case-insensitive `contains` across five columns is
-  a sequential scan. It wants a trigram index (`pg_trgm`) or a `tsvector` column
-  before the table gets large.
+- **`search` does not scale.** A case-insensitive `contains` is a sequential scan:
+  across five columns on [`GET /posts`](endpoints/list-reports.md), three on
+  [`GET /posts/search`](endpoints/search-reports.md) and
+  [`GET /posts/suggestions`](endpoints/suggest-reports.md). All of them want a
+  trigram index (`pg_trgm`) or a `tsvector` column before the table gets large.
+  Suggestions cap the scan at 50 rows, which bounds the cost, not the scan.
 - **Pagination is offset-based.** Fine for numbered pages; a report filed mid-scroll
   shifts rows by one. The index for a keyset cursor already exists
   (`posts(created_at DESC, id DESC)`).

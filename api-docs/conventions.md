@@ -35,7 +35,7 @@ A `401` means the session is genuinely gone, not that it needs refreshing.
 Refreshing is `proxy.ts`'s job and has already happened by the time a protected
 page renders — so send the person to `/login` rather than retrying.
 
-Three endpoints take the token as **optional**. They answer a signed-out request
+Four endpoints take the token as **optional**. They answer a signed-out request
 and give a signed-in one more.
 
 ## Values

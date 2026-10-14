@@ -96,6 +96,27 @@ Same endpoint, one parameter:
 await apiFetch<ReportListResponse>("/posts?mine=true&sort=newest&limit=10", { token });
 ```
 
+## The search box
+
+`IssueSearchBar.tsx` and `SearchDialog.tsx` currently filter `AllPosts`/`Reports`
+in a `useMemo` on the client and show every match. Two endpoints replace that, both
+matching only the **tracking code, title and address**:
+
+- **As somebody types** — [`GET /posts/suggestions`](../endpoints/suggest-reports.md)
+  returns at most six ranked candidates. Debounce, start at two characters, and
+  only apply a response if its term is still the current one.
+- **On submit** — [`GET /posts/search`](../endpoints/search-reports.md) for the
+  full paginated results, or navigate to `/reports?search=...` and let
+  [`GET /posts`](../endpoints/list-reports.md) own the query, which is the pattern
+  the rest of the page uses.
+
+A suggestion already carries `trackingCode`, so a row links straight to
+`/issues/<trackingCode>` with no second request.
+
+Note the deliberate narrowing: the old client filter also matched the category and
+ward **names**; the endpoints do not. To keep filtering by those, send the person
+to this page's dropdowns, which own `category` and `ward` as real parameters.
+
 ## How each mock field maps
 
 `PostItem` in `types/index.ts` is a mock shape, and some of it is presentation

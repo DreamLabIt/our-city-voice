@@ -16,6 +16,8 @@ is why it behaves the way it does.
 | [`GET /posts`](endpoints/list-reports.md) | optional | the filtered, paginated feed of reports |
 | [`POST /posts`](endpoints/create-report.md) | required | file a new report |
 | [`GET /posts/filters`](endpoints/report-filter-options.md) | none | option lists for the filter dropdowns |
+| [`GET /posts/search`](endpoints/search-reports.md) | optional | full results for a term, by code, title or address |
+| [`GET /posts/suggestions`](endpoints/suggest-reports.md) | none | up to six best matches for a search box |
 | [`GET /posts/:code`](endpoints/get-report.md) | optional | one report, with timeline and related |
 | [`PATCH /posts/:code`](endpoints/update-report.md) | required | edit a report you filed (or any, as a super admin) |
 | [`DELETE /posts/:code`](endpoints/delete-report.md) | required | soft-delete a report you filed (or any, as a super admin) |
