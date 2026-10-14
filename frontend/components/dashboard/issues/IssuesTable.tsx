@@ -153,6 +153,7 @@ export default function IssuesTable({
                 categories={filters.categories}
                 statuses={filters.statuses}
                 wards={filters.wards}
+                enableSearchSuggestions
             />
 
             <div className="hidden rounded-xl border border-border bg-card md:block">

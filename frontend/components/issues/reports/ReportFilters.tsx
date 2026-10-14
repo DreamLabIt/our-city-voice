@@ -22,9 +22,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { useReportSearch } from "@/hooks/use-report-search";
+import ReportSearchInput from "./ReportSearchInput";
 import type { ReportFiltersProps } from "@/types/report"
+import type { DraftFilters } from "@/types/search";
+
 
 type FilterKey = "search" | "category" | "status" | "ward";
+type SelectFilterKey = "category" | "status" | "ward";
 
 export default function ReportFilters({
     searchQuery,
@@ -34,7 +39,8 @@ export default function ReportFilters({
     categories,
     statuses,
     wards,
-}: ReportFiltersProps) {
+    enableSearchSuggestions = false,
+}: ReportFiltersProps & { enableSearchSuggestions?: boolean }) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -45,6 +51,24 @@ export default function ReportFilters({
     useEffect(() => {
         setSearchValue(searchQuery);
     }, [searchQuery]);
+
+    const appliedFiltersKey = `${selectedCategory}|${selectedStatus}|${selectedWard}`;
+    const [previousFiltersKey, setPreviousFiltersKey] =
+        useState(appliedFiltersKey);
+    const [draft, setDraft] = useState<DraftFilters>({
+        category: selectedCategory,
+        status: selectedStatus,
+        ward: selectedWard,
+    });
+
+    if (appliedFiltersKey !== previousFiltersKey) {
+        setPreviousFiltersKey(appliedFiltersKey);
+        setDraft({
+            category: selectedCategory,
+            status: selectedStatus,
+            ward: selectedWard,
+        });
+    }
 
     const updateFilter = useCallback(
         (key: FilterKey, value: string | null) => {
@@ -69,6 +93,52 @@ export default function ReportFilters({
         },
         [searchParams, pathname, router]
     );
+
+    const applyFilters = (term: string): void => {
+        const params = new URLSearchParams(searchParams.toString());
+
+        const setParam = (key: FilterKey, value: string): void => {
+            if (value && value !== "All") {
+                params.set(key, value);
+            } else {
+                params.delete(key);
+            }
+        };
+
+        setParam("search", term);
+        setParam("category", draft.category);
+        setParam("status", draft.status);
+        setParam("ward", draft.ward);
+
+        params.delete("page");
+
+        const queryString = params.toString();
+        const targetUrl = queryString
+            ? `${pathname}?${queryString}`
+            : pathname;
+
+        startTransition(() => {
+            router.push(targetUrl);
+        });
+    };
+
+    const search = useReportSearch({
+        syncedQuery: searchQuery,
+        enabled: enableSearchSuggestions,
+        onSearch: applyFilters,
+    });
+
+    const handleFilterChange = (
+        key: SelectFilterKey,
+        value: string | null,
+    ): void => {
+        if (enableSearchSuggestions) {
+            setDraft((previous) => ({ ...previous, [key]: value ?? "All" }));
+            return;
+        }
+
+        updateFilter(key, value);
+    };
 
     useEffect(() => {
         if (searchValue === searchQuery) {
@@ -96,28 +166,57 @@ export default function ReportFilters({
             )}
 
             <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center sm:gap-4">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                {enableSearchSuggestions ? (
+                    <form
+                        onSubmit={search.handleSubmit}
+                        className="relative flex-1"
+                    >
+                        <ReportSearchInput search={search} />
+                    </form>
+                ) : (
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 
-                    <Input
-                        type="text"
-                        placeholder="Search by report title, id or location..."
-                        value={searchValue}
-                        onChange={(e) => setSearchValue(e.target.value)}
-                        className="rounded-md border-border bg-background py-5 pl-10 pr-10 text-xs sm:text-sm"
-                    />
+                        <Input
+                            type="text"
+                            placeholder="Search by report title, id or location..."
+                            value={searchValue}
+                            onChange={(e) => setSearchValue(e.target.value)}
+                            className="rounded-md border-border bg-background py-5 pl-10 pr-10 text-xs sm:text-sm"
+                        />
 
-                    {searchValue && (
-                        <button
+                        {searchValue && (
+                            <button
+                                type="button"
+                                onClick={handleClearSearch}
+                                aria-label="Clear search input"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer rounded-md p-1 text-muted-foreground hover:text-foreground"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {enableSearchSuggestions && (
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+
+                        <Button
                             type="button"
-                            onClick={handleClearSearch}
-                            aria-label="Clear search input"
-                            className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer rounded-md p-1 text-muted-foreground hover:text-foreground"
+                            onClick={() => search.handleSubmit()}
+                            disabled={isPending}
+                            className="w-full gap-2 rounded-md px-8 py-5 text-xs font-bold sm:w-auto sm:text-sm"
                         >
-                            <X className="h-4 w-4" />
-                        </button>
-                    )}
-                </div>
+                            {isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <Search className="h-4 w-4" />
+                            )}
+                            <span>Search</span>
+                        </Button>
+                    </div>
+                )}
 
                 <Link href="/report-issue" className="shrink-0">
                     <Button className="w-full gap-2 rounded-md py-5 text-xs font-bold sm:w-auto sm:text-sm">
@@ -138,9 +237,13 @@ export default function ReportFilters({
                     </label>
 
                     <Select
-                        value={selectedCategory}
+                        value={
+                            enableSearchSuggestions
+                                ? draft.category
+                                : selectedCategory
+                        }
                         onValueChange={(value) =>
-                            updateFilter("category", value)
+                            handleFilterChange("category", value)
                         }
                     >
                         <SelectTrigger
@@ -186,9 +289,13 @@ export default function ReportFilters({
                     </label>
 
                     <Select
-                        value={selectedStatus}
+                        value={
+                            enableSearchSuggestions
+                                ? draft.status
+                                : selectedStatus
+                        }
                         onValueChange={(value) =>
-                            updateFilter("status", value)
+                            handleFilterChange("status", value)
                         }
                     >
                         <SelectTrigger
@@ -222,9 +329,13 @@ export default function ReportFilters({
                     </label>
 
                     <Select
-                        value={selectedWard}
+                        value={
+                            enableSearchSuggestions
+                                ? draft.ward
+                                : selectedWard
+                        }
                         onValueChange={(value) =>
-                            updateFilter("ward", value)
+                            handleFilterChange("ward", value)
                         }
                     >
                         <SelectTrigger
@@ -263,4 +374,3 @@ export default function ReportFilters({
         </div>
     );
 }
-

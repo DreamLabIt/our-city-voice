@@ -11,7 +11,7 @@ import { CategoryItem } from "@/types";
 export const revalidate = 60;
 
 export default async function Home() {
-    const [recentPostsRes, filtersRes, recentActivitiesRes, allPostsRes] = await Promise.all([
+    const [recentPostsRes, filtersRes, recentActivitiesRes] = await Promise.all([
         getReports({ page: 1, limit: 50 }).catch(() => ({ posts: [] })),
         getReportFilters().catch(() => ({
             categories: [],
@@ -20,17 +20,11 @@ export default async function Home() {
             priorities: [],
         })),
         getReports({ page: 1, limit: 4 }).catch(() => ({ posts: [] })),
-        getReports({ page: 1, limit: 100 }).catch(() => ({ posts: [] })),
     ]);
 
     const fetchedRecentPosts: Report[] = recentPostsRes.posts || [];
-    const fetchedAllPosts: Report[] = allPostsRes.posts || [];
     const fetchedRecentActivities: Report[] = recentActivitiesRes.posts || [];
-
     const recentPosts: Report[] = fetchedRecentPosts.length > 0 ? fetchedRecentPosts : mockPosts;
-
-    const allPosts: Report[] = fetchedAllPosts.length > 0 ? fetchedAllPosts : mockPosts;
-
     const recentActivities: Report[] =
         fetchedRecentActivities.length > 0 ? fetchedRecentActivities : mockPosts.slice(0, 4);
 
@@ -70,19 +64,15 @@ export default async function Home() {
 
     return (
         <section>
-            <HeroSection AllPosts={allPosts} />
-
+            <HeroSection />
             <CategoryFilter allCategory={allCategory} />
-
             <HomeLayout
                 recentPosts={recentPosts}
                 categoryTabs={categoryTabs}
                 filterOptions={filterOptions}
                 recentActivities={recentActivities}
             />
-
             <HowItWorks />
-
             <ExploreTopLocations recentPosts={recentPosts} />
         </section>
     );

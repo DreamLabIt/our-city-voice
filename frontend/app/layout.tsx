@@ -5,12 +5,8 @@ import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
 import ConditionalLayout from "@/components/common/ConditionalLayout";
 import { getCurrentUser } from "@/lib/session";
-import { getReportFilters, getReports } from "./actions/report";
-import type { Report } from "@/types/report";
-import { posts as mockPosts, } from "@/data/mock-data";
 
-
-const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -24,24 +20,11 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const user = await getCurrentUser();
-  const [PostsRes] = await Promise.all([
-    getReports({ page: 1, limit: 100 }).catch(() => ({ posts: [] })),
-    getReportFilters().catch(() => ({
-      categories: [],
-      wards: [],
-      statuses: [],
-      priorities: [],
-    })),
-  ]);
-
-  const allPosts: Report[] = PostsRes.posts || [];
-  const Reports: Report[] = allPosts.length > 0 ? allPosts : mockPosts;
-
 
   return (
     <html lang="en" className={cn("font-sans", geist.variable)}>
       <body className={`${inter.className} min-h-screen`}>
-        <ConditionalLayout user={user} Reports={Reports}>
+        <ConditionalLayout user={user}>
           {children}
         </ConditionalLayout>
 

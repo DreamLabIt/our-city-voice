@@ -1,11 +1,13 @@
-
 import Link from "next/link";
 import PageHeader from "@/components/common/PageHeader";
 import SectionContainer from "@/components/common/SectionContainer";
 import { AlertCircle } from "lucide-react";
 import ReportFilters from "@/components/issues/reports/ReportFilters";
+import SearchResults from "@/components/issues/reports/SearchResults";
 import PostCard from "@/components/landing/PostCard";
 import { getReports, getReportFilters } from "@/app/actions/report";
+import { getSearchResults } from "@/app/actions/search";
+import { SEARCH_MIN_LENGTH, SEARCH_PAGE_SIZE } from "@/lib/search-config";
 
 import {
     Pagination,
@@ -45,14 +47,13 @@ export default async function ReportsPage({
     searchParams,
 }: PageProps): Promise<React.ReactNode> {
     const params = await searchParams;
-
     const searchQuery = params.search?.trim() || "";
     const selectedCategory = params.category || "All";
     const selectedStatus = params.status || "All";
     const selectedWard = params.ward || "All";
     const currentPage = getValidPage(params.page);
     const limit = 12;
-
+    const isSearchMode = searchQuery.length >= SEARCH_MIN_LENGTH;
     const queryParams: GetReportsParams = {
         page: currentPage,
         limit,
@@ -71,14 +72,18 @@ export default async function ReportsPage({
                 : undefined,
     };
 
-    const [reportsData, filtersData] = await Promise.all([
-        getReports(queryParams).catch(() => ({
-            posts: [],
-            total: 0,
-            page: currentPage,
-            limit,
-            pageCount: 0,
-        })),
+    const emptyReportsData = {
+        posts: [] as Report[],
+        total: 0,
+        page: currentPage,
+        limit,
+        pageCount: 0,
+    };
+
+    const [reportsData, filtersData, searchData] = await Promise.all([
+        isSearchMode
+            ? Promise.resolve(emptyReportsData)
+            : getReports(queryParams).catch(() => emptyReportsData),
         getReportFilters().catch(
             (): ReportFiltersResponse => ({
                 categories: [],
@@ -87,32 +92,30 @@ export default async function ReportsPage({
                 priorities: [],
             })
         ),
+        isSearchMode
+            ? getSearchResults(searchQuery, 1, SEARCH_PAGE_SIZE)
+            : Promise.resolve(null),
     ]);
 
     const fetchedReports: Report[] = reportsData.posts || [];
     const hasFetchedReports = fetchedReports.length > 0;
-
     const reportsSource: Report[] = hasFetchedReports
         ? fetchedReports
         : mockPosts;
-
     const reports: Report[] = hasFetchedReports
         ? reportsSource
         : mockPosts.slice(
             (currentPage - 1) * limit,
             currentPage * limit
         );
-
     const totalReports = hasFetchedReports
         ? reportsData.total || fetchedReports.length
         : mockPosts.length;
-
     const totalPages = hasFetchedReports
         ? reportsData.pageCount ||
         Math.ceil(totalReports / limit) ||
         1
         : Math.ceil(mockPosts.length / limit) || 1;
-
     const categoriesList =
         filtersData.categories.length > 0
             ? filtersData.categories
@@ -120,7 +123,6 @@ export default async function ReportsPage({
                 name: category.name,
                 value: category.id,
             }));
-
     const categories = [
         {
             slug: "All",
@@ -133,14 +135,12 @@ export default async function ReportsPage({
             name: category.name,
         })),
     ];
-
     const statusesList =
         filtersData.statuses.length > 0
             ? filtersData.statuses.map((status) => status.value)
             : ["pending", "in_progress", "resolved"];
 
     const statuses = ["All", ...statusesList];
-
     const wardsList =
         filtersData.wards.length > 0
             ? filtersData.wards.map((ward) => ({
@@ -153,7 +153,6 @@ export default async function ReportsPage({
                 { code: "ward-3", name: "Ward 3" },
                 { code: "ward-4", name: "Ward 4" },
             ];
-
     const wards = [
         {
             code: "All",
@@ -161,13 +160,11 @@ export default async function ReportsPage({
         },
         ...wardsList,
     ];
-
     const hasActiveFilters =
         selectedCategory !== "All" ||
         selectedStatus !== "All" ||
         selectedWard !== "All" ||
         Boolean(searchQuery);
-
     const createPageUrl = (pageNumber: number) => {
         const query = new URLSearchParams();
 
@@ -246,20 +243,30 @@ export default async function ReportsPage({
                         categories={categories}
                         statuses={statuses}
                         wards={wards}
+                        enableSearchSuggestions
                     />
 
                     <div className="flex items-center justify-between px-1 text-xs font-bold text-muted-foreground">
-                        <span>
-                            Showing{" "}
-                            <strong className="text-foreground">
-                                {reports.length}
-                            </strong>{" "}
-                            of{" "}
-                            <strong className="text-foreground">
-                                {totalReports}
-                            </strong>{" "}
-                            Public Reports
-                        </span>
+                        {isSearchMode ? (
+                            <span>
+                                Search results for{" "}
+                                <strong className="text-primary">
+                                    &quot;{searchQuery}&quot;
+                                </strong>
+                            </span>
+                        ) : (
+                            <span>
+                                Showing{" "}
+                                <strong className="text-foreground">
+                                    {reports.length}
+                                </strong>{" "}
+                                of{" "}
+                                <strong className="text-foreground">
+                                    {totalReports}
+                                </strong>{" "}
+                                Public Reports
+                            </span>
+                        )}
 
                         {hasActiveFilters && (
                             <Link
@@ -271,7 +278,13 @@ export default async function ReportsPage({
                         )}
                     </div>
 
-                    {reports.length > 0 ? (
+                    {isSearchMode ? (
+                        <SearchResults
+                            key={searchQuery}
+                            term={searchQuery}
+                            initialData={searchData}
+                        />
+                    ) : reports.length > 0 ? (
                         <>
                             <div className="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                                 {reports.map((report) => (

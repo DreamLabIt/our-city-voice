@@ -9,7 +9,7 @@ import { posts as mockPosts } from "@/data/mock-data";
 
 export default async function IssuesMapPage(): Promise<React.ReactNode> {
     const [PostsRes] = await Promise.all([
-        getReports({ page: 1, limit: 50 }).catch(() => ({ posts: [] })),
+        getReports({ page: 1, limit: 20 }).catch(() => ({ posts: [] })),
         getReportFilters().catch(() => ({
             categories: [],
             wards: [],
