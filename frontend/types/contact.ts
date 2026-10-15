@@ -38,6 +38,8 @@ export interface SendContactMessageResponse {
     fieldErrors?: Record<string, string[]>;
     rateLimited?: boolean;
     retryAfterSeconds?: number;
+    message?: string;
+
 }
 
 export interface GetAdminContactMessagesParams {
