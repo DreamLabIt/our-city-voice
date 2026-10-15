@@ -1,8 +1,10 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { apiFetch } from "@/lib/api";
 import { clientForwardHeaders } from "@/lib/client-headers";
 import { getAccessToken } from "@/lib/session";
+import type { IssueComment } from "@/types/IssueDetails";
 import { AddCommentPayload, AddCommentResponse, LikeToggleResponse, LikeApiData, LikeRequestOptions } from "@/types/commentsLikes";
 
 const COMMENT_MAX_LENGTH = 2000;
@@ -20,21 +22,50 @@ function normalizeCommentId(
     return /^\d+$/.test(value) ? value : null;
 }
 
-function getFieldErrors(
+function asRecord(value: unknown): Record<string, unknown> | null {
+    return value && typeof value === "object" && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : null;
+}
+
+function getApiErrorMessage(result: unknown, fallback: string): string {
+    const root = asRecord(result);
+    const error = root?.error;
+
+    if (typeof error === "string" && error.trim()) {
+        return error;
+    }
+
+    const errorMessage = asRecord(error)?.message;
+
+    if (typeof errorMessage === "string" && errorMessage.trim()) {
+        return errorMessage;
+    }
+
+    if (typeof root?.message === "string" && root.message.trim()) {
+        return root.message;
+    }
+
+    return fallback;
+}
+
+function toFieldErrors(
     details: unknown,
 ): Record<string, string[]> | undefined {
-    if (!details || typeof details !== "object" || Array.isArray(details)) {
-        return undefined;
-    }
+    const record = asRecord(details);
+
+    if (!record) return undefined;
 
     const fieldErrors: Record<string, string[]> = {};
 
-    for (const [key, value] of Object.entries(details)) {
+    for (const [key, value] of Object.entries(record)) {
         if (
             Array.isArray(value) &&
             value.every((item) => typeof item === "string")
         ) {
             fieldErrors[key] = value;
+        } else if (typeof value === "string") {
+            fieldErrors[key] = [value];
         }
     }
 
@@ -43,8 +74,20 @@ function getFieldErrors(
         : undefined;
 }
 
+function getFieldErrors(
+    result: unknown,
+): Record<string, string[]> | undefined {
+    const root = asRecord(result);
+
+    return (
+        toFieldErrors(root?.details) ??
+        toFieldErrors(asRecord(root?.error)?.details)
+    );
+}
+
 async function sendLikeRequest(
     options: LikeRequestOptions,
+    reportCode?: string,
 ): Promise<LikeToggleResponse> {
     try {
         const token = await getAccessToken();
@@ -81,7 +124,7 @@ async function sendLikeRequest(
 
             return {
                 success: false,
-                error: result.error?.message || options.fallbackError,
+                error: getApiErrorMessage(result, options.fallbackError),
             };
         }
 
@@ -97,6 +140,13 @@ async function sendLikeRequest(
                 success: false,
                 error: "The server returned an invalid like response.",
             };
+        }
+
+        if (reportCode) {
+            revalidatePath("/");
+            revalidatePath("/reports");
+            revalidatePath(`/issues/${reportCode}`);
+            revalidatePath("/dashboard/issues");
         }
 
         return {
@@ -166,13 +216,13 @@ export async function addReportComment(
             };
         }
 
-        const result = await apiFetch<{ comment: Comment }>(
+        const result = await apiFetch<{ comment: IssueComment }>(
             `/posts/${encodeURIComponent(normalizedCode)}/comments`,
             {
                 method: "POST",
                 token: token.trim(),
                 forward: await clientForwardHeaders(),
-                body: JSON.stringify({ message }),
+                body: { message },
             },
         );
 
@@ -192,10 +242,16 @@ export async function addReportComment(
                 };
             }
 
+            console.error(
+                "addReportComment failed:",
+                result.status,
+                JSON.stringify(result),
+            );
+
             return {
                 success: false,
-                error: result.error?.message || "Failed to add comment.",
-                fieldErrors: getFieldErrors(result.error),
+                error: getApiErrorMessage(result, "Failed to add comment."),
+                fieldErrors: getFieldErrors(result),
             };
         }
 
@@ -205,6 +261,12 @@ export async function addReportComment(
                 error: "The comment was submitted, but the server returned an invalid response.",
             };
         }
+
+        revalidatePath("/");
+        revalidatePath("/reports");
+        revalidatePath(`/issues/${normalizedCode}`);
+        revalidatePath("/dashboard/issues");
+
 
         return {
             success: true,
@@ -239,7 +301,7 @@ export async function likeReport(
         fallbackError: "Failed to like report.",
         notFoundMessage: "This report no longer exists.",
         defaultLikedByMe: true,
-    });
+    }, normalizedCode);
 }
 
 export async function unlikeReport(
@@ -261,7 +323,7 @@ export async function unlikeReport(
         fallbackError: "Failed to remove like.",
         notFoundMessage: "This report no longer exists.",
         defaultLikedByMe: false,
-    });
+    }, normalizedCode);
 }
 
 export async function likeComment(
@@ -285,7 +347,7 @@ export async function likeComment(
         fallbackError: "Failed to like comment.",
         notFoundMessage: "This comment no longer exists.",
         defaultLikedByMe: true,
-    });
+    }, normalizedCode);
 }
 
 export async function unlikeComment(
@@ -309,5 +371,5 @@ export async function unlikeComment(
         fallbackError: "Failed to remove like from comment.",
         notFoundMessage: "This comment no longer exists.",
         defaultLikedByMe: false,
-    });
+    }, normalizedCode);
 }

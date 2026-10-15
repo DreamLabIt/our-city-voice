@@ -51,6 +51,7 @@ export interface RelatedPostsProps {
 export interface CommentsProps {
     postId: string;
     comments: IssueComment[];
+    trackingCode: string;
 }
 
 export interface CommentItemProps {

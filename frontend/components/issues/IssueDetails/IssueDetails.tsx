@@ -109,6 +109,7 @@ export default function IssueDetails({
 
                         <Comments
                             postId={post.id}
+                            trackingCode={post.trackingCode}
                             comments={comments}
                         />
                     </div>

@@ -1,13 +1,15 @@
+import { IssueComment } from "./IssueDetails";
+
 export interface AddCommentPayload {
     message: string;
 }
 
 export interface AddCommentResponse {
     success: boolean;
-    comment?: Comment;
     error?: string;
     fieldErrors?: Record<string, string[]>;
     requiresAuth?: boolean;
+    comment?: IssueComment;
 }
 
 export interface LikeToggleResponse {
