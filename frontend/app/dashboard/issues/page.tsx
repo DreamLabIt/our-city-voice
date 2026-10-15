@@ -41,6 +41,7 @@ export default async function IssuesPage({
 }: IssuesPageProps): Promise<React.ReactNode> {
     const user = await getCurrentUser();
 
+
     if (!user) {
         redirect(`/login?next=${BASE_PATH}`);
     }
@@ -221,7 +222,7 @@ export default async function IssuesPage({
     }
 
     return (
-        <DashboardLayout user={user}>
+        <DashboardLayout user={user} isAdmin={isAdmin}>
             <IssuesTable
                 issues={issues}
                 total={total}

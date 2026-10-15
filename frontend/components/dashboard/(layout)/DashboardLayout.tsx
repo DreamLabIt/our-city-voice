@@ -4,7 +4,7 @@ import type { DashboardLayoutProps } from "@/types";
 export default async function DashboardLayout({
     children,
     user,
-    isAdmin = false,
+    isAdmin,
 }: DashboardLayoutProps) {
 
     if (!user) {
