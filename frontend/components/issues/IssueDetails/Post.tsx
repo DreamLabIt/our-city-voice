@@ -126,7 +126,7 @@ export default function Post({ post }: PostProps): React.ReactNode {
 
         setHasLiked(nowLiked);
         setLikes(result.likeCount ?? optimisticLikes);
-
+        router.refresh();
         if (nowLiked) {
             toast.success("Thanks for supporting this report!", {
                 description:

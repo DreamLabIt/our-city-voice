@@ -19,6 +19,9 @@ import type {
     ReportFiltersResponse,
 } from "@/types/report";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const LIMIT = 16;
 const BASE_PATH = "/dashboard/issues";
 

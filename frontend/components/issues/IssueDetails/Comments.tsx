@@ -247,6 +247,7 @@ export default function Comments({
         toast.success("Comment posted", {
             description: "Your comment is now visible on this issue.",
         });
+        router.refresh();
     };
 
     const handleAddReply = (parentId: string, message: string) => {

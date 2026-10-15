@@ -146,7 +146,8 @@ async function sendLikeRequest(
             revalidatePath("/");
             revalidatePath("/reports");
             revalidatePath(`/issues/${reportCode}`);
-            revalidatePath("/dashboard/issues");
+            revalidatePath("/dashboard", "layout");
+            revalidatePath("/dashboard/issues", "page");
         }
 
         return {
@@ -265,7 +266,8 @@ export async function addReportComment(
         revalidatePath("/");
         revalidatePath("/reports");
         revalidatePath(`/issues/${normalizedCode}`);
-        revalidatePath("/dashboard/issues");
+        revalidatePath("/dashboard", "layout");
+        revalidatePath("/dashboard/issues", "page");
 
 
         return {
