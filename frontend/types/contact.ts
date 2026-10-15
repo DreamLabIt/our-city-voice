@@ -57,3 +57,11 @@ export interface GetAdminContactMessagesResponse {
     error?: string;
     requiresAuth?: boolean;
 }
+
+export interface ContactMessagesTableProps {
+    messages: ContactMessage[];
+    total: number;
+    currentPage: number;
+    totalPages: number;
+    basePath: string;
+}
