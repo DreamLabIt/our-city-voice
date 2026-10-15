@@ -269,7 +269,6 @@ export async function addReportComment(
         revalidatePath("/dashboard", "layout");
         revalidatePath("/dashboard/issues", "page");
 
-
         return {
             success: true,
             comment: result.data.comment,
@@ -280,6 +279,131 @@ export async function addReportComment(
         return {
             success: false,
             error: "An unexpected error occurred while adding the comment.",
+        };
+    }
+}
+
+export async function replyToReportComment(
+    code: string,
+    commentId: string | number,
+    payload: AddCommentPayload,
+): Promise<AddCommentResponse> {
+    try {
+        const normalizedCode = normalizeReportCode(code);
+        const id = normalizeCommentId(commentId);
+
+        if (!normalizedCode || !id) {
+            return {
+                success: false,
+                error: "Invalid report or comment.",
+            };
+        }
+
+        const message =
+            payload && typeof payload.message === "string"
+                ? payload.message.trim()
+                : "";
+
+        if (!message) {
+            return {
+                success: false,
+                fieldErrors: {
+                    message: ["Reply cannot be empty."],
+                },
+            };
+        }
+
+        if (message.length > COMMENT_MAX_LENGTH) {
+            return {
+                success: false,
+                fieldErrors: {
+                    message: [
+                        `Reply cannot exceed ${COMMENT_MAX_LENGTH} characters.`,
+                    ],
+                },
+            };
+        }
+
+        const token = await getAccessToken();
+
+        if (!token?.trim()) {
+            return {
+                success: false,
+                requiresAuth: true,
+                error: "Please log in to reply.",
+            };
+        }
+
+        const result = await apiFetch<{ comment: IssueComment }>(
+            `/posts/${encodeURIComponent(normalizedCode)}/comments/${id}/replies`,
+            {
+                method: "POST",
+                token: token.trim(),
+                forward: await clientForwardHeaders(),
+                body: { message },
+            },
+        );
+
+        if (!result.ok) {
+            if (result.status === 401) {
+                return {
+                    success: false,
+                    requiresAuth: true,
+                    error: "Session expired. Please log in again.",
+                };
+            }
+
+            if (result.status === 400) {
+                return {
+                    success: false,
+                    error: getApiErrorMessage(result, "Cannot reply to this comment."),
+                    fieldErrors: getFieldErrors(result),
+                };
+            }
+
+            if (result.status === 404) {
+                return {
+                    success: false,
+                    error: "This report or comment no longer exists.",
+                };
+            }
+
+            console.error(
+                "replyToReportComment failed:",
+                result.status,
+                JSON.stringify(result),
+            );
+
+            return {
+                success: false,
+                error: getApiErrorMessage(result, "Failed to send reply."),
+                fieldErrors: getFieldErrors(result),
+            };
+        }
+
+        if (!result.data?.comment) {
+            return {
+                success: false,
+                error: "The reply was submitted, but the server returned an invalid response.",
+            };
+        }
+
+        revalidatePath("/");
+        revalidatePath("/reports");
+        revalidatePath(`/issues/${normalizedCode}`);
+        revalidatePath("/dashboard", "layout");
+        revalidatePath("/dashboard/issues", "page");
+
+        return {
+            success: true,
+            comment: result.data.comment,
+        };
+    } catch (error) {
+        console.error("Error in replyToReportComment server action:", error);
+
+        return {
+            success: false,
+            error: "An unexpected error occurred while sending the reply.",
         };
     }
 }

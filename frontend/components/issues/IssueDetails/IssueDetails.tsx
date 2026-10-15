@@ -110,8 +110,7 @@ export default function IssueDetails({
                         <Comments
                             postId={post.id}
                             trackingCode={post.trackingCode}
-                            comments={comments}
-                        />
+                            comments={comments.toReversed()} />
                     </div>
 
                     <aside className="space-y-4 lg:col-span-4">
