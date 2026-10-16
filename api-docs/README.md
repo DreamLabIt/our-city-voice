@@ -32,6 +32,10 @@ is why it behaves the way it does.
 | [`GET /contact/categories`](endpoints/list-contact-categories.md) | none | the contact form's category options |
 | [`POST /contact/messages`](endpoints/create-contact-message.md) | none | store a contact-form submission |
 | [`GET /contact/messages`](endpoints/list-contact-messages.md) | required | the contact inbox, paginated (super admin only) |
+| [`GET /stats`](endpoints/get-statistics.md) | none | the whole site's report numbers |
+| [`GET /stats/activity`](endpoints/get-activity-stats.md) | none | the landing page's counters and month chart |
+| [`GET /stats/me`](endpoints/get-my-statistics.md) | required | those report numbers for your own reports |
+| [`GET /stats/admin`](endpoints/get-admin-overview.md) | required | reports, users, inbox and activity (super admin only) |
 
 "Auth optional" means the endpoint answers a signed-out request and gives a
 signed-in one more: `likedByMe`, and in some cases extra parameters.
@@ -41,7 +45,7 @@ signed-in one more: `likedByMe`, and in some cases extra parameters.
 | File | Why |
 | --- | --- |
 | [conventions.md](conventions.md) | how to call the API, and the rules every endpoint follows — ids, dates, enums, blank parameters, pagination |
-| [objects.md](objects.md) | the shapes that come back: `User`, `Report`, `ReportDetail`, `Comment`, `FilterOptions` |
+| [objects.md](objects.md) | the shapes that come back: `User`, `Report`, `ReportDetail`, `Comment`, `FilterOptions`, `ReportStatistics` |
 | [errors.md](errors.md) | one envelope for every failure, and how to put a message under the right input |
 
 ## Guides
