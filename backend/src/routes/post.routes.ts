@@ -1,7 +1,7 @@
 import { Router } from "express";
 
 import * as postController from "../controllers/post.controller.js";
-import { optionalAuth, requireAuth } from "../middleware/authenticate.js";
+import { optionalAuth, requireAuth, requireSuperAdmin } from "../middleware/authenticate.js";
 
 export const postRouter: Router = Router();
 
@@ -22,6 +22,8 @@ postRouter.post("/", requireAuth, postController.create);
 postRouter.get("/:code", postController.detail);
 
 postRouter.patch("/:code", requireAuth, postController.update);
+
+postRouter.patch("/:code/status", requireAuth, requireSuperAdmin, postController.updateStatus);
 
 postRouter.delete("/:code", requireAuth, postController.remove);
 

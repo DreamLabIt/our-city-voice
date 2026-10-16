@@ -19,6 +19,9 @@ import type {
     ReportFiltersResponse,
 } from "@/types/report";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const LIMIT = 16;
 const BASE_PATH = "/dashboard/issues";
 
@@ -37,6 +40,7 @@ export default async function IssuesPage({
     searchParams,
 }: IssuesPageProps): Promise<React.ReactNode> {
     const user = await getCurrentUser();
+
 
     if (!user) {
         redirect(`/login?next=${BASE_PATH}`);
@@ -218,7 +222,7 @@ export default async function IssuesPage({
     }
 
     return (
-        <DashboardLayout user={user}>
+        <DashboardLayout user={user} isAdmin={isAdmin}>
             <IssuesTable
                 issues={issues}
                 total={total}

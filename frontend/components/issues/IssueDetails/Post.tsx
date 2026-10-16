@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
     AlertTriangle,
     Calendar,
@@ -23,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { likeReport, unlikeReport } from "@/app/actions/commentsLikes";
 
 import {
     CARD_CLASS,
@@ -36,9 +38,7 @@ import {
 import type { MediaItem, PostProps } from "@/types/IssueDetails"
 
 export default function Post({ post }: PostProps): React.ReactNode {
-    // `media` is the Media relation itself — every row, in sortOrder order —
-    // so a video row already carries its poster frame and there is nothing to
-    // merge.
+    const router = useRouter();
     const mediaItems = useMemo(() => {
         const items: MediaItem[] = [];
 
@@ -58,9 +58,7 @@ export default function Post({ post }: PostProps): React.ReactNode {
 
     const [activeMedia, setActiveMedia] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
-
     const videoRef = useRef<HTMLVideoElement | null>(null);
-
     const current = mediaItems[activeMedia];
 
     const handleVideoPlay = () => {
@@ -87,21 +85,55 @@ export default function Post({ post }: PostProps): React.ReactNode {
 
     const [likes, setLikes] = useState(post.likeCount);
     const [hasLiked, setHasLiked] = useState(post.likedByMe);
+    const [isLiking, setIsLiking] = useState(false);
 
-    const handleLike = () => {
-        if (hasLiked) {
-            setLikes((prev) => prev - 1);
-            setHasLiked(false);
+    const handleLike = async () => {
+        if (isLiking) return;
 
-            toast.info("Support removed");
-        } else {
-            setLikes((prev) => prev + 1);
-            setHasLiked(true);
+        const wasLiked = hasLiked;
+        const previousLikes = likes;
+        const optimisticLikes = wasLiked ? previousLikes - 1 : previousLikes + 1;
 
+        setIsLiking(true);
+        setHasLiked(!wasLiked);
+        setLikes(optimisticLikes);
+
+        const result = wasLiked
+            ? await unlikeReport(post.trackingCode)
+            : await likeReport(post.trackingCode);
+
+        setIsLiking(false);
+
+        if (!result.success) {
+            setHasLiked(wasLiked);
+            setLikes(previousLikes);
+
+            if (result.requiresAuth) {
+                toast.error(
+                    result.error ?? "Please log in to support this report.",
+                );
+                router.push(`/login?next=/issues/${post.trackingCode}`);
+                return;
+            }
+
+            toast.error("Could not update your support", {
+                description: result.error ?? "Please try again.",
+            });
+            return;
+        }
+
+        const nowLiked = result.likedByMe ?? !wasLiked;
+
+        setHasLiked(nowLiked);
+        setLikes(result.likeCount ?? optimisticLikes);
+        router.refresh();
+        if (nowLiked) {
             toast.success("Thanks for supporting this report!", {
                 description:
                     "Issues with more community support get prioritized sooner.",
             });
+        } else {
+            toast.info("Support removed");
         }
     };
 
@@ -281,6 +313,7 @@ export default function Post({ post }: PostProps): React.ReactNode {
                         <Button
                             type="button"
                             onClick={handleLike}
+                            disabled={isLiking}
                             variant={hasLiked ? "default" : "outline"}
                             className={cn(
                                 "h-auto rounded-xl px-4 py-2.5 text-xs font-bold",

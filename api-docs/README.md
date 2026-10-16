@@ -20,6 +20,7 @@ is why it behaves the way it does.
 | [`GET /posts/suggestions`](endpoints/suggest-reports.md) | none | up to six best matches for a search box |
 | [`GET /posts/:code`](endpoints/get-report.md) | optional | one report, with timeline and related |
 | [`PATCH /posts/:code`](endpoints/update-report.md) | required | edit a report you filed (or any, as a super admin) |
+| [`PATCH /posts/:code/status`](endpoints/update-report-status.md) | required | move a report's status (super admin only) |
 | [`DELETE /posts/:code`](endpoints/delete-report.md) | required | soft-delete a report you filed (or any, as a super admin) |
 | [`GET /posts/:code/comments`](endpoints/list-report-comments.md) | optional | a page of comment threads |
 | [`POST /posts/:code/like`](endpoints/like-report.md) | required | like a report |
@@ -59,6 +60,7 @@ code is written to disk.
 [not-implemented.md](not-implemented.md) lists what deliberately does not exist
 yet, so nothing here is mistaken for an oversight. The short version: **every read
 the current pages need exists, plus the writes that own a report — filing one,
-editing it and soft-deleting it — the engagement controls the detail page shows:
-liking a report, posting a comment, replying, and liking a comment; and the
-contact form, which can submit a message and list it back in the admin inbox.**
+editing it and soft-deleting it — a super admin's status change, the engagement
+controls the detail page shows: liking a report, posting a comment, replying, and
+liking a comment; and the contact form, which can submit a message and list it back
+in the admin inbox.**

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { BadgeCheck, Send, ThumbsUp } from "lucide-react";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { BadgeCheck, Loader2, Send, ThumbsUp } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -10,24 +11,76 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import {
+    addReportComment,
+    replyToReportComment,
+    likeComment,
+    unlikeComment,
+} from "@/app/actions/commentsLikes";
 import type { IssueComment } from "@/types/IssueDetails";
 import { CARD_CLASS, countComments, getInitials, timeAgo } from "@/lib/utils";
 import type { CommentsProps, CommentItemProps } from "@/types/IssueDetails";
 
+const COMMENT_MAX_LENGTH = 2000;
+const NUMERIC_ID = /^\d+$/;
+
+function findCommentInTree(
+    items: IssueComment[],
+    commentId: string,
+): IssueComment | undefined {
+    for (const item of items) {
+        if (String(item.id) === commentId) return item;
+
+        const inReplies = item.replies
+            ? findCommentInTree(item.replies, commentId)
+            : undefined;
+
+        if (inReplies) return inReplies;
+    }
+
+    return undefined;
+}
+
+function updateCommentInTree(
+    items: IssueComment[],
+    commentId: string,
+    update: (comment: IssueComment) => IssueComment,
+): IssueComment[] {
+    return items.map((item) => {
+        const replies = item.replies
+            ? updateCommentInTree(item.replies, commentId, update)
+            : item.replies;
+
+        const next = { ...item, replies };
+
+        return String(next.id) === commentId ? update(next) : next;
+    });
+}
+
 function CommentItem({ comment, isReply = false, onLike, onReply }: CommentItemProps) {
     const [isReplying, setIsReplying] = useState(false);
     const [replyBody, setReplyBody] = useState("");
+    const [isSubmittingReply, setIsSubmittingReply] = useState(false);
     const name = comment.author?.name ?? "Anonymous";
 
-    const submitReply = () => {
+    const submitReply = async () => {
         const message = replyBody.trim();
         if (!message) {
             toast.error("Write something before replying");
             return;
         }
-        onReply(comment.id, message);
-        setReplyBody("");
-        setIsReplying(false);
+
+        setIsSubmittingReply(true);
+        const success = await (onReply as (parentId: string, message: string) => Promise<boolean>)(
+            String(comment.id),
+            message,
+        );
+        setIsSubmittingReply(false);
+
+        if (success) {
+            setReplyBody("");
+            setIsReplying(false);
+        }
     };
 
     return (
@@ -74,7 +127,7 @@ function CommentItem({ comment, isReply = false, onLike, onReply }: CommentItemP
                     <div className="flex items-center gap-4 text-xs font-semibold">
                         <button
                             type="button"
-                            onClick={() => onLike(comment.id)}
+                            onClick={() => onLike(String(comment.id))}
                             className={cn(
                                 "flex items-center gap-1.5 transition-colors cursor-pointer",
                                 comment.likedByMe
@@ -106,14 +159,22 @@ function CommentItem({ comment, isReply = false, onLike, onReply }: CommentItemP
                                 value={replyBody}
                                 onChange={(event) => setReplyBody(event.target.value)}
                                 placeholder={`Reply to ${name}...`}
+                                disabled={isSubmittingReply}
+                                maxLength={COMMENT_MAX_LENGTH}
                                 className="flex-1 rounded-xl border-border-custom bg-section text-xs"
                             />
                             <Button
                                 type="button"
+                                disabled={isSubmittingReply}
                                 onClick={submitReply}
                                 className="h-auto rounded-xl px-4 py-2 text-xs font-bold"
                             >
-                                <Send className="w-3.5 h-3.5" /> Reply
+                                {isSubmittingReply ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                    <Send className="w-3.5 h-3.5" />
+                                )}
+                                Reply
                             </Button>
                         </div>
                     )}
@@ -137,24 +198,24 @@ function CommentItem({ comment, isReply = false, onLike, onReply }: CommentItemP
     );
 }
 
-export default function Comments({ postId, comments }: CommentsProps): React.ReactNode {
+export default function Comments({
+    postId,
+    trackingCode,
+    comments,
+}: CommentsProps): React.ReactNode {
+    const router = useRouter();
     const [list, setList] = useState<IssueComment[]>(comments);
     const [newComment, setNewComment] = useState("");
-
+    const [messageError, setMessageError] = useState<string | null>(null);
+    const [isPosting, setIsPosting] = useState(false);
+    const pendingLikesRef = useRef<Set<string>>(new Set());
     const total = countComments(list);
+    const loginUrl = `/login?next=/issues/${trackingCode}`;
 
-    const buildLocal = (id: string, message: string): IssueComment => ({
-        id,
-        postId,
-        message,
-        likeCount: 0,
-        likedByMe: false,
-        createdAt: new Date().toISOString(),
-        author: { id: "me", name: "You", role: "Resident" },
-    });
-
-    const handleAddComment = (event: React.FormEvent) => {
+    const handleAddComment = async (event: React.FormEvent) => {
         event.preventDefault();
+
+        if (isPosting) return;
 
         const message = newComment.trim();
         if (!message) {
@@ -162,36 +223,141 @@ export default function Comments({ postId, comments }: CommentsProps): React.Rea
             return;
         }
 
-        setList((prev) => [buildLocal(`local-${Date.now()}`, message), ...prev]);
+        setIsPosting(true);
+        setMessageError(null);
+
+        const result = await addReportComment(trackingCode, { message });
+
+        setIsPosting(false);
+
+        if (!result.success || !result.comment) {
+            if (result.requiresAuth) {
+                toast.error(result.error ?? "Please log in to add a comment.");
+                router.push(loginUrl);
+                return;
+            }
+
+            const fieldMessage = result.fieldErrors?.message?.[0];
+
+            if (fieldMessage) {
+                setMessageError(fieldMessage);
+                return;
+            }
+
+            toast.error("Could not post your comment", {
+                description: result.error ?? "Please try again.",
+            });
+            return;
+        }
+
+        const created = result.comment as unknown as IssueComment;
+
+        setList((prev) => [created, ...prev]);
         setNewComment("");
         toast.success("Comment posted", {
             description: "Your comment is now visible on this issue.",
         });
+        router.refresh();
     };
 
-    const handleAddReply = (parentId: string, message: string) => {
-        const reply = buildLocal(`local-${parentId}-${Date.now()}`, message);
+    const handleAddReply = async (parentId: string, message: string): Promise<boolean> => {
+        const result = await replyToReportComment(trackingCode, parentId, { message });
+
+        if (!result.success || !result.comment) {
+            if (result.requiresAuth) {
+                toast.error(result.error ?? "Please log in to reply.");
+                router.push(loginUrl);
+                return false;
+            }
+
+            toast.error("Could not post your reply", {
+                description: result.error ?? result.fieldErrors?.message?.[0] ?? "Please try again.",
+            });
+            return false;
+        }
+
+        const reply = result.comment as unknown as IssueComment;
+
         setList((prev) =>
             prev.map((item) =>
-                item.id === parentId ? { ...item, replies: [...(item.replies ?? []), reply] } : item,
+                String(item.id) === parentId
+                    ? { ...item, replies: [...(item.replies ?? []), reply] }
+                    : item,
             ),
         );
+
         toast.success("Reply posted");
+        router.refresh();
+        return true;
     };
 
-    const handleLike = (commentId: string) => {
-        const apply = (items: IssueComment[]): IssueComment[] =>
-            items.map((item) => {
-                const replies = item.replies ? apply(item.replies) : item.replies;
-                if (item.id !== commentId) return { ...item, replies };
-                return {
+    const handleLike = async (commentId: string) => {
+        const target = findCommentInTree(list, commentId);
+
+        if (!target) return;
+
+        if (!NUMERIC_ID.test(commentId)) {
+            setList((prev) =>
+                updateCommentInTree(prev, commentId, (item) => ({
                     ...item,
-                    replies,
                     likedByMe: !item.likedByMe,
                     likeCount: item.likeCount + (item.likedByMe ? -1 : 1),
-                };
+                })),
+            );
+            return;
+        }
+
+        if (pendingLikesRef.current.has(commentId)) return;
+
+        const wasLiked = target.likedByMe;
+        const previousCount = target.likeCount;
+        const optimisticLiked = !wasLiked;
+        const optimisticCount = previousCount + (wasLiked ? -1 : 1);
+
+        pendingLikesRef.current.add(commentId);
+
+        setList((prev) =>
+            updateCommentInTree(prev, commentId, (item) => ({
+                ...item,
+                likedByMe: optimisticLiked,
+                likeCount: optimisticCount,
+            })),
+        );
+
+        const result = wasLiked
+            ? await unlikeComment(trackingCode, commentId)
+            : await likeComment(trackingCode, commentId);
+
+        pendingLikesRef.current.delete(commentId);
+
+        if (!result.success) {
+            setList((prev) =>
+                updateCommentInTree(prev, commentId, (item) => ({
+                    ...item,
+                    likedByMe: wasLiked,
+                    likeCount: previousCount,
+                })),
+            );
+
+            if (result.requiresAuth) {
+                toast.error(result.error ?? "Please log in to like this comment.");
+                router.push(loginUrl);
+                return;
+            }
+
+            toast.error("Could not update your like", {
+                description: result.error ?? "Please try again.",
             });
-        setList((prev) => apply(prev));
+            return;
+        }
+
+        setList((prev) =>
+            updateCommentInTree(prev, commentId, (item) => ({
+                ...item,
+                likedByMe: result.likedByMe ?? optimisticLiked,
+                likeCount: result.likeCount ?? optimisticCount,
+            })),
+        );
     };
 
     return (
@@ -202,22 +368,40 @@ export default function Comments({ postId, comments }: CommentsProps): React.Rea
                 </h2>
 
                 <form onSubmit={handleAddComment} className="space-y-3">
-                    <Textarea
-                        value={newComment}
-                        onChange={(event) => setNewComment(event.target.value)}
-                        rows={3}
-                        placeholder="Add what you have seen at this location, or any update you know about..."
-                        className="resize-y rounded-xl border-border-custom bg-section p-3.5 text-sm"
-                    />
+                    <div className="space-y-1.5">
+                        <Textarea
+                            value={newComment}
+                            onChange={(event) => {
+                                setNewComment(event.target.value);
+                                if (messageError) setMessageError(null);
+                            }}
+                            rows={3}
+                            maxLength={COMMENT_MAX_LENGTH}
+                            disabled={isPosting}
+                            placeholder="Add what you have seen at this location, or any update you know about..."
+                            className="resize-y rounded-xl border-border-custom bg-section p-3.5 text-sm"
+                        />
+
+                        {messageError && (
+                            <p className="text-xs text-destructive">{messageError}</p>
+                        )}
+                    </div>
+
                     <div className="flex items-center justify-between gap-3">
                         <p className="text-[11px] text-muted-foreground">
                             Comments are public and visible to municipal staff following this issue.
                         </p>
                         <Button
                             type="submit"
+                            disabled={isPosting}
                             className="h-auto shrink-0 rounded-xl px-5 py-2.5 text-xs font-bold shadow-sm"
                         >
-                            <Send className="w-4 h-4" /> Post comment
+                            {isPosting ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <Send className="w-4 h-4" />
+                            )}
+                            Post comment
                         </Button>
                     </div>
                 </form>
