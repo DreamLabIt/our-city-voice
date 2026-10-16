@@ -11,6 +11,9 @@ The shapes that come back. Endpoint files link here rather than repeating them.
 - [`ContactCategory`](#contactcategory) — a contact-form option
 - [`ContactMessage`](#contactmessage) — a contact-form submission
 - [`FilterOptions`](#filteroptions)
+- [`ReportStatistics`](#reportstatistics) — the report numbers
+- [`ActivitySummary`](#activitysummary) — the landing page's counters and chart
+- [`AdminOverview`](#adminoverview) — the admin dashboard payload
 
 See [conventions.md](conventions.md) for the rules behind ids, dates and enums.
 
@@ -330,3 +333,114 @@ Returned by [`GET /posts/filters`](endpoints/report-filter-options.md).
 `value` is what you send back as `?category=` or `?ward=`; `name` is what you
 show. `icon` is a lucide icon name such as `Droplets`, not a CSS class — colours
 stay in the frontend.
+
+---
+
+## `ReportStatistics`
+
+Returned by [`GET /stats`](endpoints/get-statistics.md) and
+[`GET /stats/me`](endpoints/get-my-statistics.md), and as `stats` inside
+[`GET /stats/admin`](endpoints/get-admin-overview.md). It is the
+`PlatformStatistics` shape `app/statistics` already builds locally, so the
+reducer's output and this response are interchangeable — the only difference is
+that the two dates arrive as ISO strings over HTTP.
+
+```json
+{
+  "total": 128,
+  "open": 71,
+  "resolved": 52,
+  "resolutionRate": 40.6,
+  "byStatus":   [ { "status": "pending", "count": 43 } ],
+  "byPriority": [ { "label": "Critical",   "count": 18 } ],
+  "byCategory": [ { "label": "Roads",      "count": 9 } ],
+  "byWard":     [ { "ward": "Ward 10 (Spadina Fort York)", "total": 8,
+                    "pending": 3, "inProgress": 2, "resolved": 3, "rejected": 0 } ],
+  "upvotes": 512,
+  "comments": 391,
+  "views": 2884,
+  "medianResolutionHours": 52.5,
+  "resolutionSampleSize": 24,
+  "firstReportDate": "2026-01-02T08:11:00.000Z",
+  "latestReportDate": "2026-10-14T09:12:04.512Z"
+}
+```
+
+The sub-shapes, in TypeScript because the JSON above is trimmed:
+
+```ts
+interface StatusCount { status: "pending" | "in_progress" | "resolved" | "rejected"; count: number; }
+interface CountRow    { label: string; count: number; }
+interface WardBreakdown {
+  ward: string;       // the ward's name, not its code
+  total: number;
+  pending: number;
+  inProgress: number; // camelCase, unlike the status enum
+  resolved: number;
+  rejected: number;
+}
+```
+
+`upvotes`, `comments` and `views` are the sums of the counters cached on each
+report — `likeCount`, `commentCount` and `viewCount`. `views` counts every read of
+a detail page, crawlers included; see
+[not-implemented.md](not-implemented.md).
+
+`open` is `total - resolved - rejected` — rejected is closed, not open.
+`resolutionRate` is a percentage to one decimal, `0` when there are no reports.
+`medianResolutionHours` and `resolutionSampleSize` come as a pair: the sample is
+`0` and the median is `null` until something is resolved. Both dates are `null`
+on an empty platform.
+
+Every figure excludes soft-deleted reports.
+
+---
+
+## `ActivitySummary`
+
+Returned by [`GET /stats/activity`](endpoints/get-activity-stats.md), and as
+`activity` inside [`GET /stats/admin`](endpoints/get-admin-overview.md).
+
+```json
+{
+  "year": 2026,
+  "reports": 128,
+  "comments": 391,
+  "activeUsers": 74,
+  "reportsThisMonth": 16,
+  "reportsLastMonth": 13,
+  "reportsChangePercent": 23.1,
+  "monthly": [ { "month": "Jan", "count": 8 }, { "month": "Feb", "count": 11 } ]
+}
+```
+
+`MonthCount` is `{ month, count }`, where `month` is a three-letter label and
+`count` a number. `monthly` is always twelve rows, `Jan` to `Dec`, gaps included.
+
+Everything is scoped to the current calendar year in UTC. `activeUsers` is the
+number of distinct people who filed at least one report that year.
+`reportsChangePercent` is signed and one decimal, and `null` when last month had
+no reports.
+
+---
+
+## `AdminOverview`
+
+Returned by [`GET /stats/admin`](endpoints/get-admin-overview.md). The wrapper the
+admin dashboard reads.
+
+```json
+{
+  "stats": { /* ReportStatistics */ },
+  "moderation": { "deleted": 7 },
+  "users": { "total": 312, "superAdmins": 4, "newThisMonth": 21 },
+  "contactMessages": { "total": 96, "unhandled": 12 },
+  "activity": { /* ActivitySummary */ }
+}
+```
+
+`stats` and `activity` are the same public shapes documented above.
+`moderation.deleted` counts soft-deleted reports — the only place they are
+visible. `users.newThisMonth` and the whole of `users` and `contactMessages` are
+counting figures assembled for this endpoint alone; the area is small enough that
+they need no named object of their own.

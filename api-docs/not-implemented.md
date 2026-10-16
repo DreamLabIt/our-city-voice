@@ -2,12 +2,14 @@
 
 Called out so nothing in these docs is mistaken for an oversight.
 
-**The short version: every read the current pages need exists, plus the writes
-that concern a report's own existence — filing it, editing it, soft-deleting it and
-a super admin moving its status — the engagement controls on the detail page:
-liking a report, posting a comment, replying, and liking a comment; and the contact
-form, which can submit a message and list it back in the admin inbox. Everything
-else is still a read.**
+**The short version: every read the current pages need exists — the report feed,
+a single report with its timeline, the filter options, search, the contact form's
+categories, and the platform statistics behind `app/statistics` and the landing
+page — plus the writes that concern a report's own existence — filing it, editing
+it, soft-deleting it and a super admin moving its status — the engagement controls
+on the detail page: liking a report, posting a comment, replying, and liking a
+comment; and the contact form, which can submit a message and list it back in the
+admin inbox.**
 
 ## Writes
 
@@ -55,8 +57,6 @@ Everything else below still has no `POST`, `PUT` or `DELETE`:
 - **No `department` or `assignedOfficer` filter** on the report list. Both are on
   every report, but neither is a filter the reports page has today. Each is about
   a line.
-- **No statistics endpoint.** `app/statistics` and `components/landing/CommunityActivity.tsx`
-  still show fabricated numbers.
 - **No map endpoint.** `app/issues-map` can be built from `GET /posts` —
   `location.latitude` and `location.longitude` are on every report, and null when
   the address could not be resolved to a point.
@@ -112,3 +112,8 @@ Everything else below still has no `POST`, `PUT` or `DELETE`:
 - **Rate limits are per process and in memory.** Two API containers each allow the
   full quota, and a restart forgets everything. A real limit across replicas needs
   Redis, and there is no Redis in the stack.
+- **Statistics are recounted on every call.** The `/stats` endpoints do not pull
+  rows into the app, but they are not cached either: the public numbers, the
+  activity panel and the admin overview each run a fixed set of counted queries.
+  Constant, but not free — a dashboard left open is a steady trickle, and a
+  minute of caching is the obvious first lever.
