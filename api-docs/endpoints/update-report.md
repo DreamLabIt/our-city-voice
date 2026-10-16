@@ -50,7 +50,9 @@ Validated strictly, so an unknown key is a `400` rather than silent.
 
 `status`, `assignedOfficerId` and `departmentId` are **absent from the schema** and
 therefore rejected as unknown keys. Status is the officer workflow; routing is
-derived, not typed in. The tracking code is fixed for the life of the report.
+derived, not typed in. The tracking code is fixed for the life of the report. To
+move a report's status, a super admin uses
+[`PATCH /posts/:code/status`](update-report-status.md).
 
 ### Absent and `null` are different
 
@@ -106,7 +108,8 @@ report. Nothing is wrong with saving a form that was not edited.
 [`ReportDetail.timeline`](../objects.md#timeline) is a **status** log
 (`post_status_history`), append-only, and it is what makes "average time to
 resolution" answerable. An edit changes no status, so it writes no entry — records
-read back exactly as they were.
+read back exactly as they were. Only
+[`PATCH /posts/:code/status`](update-report-status.md) appends to it.
 
 ## Status codes
 

@@ -115,7 +115,10 @@ may edit or delete it even though `author` reads `null`.
 
 `status`, `assignedOfficerId` and `departmentId` are not editable here — status is
 the officer workflow, routing follows the category. An edit form built from the
-create form should drop those fields from its body.
+create form should drop those fields from its body. Moving the status is a separate
+super-admin action,
+[`PATCH /posts/:code/status`](../endpoints/update-report-status.md), and it is the
+only thing that appends to the timeline.
 
 ## Likes, comments and replies
 

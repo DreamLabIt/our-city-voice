@@ -3,18 +3,21 @@
 Called out so nothing in these docs is mistaken for an oversight.
 
 **The short version: every read the current pages need exists, plus the writes
-that concern a report's own existence — filing it, editing it and soft-deleting it
-— the engagement controls on the detail page: liking a report, posting a comment,
-replying, and liking a comment; and the contact form, which can submit a message
-and list it back in the admin inbox. Everything else is still a read.**
+that concern a report's own existence — filing it, editing it, soft-deleting it and
+a super admin moving its status — the engagement controls on the detail page:
+liking a report, posting a comment, replying, and liking a comment; and the contact
+form, which can submit a message and list it back in the admin inbox. Everything
+else is still a read.**
 
 ## Writes
 
 **A report can be created, edited and soft-deleted by its author** (or a super
 admin): [`POST /posts`](endpoints/create-report.md),
 [`PATCH /posts/:code`](endpoints/update-report.md) and
-[`DELETE /posts/:code`](endpoints/delete-report.md). The detail page's engagement
-controls are live too:
+[`DELETE /posts/:code`](endpoints/delete-report.md). **A super admin can also move
+a report's status** — [`PATCH /posts/:code/status`](endpoints/update-report-status.md),
+the only write that fills the [`timeline`](objects.md#timeline). The detail page's
+engagement controls are live too:
 
 - **Liking a report**, and unliking it —
   [`POST`/`DELETE /posts/:code/like`](endpoints/like-report.md).
@@ -28,9 +31,6 @@ controls are live too:
 
 Everything else below still has no `POST`, `PUT` or `DELETE`:
 
-- **Changing a status.** Which also means nothing writes to the timeline that
-  [`GET /posts/:code`](endpoints/get-report.md) reads. Status is absent from the
-  edit schema on purpose; an edit is not a status change.
 - **Restoring a soft-deleted report.** `DELETE /posts/:code` sets `deleted_at` and
   keeps the row, so the data to reverse it is there, but no endpoint clears it.
 - **Deleting a comment.** A comment cannot be removed on its own — there is no

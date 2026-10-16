@@ -162,6 +162,11 @@ author, so naming them would print the name `author: null` just withheld. Staff
 steps on an anonymous report are still named, because those people are acting
 officially.
 
+The table is append-only. The first row is written when the report is filed, and
+[`PATCH /posts/:code/status`](endpoints/update-report-status.md) adds one row each
+time a super admin moves the status, which is what produces the
+"Status changed to …" entries. An edit never adds a row.
+
 ---
 
 ## `ReportSuggestion`
