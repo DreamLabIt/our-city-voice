@@ -587,10 +587,16 @@ export interface UpdatePostInput {
  */
 async function findPostForWrite(
   identifier: PostIdentifier,
-): Promise<{ id: bigint; userId: bigint; categoryId: bigint; deletedAt: Date | null }> {
+): Promise<{
+  id: bigint;
+  userId: bigint;
+  categoryId: bigint;
+  status: PostStatus;
+  deletedAt: Date | null;
+}> {
   const post = await prisma.post.findFirst({
     where: identifier,
-    select: { id: true, userId: true, categoryId: true, deletedAt: true },
+    select: { id: true, userId: true, categoryId: true, status: true, deletedAt: true },
   });
 
   if (!post) throw AppError.notFound("No report with that tracking code");
@@ -710,6 +716,91 @@ export async function deletePost(actor: PostActor, identifier: PostIdentifier): 
     { postId: post.id.toString(), actorId: actor.id.toString() },
     "report soft-deleted",
   );
+}
+
+export interface UpdatePostStatusInput {
+  status: PostStatus;
+  note?: string | null | undefined;
+}
+
+/**
+ * Moves a report along its workflow. Separate from `updatePost` because a status
+ * change appends to the timeline and an edit does not; only a super admin may
+ * call it. The new value and the timeline entry are written in one transaction,
+ * so the cache column and the append-only log can never disagree.
+ */
+export async function updatePostStatus(
+  actor: PostActor,
+  identifier: PostIdentifier,
+  input: UpdatePostStatusInput,
+): Promise<PublicPost> {
+  if (actor.role !== "super_admin") {
+    throw AppError.forbidden("Only a super admin can change a report's status");
+  }
+
+  const post = await findPostForWrite(identifier);
+
+  // A moderated report is gone for every write, a super admin included, until it
+  // is restored (no restore endpoint yet).
+  if (post.deletedAt !== null) {
+    throw AppError.notFound("No report with that tracking code");
+  }
+
+  // Setting the status it already has is not a move. Return the row untouched and
+  // write no entry, so a form that re-sends the current value does not litter the
+  // timeline with no-ops.
+  if (post.status === input.status) {
+    const unchanged = await prisma.post.findUniqueOrThrow({
+      where: { id: post.id },
+      select: PUBLIC_POST_SELECT,
+    });
+    const liked = await likedPostIds(actor.id, [post.id]);
+
+    return toPublicPost(unchanged, liked.has(post.id.toString()));
+  }
+
+  const fromStatus = post.status;
+  const note = input.note?.trim() || null;
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const next = await tx.post.update({
+      where: { id: post.id },
+      data: {
+        status: input.status,
+        // `resolved_at` tracks the resolved status alone: set on the way in,
+        // cleared on the way out. No other status touches it.
+        resolvedAt: input.status === "resolved" ? new Date() : null,
+      },
+      select: PUBLIC_POST_SELECT,
+    });
+
+    await tx.postStatusHistory.create({
+      data: {
+        postId: post.id,
+        actorId: actor.id,
+        fromStatus,
+        toStatus: input.status,
+        title: `Status changed to ${input.status.replace("_", " ")}`,
+        note,
+      },
+    });
+
+    return next;
+  });
+
+  const liked = await likedPostIds(actor.id, [post.id]);
+
+  logger.info(
+    {
+      postId: post.id.toString(),
+      actorId: actor.id.toString(),
+      fromStatus,
+      toStatus: input.status,
+    },
+    "report status changed",
+  );
+
+  return toPublicPost(updated, liked.has(post.id.toString()));
 }
 
 export interface ListCommentsOptions {

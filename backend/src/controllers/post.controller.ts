@@ -174,6 +174,13 @@ const UpdatePostSchema = z
     { error: "Send at least one field to update", path: ["_"] },
   );
 
+// A status change is its own write, not a field on PATCH /posts/:code: it
+// appends to the timeline, which an edit must not do.
+const UpdateStatusBodySchema = z.strictObject({
+  status: statusSchema,
+  note: z.string().trim().max(1000, "Note is too long").nullish(),
+});
+
 export async function create(req: Request, res: Response): Promise<void> {
   if (!req.user) throw AppError.unauthorized();
 
@@ -198,6 +205,19 @@ export async function remove(req: Request, res: Response): Promise<void> {
   await postService.deletePost(req.user, parseIdentifier(req.params.code));
 
   res.status(204).send();
+}
+
+export async function updateStatus(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw AppError.unauthorized();
+
+  const input = parseBody(UpdateStatusBodySchema, req.body ?? {});
+  const post = await postService.updatePostStatus(
+    req.user,
+    parseIdentifier(req.params.code),
+    input,
+  );
+
+  res.status(200).json({ post });
 }
 
 export async function list(req: Request, res: Response): Promise<void> {
