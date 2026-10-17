@@ -204,7 +204,11 @@ export default function Overview({
                                     </div>
                                     <div className="h-2 w-full bg-section rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-primary rounded-full transition-all duration-500"
+                                            className={`h-full rounded-full transition-all duration-500 ${item.status === 'resolved' ? 'bg-emerald-500' :
+                                                item.status === 'in_progress' ? 'bg-blue-500' :
+                                                    item.status === 'pending' ? 'bg-amber-500' :
+                                                        item.status === 'rejected' ? 'bg-destructive' : 'bg-primary'
+                                                }`}
                                             style={{ width: `${percent}%` }}
                                         />
                                     </div>
