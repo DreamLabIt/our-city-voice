@@ -9,6 +9,7 @@ import type { Report, FilterOption } from "@/types/report";
 import { posts as mockPosts, categories as mockCategories } from "@/data/mock-data";
 import { CategoryItem } from "@/types";
 
+export const dynamic = "force-dynamic";
 export const revalidate = 60;
 
 export default async function Home() {

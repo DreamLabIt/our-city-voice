@@ -12,6 +12,7 @@ import CommunityResponse from "@/components/statistics/CommunityResponse";
 import { ReportStatistics } from "@/types/statistics";
 import { getPublicStats } from "../actions/statistics";
 
+export const dynamic = "force-dynamic";
 export const revalidate = 60;
 
 const dateFormat = new Intl.DateTimeFormat("en-CA", {
