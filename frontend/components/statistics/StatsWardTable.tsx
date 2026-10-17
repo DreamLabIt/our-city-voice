@@ -36,7 +36,7 @@ export default function StatsWardTable({ stats }: StatsWardTableProps) {
                                 <TableHead className="text-left font-semibold text-xs uppercase tracking-wider py-3.5 px-6 text-muted-foreground">
                                     Ward
                                 </TableHead>
-                                <TableHead className="text-right font-semibold text-xs uppercase tracking-wider py-3.5 px-4 text-muted-foreground">
+                                <TableHead className="text-left font-semibold text-xs uppercase tracking-wider py-3.5 px-4 text-muted-foreground">
                                     Total
                                 </TableHead>
                                 <TableHead className="text-right font-semibold text-xs uppercase tracking-wider py-3.5 px-4 text-muted-foreground">
@@ -71,7 +71,7 @@ export default function StatsWardTable({ stats }: StatsWardTableProps) {
                                             {row.ward}
                                         </TableCell>
 
-                                        <TableCell className="py-3.5 px-4 text-right tabular-nums text-foreground font-bold">
+                                        <TableCell className="py-3.5 px-4 text-left tabular-nums text-foreground font-bold">
                                             {row.total}
                                         </TableCell>
 
