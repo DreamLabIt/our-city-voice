@@ -1,6 +1,6 @@
 import { LucideIcon } from "lucide-react";
 import type { Report, ReportStatus, Priority } from "@/types/report";
-import { ActivitySummary } from "./statistics";
+import { ActivitySummary, AdminOverview, ReportStatistics } from "./statistics";
 
 // ── Navigation ──────────────────────────────────────────────
 export interface NavItem {
@@ -314,4 +314,25 @@ export interface CategoryFilterProps {
 
 export interface CommunityActivityProps {
     activityData?: ActivitySummary;
+}
+
+export interface OverviewProps {
+    user: AuthUser;
+    isAdmin?: boolean;
+    adminOverview?: AdminOverview | null;
+    myStats?: ReportStatistics | null;
+}
+
+export interface CategoryItemTable {
+    label: string;
+    count: number;
+}
+
+export interface WardItem {
+    ward: string;
+    total: number;
+    pending: number;
+    inProgress?: number;
+    resolved?: number;
+    rejected?: number;
 }
