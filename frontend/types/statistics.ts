@@ -99,3 +99,20 @@ export interface GetAdminOverviewResponse {
     error?: string;
     requiresAuth?: boolean;
 }
+
+export interface StatsOverviewCardsProps {
+    stats: ReportStatistics;
+}
+
+export interface StatsBreakdownPanelsProps {
+    stats: ReportStatistics;
+}
+
+
+export interface CommunityResponseProps {
+    stats: ReportStatistics;
+}
+
+export interface StatsWardTableProps {
+    stats: ReportStatistics;
+}
