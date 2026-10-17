@@ -116,3 +116,17 @@ export interface CommunityResponseProps {
 export interface StatsWardTableProps {
     stats: ReportStatistics;
 }
+
+
+export interface DisplayStatItem {
+    title: string;
+    value: string;
+    sub: string;
+    badge?: string;
+    isNegative?: boolean;
+    cardBg: string;
+    circleBg: string;
+    iconColor: string;
+    valueColor: string;
+    icon: React.ElementType;
+}

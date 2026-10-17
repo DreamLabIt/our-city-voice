@@ -1,53 +1,97 @@
 "use client";
 
 import React, { useMemo } from "react";
+import { MessageSquare, FileText, Users, Calendar, ArrowUp, ArrowDown } from "lucide-react";
 import { stats as mockStats, chartMonths as mockChartMonths, yTicks as mockYTicks } from "@/data/mock-data";
-import type { StatItem, ChartMonth, CommunityActivityProps } from "@/types";
+import type { ChartMonth, CommunityActivityProps } from "@/types";
+import { DisplayStatItem } from "@/types/statistics";
 
 export default function CommunityActivity({ activityData }: CommunityActivityProps): React.ReactNode {
     const reports = activityData?.reports;
     const comments = activityData?.comments;
     const activeUsers = activityData?.activeUsers;
+    const reportsThisMonth = activityData?.reportsThisMonth;
+    const reportsLastMonth = activityData?.reportsLastMonth;
     const monthly = activityData?.monthly ?? [];
     const changePercent = activityData?.reportsChangePercent;
     const currentYear = activityData?.year ?? new Date().getFullYear();
-    const displayStats = useMemo<StatItem[]>(() => {
-        if (!activityData) return mockStats;
 
-        return mockStats.map((item, idx) => {
-            if (idx === 0) {
-                return {
-                    ...item,
-                    value: reports?.toLocaleString() ?? "0",
-                    badge: changePercent !== null && changePercent !== undefined
-                        ? `${changePercent >= 0 ? "+" : ""}${changePercent}%`
-                        : undefined,
-                    sub: changePercent !== null && changePercent !== undefined
-                        ? "vs last month"
-                        : item.sub,
-                };
-            }
-            if (idx === 1) {
-                return {
-                    ...item,
-                    value: comments?.toLocaleString() ?? "0",
-                };
-            }
-            if (idx === 2) {
-                return {
-                    ...item,
-                    value: activeUsers?.toLocaleString() ?? "0",
-                };
-            }
-            if (idx === 3) {
-                return {
-                    ...item,
-                    value: String(currentYear),
-                };
-            }
-            return item;
-        });
-    }, [activityData, reports, comments, activeUsers, changePercent, currentYear]);
+    const currentMonthLabel = useMemo<string>(() => {
+        const utcMonthIndex = new Date().getUTCMonth();
+        return (
+            monthly[utcMonthIndex]?.month ??
+            new Intl.DateTimeFormat("en-US", {
+                month: "short",
+                timeZone: "UTC",
+            }).format(new Date())
+        );
+    }, [monthly]);
+
+    const displayStats = useMemo<DisplayStatItem[]>(() => {
+        if (!activityData) {
+            return mockStats.map((item) => ({
+                ...item,
+                sub: currentMonthLabel,
+                icon: item.icon,
+            }));
+        }
+
+        const hasChange = changePercent !== null && changePercent !== undefined;
+
+        return [
+            {
+                title: "Total Posts",
+                value: (reports ?? 0).toLocaleString(),
+                sub: currentMonthLabel,
+                cardBg: "bg-blue-50/50 dark:bg-blue-950/20",
+                circleBg: "bg-blue-100 dark:bg-blue-900/40",
+                iconColor: "text-blue-600 dark:text-blue-400",
+                valueColor: "text-blue-950 dark:text-blue-100",
+                icon: MessageSquare,
+            },
+            {
+                title: "Comments",
+                value: (comments ?? 0).toLocaleString(),
+                sub: currentMonthLabel,
+                cardBg: "bg-emerald-50/50 dark:bg-emerald-950/20",
+                circleBg: "bg-emerald-100 dark:bg-emerald-900/40",
+                iconColor: "text-emerald-600 dark:text-emerald-400",
+                valueColor: "text-emerald-950 dark:text-emerald-100",
+                icon: FileText,
+            },
+            {
+                title: "Active Users",
+                value: (activeUsers ?? 0).toLocaleString(),
+                sub: currentMonthLabel,
+                cardBg: "bg-amber-50/50 dark:bg-amber-950/20",
+                circleBg: "bg-amber-100 dark:bg-amber-900/40",
+                iconColor: "text-amber-600 dark:text-amber-400",
+                valueColor: "text-amber-950 dark:text-amber-100",
+                icon: Users,
+            },
+            {
+                title: "Posts This Month",
+                value: (reportsThisMonth ?? 0).toLocaleString(),
+                sub: hasChange ? `vs. Last Month (${reportsLastMonth ?? 0})` : currentMonthLabel,
+                badge: hasChange ? `${Math.abs(changePercent)}%` : undefined,
+                isNegative: hasChange && changePercent < 0,
+                cardBg: "bg-purple-50/50 dark:bg-purple-950/20",
+                circleBg: "bg-purple-100 dark:bg-purple-900/40",
+                iconColor: "text-purple-600 dark:text-purple-400",
+                valueColor: "text-purple-950 dark:text-purple-100",
+                icon: Calendar,
+            },
+        ];
+    }, [
+        activityData,
+        reports,
+        comments,
+        activeUsers,
+        reportsThisMonth,
+        reportsLastMonth,
+        changePercent,
+        currentMonthLabel,
+    ]);
 
     const { chartData, calculatedYTicks, maxVal } = useMemo(() => {
         if (!monthly || monthly.length === 0) {
@@ -64,14 +108,14 @@ export default function CommunityActivity({ activityData }: CommunityActivityPro
         }));
 
         const counts = monthly.map((m) => m.count);
-        const highestCount = Math.max(...counts, 10);
-        const ceilingMax = Math.ceil(highestCount / 10) * 10 || 10;
+        const highestCount = Math.max(...counts, 8);
+        const ceilingMax = Math.ceil(highestCount / 4) * 4 || 4;
 
         const ticks = [
             ceilingMax,
-            Math.round(ceilingMax * 0.75),
-            Math.round(ceilingMax * 0.5),
-            Math.round(ceilingMax * 0.25),
+            (ceilingMax * 3) / 4,
+            ceilingMax / 2,
+            ceilingMax / 4,
             0,
         ];
 
@@ -90,34 +134,39 @@ export default function CommunityActivity({ activityData }: CommunityActivityPro
                     <h2 className="text-base font-bold text-foreground">Community Activity</h2>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                        {displayStats.map((item: StatItem, idx: number) => {
+                        {displayStats.map((item: DisplayStatItem, idx: number) => {
                             const Icon = item.icon;
                             return (
                                 <div
                                     key={idx}
-                                    className={`${item.cardBg} rounded-2xl p-3.5 border border-border-custom/50 flex items-start gap-3.5 h-30 relative pt-4`}
+                                    className={`${item.cardBg} rounded-2xl p-4 border border-border-custom/40 flex items-start gap-3.5 h-28 relative`}
                                 >
                                     <div className={`w-12 h-12 rounded-full ${item.circleBg} flex items-center justify-center shrink-0`}>
-                                        <Icon className={`w-6 h-6 ${item.iconColor} fill-current`} />
+                                        <Icon className={`w-6 h-6 ${item.iconColor}`} />
                                     </div>
 
                                     <div className="flex-1 min-w-0">
-                                        <span className={`text-xl font-extrabold ${item.valueColor} leading-none block`}>
+                                        <span className={`text-2xl font-extrabold ${item.valueColor} leading-tight block`}>
                                             {item.value}
                                         </span>
-                                        <p className="text-[10px] font-semibold text-foreground/80 mt-1 leading-tight truncate">
+                                        <p className="text-xs font-bold text-foreground/80 mt-0.5 leading-tight truncate">
                                             {item.title}
                                         </p>
 
                                         {item.badge ? (
                                             <div className="mt-1">
-                                                <span className="text-[11px] font-bold text-tag-green-text block leading-tight">
-                                                    {item.badge}
-                                                </span>
-                                                <p className="text-[9px] text-muted-foreground leading-tight">{item.sub}</p>
+                                                <div className={`flex items-center gap-0.5 text-xs font-bold ${item.isNegative ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"}`}>
+                                                    {item.isNegative ? (
+                                                        <ArrowDown className="w-3.5 h-3.5 stroke-3" />
+                                                    ) : (
+                                                        <ArrowUp className="w-3.5 h-3.5 stroke-3" />
+                                                    )}
+                                                    <span>{item.badge}</span>
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">{item.sub}</p>
                                             </div>
                                         ) : (
-                                            <p className="text-[12px] text-muted-foreground mt-0.5">{item.sub}</p>
+                                            <p className="text-[11px] text-muted-foreground mt-0.5 font-medium">This Year</p>
                                         )}
                                     </div>
                                 </div>
