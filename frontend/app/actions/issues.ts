@@ -26,6 +26,7 @@ function revalidateReportPages(): void {
     revalidatePath("/");
     revalidatePath("/reports");
     revalidatePath("/dashboard/issues");
+    revalidatePath("/statistics");
 }
 
 export async function createReportIssue(
@@ -338,6 +339,89 @@ export async function updateReport(
                 err instanceof Error
                     ? err.message
                     : "An unexpected error occurred.",
+        };
+    }
+}
+
+export async function updateReportStatus(
+    code: string,
+    status: "pending" | "in_progress" | "resolved" | "rejected",
+    note?: string,
+): Promise<MutationResult & { post?: unknown }> {
+    const token = await getAccessToken();
+
+    if (!token?.trim()) {
+        return {
+            success: false,
+            error: "Please log in again.",
+            requiresAuth: true,
+        };
+    }
+
+    const validStatuses = ["pending", "in_progress", "resolved", "rejected"];
+    if (!validStatuses.includes(status)) {
+        return {
+            success: false,
+            error: "Invalid status value provided.",
+            fieldErrors: { status: ["Status must be pending, in_progress, resolved, or rejected."] },
+        };
+    }
+
+    const trimmedNote = note?.trim();
+    if (trimmedNote && trimmedNote.length > 1000) {
+        return {
+            success: false,
+            error: "Note cannot exceed 1000 characters.",
+            fieldErrors: { note: ["Note must be 1000 characters or less."] },
+        };
+    }
+
+    const body: { status: string; note?: string | null } = {
+        status,
+        note: trimmedNote || null,
+    };
+
+    try {
+        const res = await apiFetch<{ post?: unknown }>(
+            `/posts/${encodeURIComponent(code)}/status`,
+            {
+                method: "PATCH",
+                token: token.trim(),
+                forward: await clientForwardHeaders(),
+                body,
+            },
+        );
+
+        if (!res.ok) {
+            if (res.error.status === 401) {
+                return {
+                    success: false,
+                    error: "Your session has expired. Please log in again.",
+                    requiresAuth: true,
+                };
+            }
+
+            const message =
+                res.error.status === 403
+                    ? "Only super admins can update report status."
+                    : res.error.status === 404
+                        ? "This report no longer exists."
+                        : res.error.message || "Failed to update report status.";
+
+            return {
+                success: false,
+                error: message,
+                fieldErrors: res.error.details as Record<string, string[]> | undefined,
+            };
+        }
+
+        revalidateReportPages();
+        return { success: true, post: res.data.post };
+    } catch (err: unknown) {
+        console.error("Error in updateReportStatus server action:", err);
+        return {
+            success: false,
+            error: err instanceof Error ? err.message : "An unexpected error occurred.",
         };
     }
 }

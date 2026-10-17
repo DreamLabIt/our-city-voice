@@ -1,3 +1,5 @@
+import { ActivitySummary } from "./statistics";
+
 export type ReportStatus =
     | "pending"
     | "in_progress"
@@ -36,67 +38,44 @@ export interface Author {
     avatarUrl: string | null;
 }
 
-/** One Media row, mirroring the schema's PostMedia where the frontend needs it. */
 export interface ReportMedia {
     id: string;
     type: MediaType;
     storageKey: string;
     thumbnailKey: string | null;
     mimeType: string;
-    /** BigInt serialized as a string. */
     sizeBytes: string;
     durationSecs: number | null;
     sortOrder: number;
-    /** Derived from storageKey at read time. */
     url: string;
     thumbnailUrl: string | null;
 }
 
-/**
- * A report as the API ships it. Mirrors the Post model 1:1: the Post columns
- * (`street`/`city`/`address`/…, `viewCount`/`likeCount`/`commentCount`) stay
- * flat under their own names, reduced relation rows appear as the objects
- * below, and `media` is the Media relation itself — one entry per row — rather
- * than a summary. The only field that is not a stored column is the computed
- * `likedByMe`.
- */
 export interface Report {
     id: string;
     trackingCode: string;
     title: string;
     description: string;
-
     status: ReportStatus;
     priority: Priority;
-
     isAnonymous: boolean;
-
     category: Category;
     ward: Ward;
-
     department: Department | null;
     author: Author | null;
     assignedOfficer: Department | null;
-
-    // Post columns, flat and untranslated.
     street: string | null;
     city: string;
     address: string;
     postalCode: string | null;
     latitude: number | null;
     longitude: number | null;
-
     viewCount: number;
     likeCount: number;
     commentCount: number;
-
     likedByMe: boolean;
-
-    // The Media relation, one entry per row, in display (sortOrder) order.
     media: ReportMedia[];
-
     resolvedAt: string | null;
-
     createdAt: string;
     updatedAt: string;
 }
@@ -116,7 +95,6 @@ export interface TimelineEntry {
     createdAt: string;
 }
 
-/** A `Report` (whose `media` is already the full set of rows) plus the timeline. */
 export interface ReportDetail extends Report {
     timeline: TimelineEntry[];
 }
@@ -253,6 +231,7 @@ export interface HomeLayoutProps {
     categoryTabs: string[];
     filterOptions: FilterOption;
     recentActivities: Report[];
+    activityData?: ActivitySummary;
 }
 
 export interface RecentPostsProps {

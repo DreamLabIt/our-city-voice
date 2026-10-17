@@ -4,14 +4,16 @@ import HowItWorks from "@/components/landing/HowItWorks";
 import HomeLayout from "@/components/landing/HomeLayout";
 import ExploreTopLocations from "@/components/landing/ExploreTopLocations";
 import { getReports, getReportFilters } from "@/app/actions/report";
+import { getActivityStats } from "./actions/statistics";
 import type { Report, FilterOption } from "@/types/report";
 import { posts as mockPosts, categories as mockCategories } from "@/data/mock-data";
 import { CategoryItem } from "@/types";
 
+export const dynamic = "force-dynamic";
 export const revalidate = 60;
 
 export default async function Home() {
-    const [recentPostsRes, filtersRes, recentActivitiesRes] = await Promise.all([
+    const [recentPostsRes, filtersRes, recentActivitiesRes, activityStatsRes] = await Promise.all([
         getReports({ page: 1, limit: 50 }).catch(() => ({ posts: [] })),
         getReportFilters().catch(() => ({
             categories: [],
@@ -20,6 +22,7 @@ export default async function Home() {
             priorities: [],
         })),
         getReports({ page: 1, limit: 4 }).catch(() => ({ posts: [] })),
+        getActivityStats().catch(() => ({ success: false, activity: undefined })),
     ]);
 
     const fetchedRecentPosts: Report[] = recentPostsRes.posts || [];
@@ -27,7 +30,7 @@ export default async function Home() {
     const recentPosts: Report[] = fetchedRecentPosts.length > 0 ? fetchedRecentPosts : mockPosts;
     const recentActivities: Report[] =
         fetchedRecentActivities.length > 0 ? fetchedRecentActivities : mockPosts.slice(0, 4);
-
+    const activityData = activityStatsRes.success ? activityStatsRes.activity : undefined;
     const categoriesList: CategoryItem[] =
         filtersRes.categories.length > 0
             ? filtersRes.categories
@@ -71,6 +74,7 @@ export default async function Home() {
                 categoryTabs={categoryTabs}
                 filterOptions={filterOptions}
                 recentActivities={recentActivities}
+                activityData={activityData}
             />
             <HowItWorks />
             <ExploreTopLocations recentPosts={recentPosts} />

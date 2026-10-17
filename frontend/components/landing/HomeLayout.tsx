@@ -10,6 +10,7 @@ export default function HomeLayout({
     categoryTabs,
     filterOptions,
     recentActivities,
+    activityData,
 }: HomeLayoutProps) {
     return (
         <section className="w-full py-6 sm:py-8">
@@ -17,7 +18,7 @@ export default function HomeLayout({
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                     <div className="lg:col-span-8 xl:col-span-9 space-y-6">
                         <div className="w-full">
-                            <CommunityActivity />
+                            <CommunityActivity activityData={activityData} />
                         </div>
                         <div className="w-full">
                             <RecentPosts initialPosts={recentPosts} tabs={categoryTabs} />

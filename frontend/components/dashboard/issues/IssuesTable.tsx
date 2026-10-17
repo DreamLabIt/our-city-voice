@@ -22,6 +22,7 @@ import type { Report } from "@/types/report";
 import type { IssuesFilters, IssuesEditOptions } from "@/types/issues";
 import IssueRowActions from "./IssueRowActions";
 import { MessageSquare } from "lucide-react";
+import StatusBadgeSelect from "./StatusBadgeSelect";
 
 interface IssuesTableProps {
     issues: Report[];
@@ -207,7 +208,11 @@ export default function IssuesTable({
                                         <PriorityBadge priority={issue.priority} />
                                     </TableCell>
                                     <TableCell className="border-t border-border">
-                                        <StatusBadge status={issue.status} />
+                                        <StatusBadgeSelect
+                                            trackingCode={issue.trackingCode}
+                                            currentStatus={issue.status}
+                                            isAdmin={isAdmin}
+                                        />
                                     </TableCell>
                                     {isAdmin && (
                                         <TableCell className="border-t border-border">
@@ -270,7 +275,11 @@ export default function IssuesTable({
                                 </div>
 
                                 <div className="flex flex-wrap gap-2">
-                                    <StatusBadge status={issue.status} />
+                                    <StatusBadgeSelect
+                                        trackingCode={issue.trackingCode}
+                                        currentStatus={issue.status}
+                                        isAdmin={isAdmin}
+                                    />
                                     <PriorityBadge priority={issue.priority} />
                                 </div>
 
