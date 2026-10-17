@@ -161,3 +161,9 @@ export interface EditState {
     street: string;
     postalCode: string;
 }
+
+export interface StatusBadgeSelectProps {
+    trackingCode: string;
+    currentStatus: string;
+    isAdmin?: boolean;
+}
