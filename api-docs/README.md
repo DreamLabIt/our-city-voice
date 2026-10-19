@@ -13,6 +13,9 @@ is why it behaves the way it does.
 | --- | --- | --- |
 | [`GET /me`](endpoints/get-current-user.md) | required | the signed-in account |
 | [`PATCH /me`](endpoints/update-current-user.md) | required | change your own name, email, phone or avatar |
+| [`GET /users`](endpoints/list-users.md) | required | every registered account, paginated (super admin only) |
+| [`GET /users/:id`](endpoints/get-user.md) | required | one registered account (super admin only) |
+| [`PATCH /users/:id/role`](endpoints/update-user-role.md) | required | promote or demote an account (super admin only) |
 | [`GET /posts`](endpoints/list-reports.md) | optional | the filtered, paginated feed of reports |
 | [`POST /posts`](endpoints/create-report.md) | required | file a new report |
 | [`GET /posts/filters`](endpoints/report-filter-options.md) | none | option lists for the filter dropdowns |
@@ -64,7 +67,7 @@ code is written to disk.
 [not-implemented.md](not-implemented.md) lists what deliberately does not exist
 yet, so nothing here is mistaken for an oversight. The short version: **every read
 the current pages need exists, plus the writes that own a report — filing one,
-editing it and soft-deleting it — a super admin's status change, the engagement
-controls the detail page shows: liking a report, posting a comment, replying, and
-liking a comment; and the contact form, which can submit a message and list it back
-in the admin inbox.**
+editing it and soft-deleting it — a super admin's status change and account
+management, the engagement controls the detail page shows: liking a report, posting
+a comment, replying, and liking a comment; and the contact form, which can submit a
+message and list it back in the admin inbox.**
