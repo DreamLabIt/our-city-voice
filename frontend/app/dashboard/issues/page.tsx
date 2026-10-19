@@ -20,7 +20,7 @@ import type {
 } from "@/types/report";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 60;
 
 const LIMIT = 16;
 const BASE_PATH = "/dashboard/issues";
