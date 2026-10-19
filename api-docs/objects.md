@@ -21,8 +21,12 @@ See [conventions.md](conventions.md) for the rules behind ids, dates and enums.
 
 ## `User`
 
-Already declared as `AuthUser` in `frontend/types/index.ts`, and **unchanged**, so
-no type edits are needed.
+The account shape: returned by [`GET /me`](endpoints/get-current-user.md),
+[`PATCH /me`](endpoints/update-current-user.md), and the super-admin
+[`GET /users`](endpoints/list-users.md), [`GET /users/:id`](endpoints/get-user.md)
+and [`PATCH /users/:id/role`](endpoints/update-user-role.md). It is already
+declared as `AuthUser` in `frontend/types/index.ts`, so the same type can be reused
+for a user-management row — no new type is needed.
 
 ```ts
 interface AuthUser {
@@ -40,7 +44,8 @@ interface AuthUser {
 
 A password hash cannot appear here: every query selects an explicit column list
 that excludes it. There is no `updatedAt`, no `location` and no `bio` — see
-[not-implemented.md](not-implemented.md).
+[not-implemented.md](not-implemented.md). `role` is the only field an admin can
+change on another account.
 
 ---
 

@@ -6,8 +6,8 @@ A page of contact-form submissions, newest first, for the super admin dashboard.
 signed-out request gets a `401`. Every message carries a sender's name, email and
 phone, so it is not a public feed.
 
-The check is the account's `role`, not a page guard: the same rule the
-super-admin user list uses.
+The check is the account's `role`, not a page guard: the same rule
+[the super-admin user list](list-users.md) uses.
 
 ## Query parameters
 

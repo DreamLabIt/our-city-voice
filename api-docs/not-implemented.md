@@ -4,12 +4,13 @@ Called out so nothing in these docs is mistaken for an oversight.
 
 **The short version: every read the current pages need exists — the report feed,
 a single report with its timeline, the filter options, search, the contact form's
-categories, and the platform statistics behind `app/statistics` and the landing
-page — plus the writes that concern a report's own existence — filing it, editing
-it, soft-deleting it and a super admin moving its status — the engagement controls
-on the detail page: liking a report, posting a comment, replying, and liking a
-comment; and the contact form, which can submit a message and list it back in the
-admin inbox.**
+categories, the platform statistics behind `app/statistics` and the landing page,
+and the super admin's user list — plus the writes that concern a report's own
+existence — filing it, editing it, soft-deleting it and a super admin moving its
+status — a super admin changing an account's role, the engagement controls on the
+detail page: liking a report, posting a comment, replying, and liking a comment;
+and the contact form, which can submit a message and list it back in the admin
+inbox.**
 
 ## Writes
 
@@ -31,8 +32,20 @@ engagement controls are live too:
   [`POST /contact/messages`](endpoints/create-contact-message.md), with its
   category options from [`GET /contact/categories`](endpoints/list-contact-categories.md).
 
+A super admin can also manage accounts: list every one, read a single one, and
+change a role — [`GET /users`](endpoints/list-users.md),
+[`GET /users/:id`](endpoints/get-user.md) and
+[`PATCH /users/:id/role`](endpoints/update-user-role.md). A role is the only field
+they can change on somebody else.
+
 Everything else below still has no `POST`, `PUT` or `DELETE`:
 
+- **Creating an account.** Registration is the only public path in, and
+  `super_admin` accounts are made by hand with `pnpm admin:create`. There is no
+  admin endpoint that creates a user — deliberately, so no request body can set the
+  `role` column.
+- **Editing another account.** A super admin can change a role and nothing else:
+  no endpoint sets somebody else's name, email, phone or avatar.
 - **Restoring a soft-deleted report.** `DELETE /posts/:code` sets `deleted_at` and
   keeps the row, so the data to reverse it is there, but no endpoint clears it.
 - **Deleting a comment.** A comment cannot be removed on its own — there is no
@@ -63,6 +76,8 @@ Everything else below still has no `POST`, `PUT` or `DELETE`:
 - **No filters on the contact inbox.** [`GET /contact/messages`](endpoints/list-contact-messages.md)
   paginates but cannot filter by category, search the text, or split handled from
   unhandled. Each is a query parameter away when the dashboard needs it.
+- **No filters on the user list beyond `search` and `role`.** [`GET /users`](endpoints/list-users.md)
+  cannot filter by email-verified state or department, or by a join-date range.
 
 ## Behaviour to know about
 
@@ -82,6 +97,16 @@ Everything else below still has no `POST`, `PUT` or `DELETE`:
   Cloudinary. The `publicId` is never sent to or stored by the API, so nothing in
   our own data can delete it. This is the orphan problem from the upload work, and
   it is still open.
+- **A role change lags by one access token.** The role is carried in the access
+  token's claims and is not re-checked against the database, so a promotion or a
+  demotion only takes effect when the target obtains a new token — up to fifteen
+  minutes. [`PATCH /users/:id/role`](endpoints/update-user-role.md) revokes the
+  target's refresh tokens on a change so the next refresh is a fresh sign-in, but it
+  cannot invalidate a token already issued.
+- **`GET /users` rejects blank query parameters.** The report feed reads
+  `?page=` and `?search=` as "no opinion"; the user list does not, and answers a
+  `400`. Build the query string from the keys you mean to send rather than leaving
+  empty ones in place.
 
 ## Fields with no column
 

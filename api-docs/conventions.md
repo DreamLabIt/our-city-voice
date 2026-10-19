@@ -87,6 +87,10 @@ conditionally:
 A value that is genuinely wrong still fails. `?page=abc`, `?limit=101`,
 `?status=Pending` and `?category=Roads` are each a `400` naming the field.
 
+The one endpoint that does not follow this rule is
+[`GET /users`](endpoints/list-users.md), which rejects a blank parameter; see
+[not-implemented.md](not-implemented.md).
+
 ### Multi-value filters accept three forms
 
 ```
