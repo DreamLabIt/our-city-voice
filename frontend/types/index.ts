@@ -336,3 +336,10 @@ export interface WardItem {
     resolved?: number;
     rejected?: number;
 }
+
+export interface CloudinaryConfig {
+    cloudName: string;
+    apiKey: string;
+    apiSecret: string;
+    rootFolder: string;
+}

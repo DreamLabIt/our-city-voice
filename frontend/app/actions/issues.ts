@@ -35,6 +35,12 @@ function extractPublicIdFromUrl(url: string): string | null {
     }
 }
 
+function getResourceType(url: string): "image" | "video" {
+    const videoExtensions = ["mp4", "mov", "webm", "avi", "mkv", "qt"];
+    const ext = url.split("?")[0].split(".").pop()?.toLowerCase() ?? "";
+    return videoExtensions.includes(ext) ? "video" : "image";
+}
+
 function revalidateReportPages(): void {
     revalidatePath("/");
     revalidatePath("/reports");
@@ -325,7 +331,8 @@ export async function updateReport(
             for (const oldUrl of removedUrls) {
                 const publicId = extractPublicIdFromUrl(oldUrl);
                 if (publicId) {
-                    await deleteCloudinaryAsset(publicId);
+                    const resourceType = getResourceType(oldUrl);
+                    await deleteCloudinaryAsset(publicId, resourceType);
                 }
             }
         }
@@ -518,7 +525,8 @@ export async function deleteReport(code: string): Promise<MutationResult> {
         for (const url of mediaUrls) {
             const publicId = extractPublicIdFromUrl(url);
             if (publicId) {
-                await deleteCloudinaryAsset(publicId);
+                const resourceType = getResourceType(url);
+                await deleteCloudinaryAsset(publicId, resourceType);
             }
         }
 

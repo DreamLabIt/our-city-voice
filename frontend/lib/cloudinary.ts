@@ -1,13 +1,6 @@
 import { createHash } from "node:crypto";
 import { UPLOAD_RULES } from "@/lib/upload-rules";
-import type { UploadKind } from "@/types";
-
-interface CloudinaryConfig {
-  cloudName: string;
-  apiKey: string;
-  apiSecret: string;
-  rootFolder: string;
-}
+import type { CloudinaryConfig, UploadKind } from "@/types";
 
 export class CloudinaryNotConfiguredError extends Error {
   constructor(missing: string[]) {
@@ -94,7 +87,10 @@ export function createUploadTicket(kind: UploadKind): UploadTicket {
   };
 }
 
-export async function deleteCloudinaryAsset(publicId: string): Promise<boolean> {
+export async function deleteCloudinaryAsset(
+  publicId: string,
+  resourceType: "image" | "video" | "raw" = "image"
+): Promise<boolean> {
   try {
     const config = readConfig();
     const timestamp = Math.floor(Date.now() / 1000).toString();
@@ -113,7 +109,7 @@ export async function deleteCloudinaryAsset(publicId: string): Promise<boolean> 
     formData.append("signature", signature);
 
     const res = await fetch(
-      `https://api.cloudinary.com/v1_1/${config.cloudName}/image/destroy`,
+      `https://api.cloudinary.com/v1_1/${config.cloudName}/${resourceType}/destroy`,
       {
         method: "POST",
         body: formData,
