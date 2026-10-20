@@ -11,8 +11,8 @@ import {
     postComments as mockComments,
 } from "@/data/mock-data";
 import type { IssuePageProps } from "@/types/IssueDetails";
-
-export const revalidate = 60;
+import { cookies } from "next/headers";
+import ViewTrackerClient from "@/components/issues/IssueDetails/ViewTrackerClient";
 
 const allMockReports = [...mockPosts, ...mockReports];
 
@@ -21,8 +21,14 @@ export default async function IssuePage({
 }: IssuePageProps): Promise<React.ReactNode> {
     const { id } = await params;
 
+    const cookieStore = await cookies();
+    const viewedReportsCookie = cookieStore.get("viewed_reports")?.value;
+    const viewedCodes: string[] = viewedReportsCookie ? JSON.parse(viewedReportsCookie) : [];
+
+    const hasViewedBefore = viewedCodes.includes(id);
+    const countView = !hasViewedBefore;
     const [reportRes, commentsRes] = await Promise.all([
-        getReportByCode(id)
+        getReportByCode(id, { countView })
             .then((data) => ({ data, failed: false as const }))
             .catch(() => ({ data: null, failed: true as const })),
         getReportComments(id, { limit: 10 })
@@ -53,8 +59,11 @@ export default async function IssuePage({
         notFound();
     }
 
+
     return (
         <SectionContainer>
+            <ViewTrackerClient code={id} />
+
             <IssueDetails
                 post={post}
                 comments={comments}

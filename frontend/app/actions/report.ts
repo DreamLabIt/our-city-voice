@@ -13,6 +13,8 @@ import type {
     GetReportCommentsParams,
 } from "@/types/report";
 
+const VIEW_COUNT_PARAM = "countView";
+
 function appendQueryParam(
     params: URLSearchParams,
     key: string,
@@ -120,6 +122,7 @@ export async function getReportByCode(
     code: string,
     options?: {
         includeDeleted?: boolean;
+        countView?: boolean;
     }
 ): Promise<ReportDetailResponse> {
     const token = await getAccessToken();
@@ -132,6 +135,10 @@ export async function getReportByCode(
             "includeDeleted",
             String(options.includeDeleted)
         );
+    }
+
+    if (options?.countView !== undefined) {
+        query.set(VIEW_COUNT_PARAM, String(options.countView));
     }
 
     const queryString = query.toString();
