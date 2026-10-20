@@ -1,6 +1,22 @@
-import { User, ShieldCheck, Mail, Phone, CheckCircle2, AlertCircle } from "lucide-react";
+"use client";
+
+import { useState, useRef, useTransition, type ChangeEvent } from "react";
+import { useRouter } from "next/navigation";
+import {
+    User,
+    ShieldCheck,
+    Mail,
+    Phone,
+    CheckCircle2,
+    AlertCircle,
+    Camera,
+    Loader2,
+} from "lucide-react";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { useUploads } from "@/hooks/use-uploads";
+import { updateProfileAction } from "@/app/actions/profile";
 import type { AuthUser } from "@/types";
 
 interface ProfileHeaderProps {
@@ -8,8 +24,18 @@ interface ProfileHeaderProps {
 }
 
 export default function ProfileHeader({ user }: ProfileHeaderProps) {
+    const router = useRouter();
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const [isPending, startTransition] = useTransition();
+
     const isAdmin = user.role === "super_admin";
     const isEmailVerified = Boolean(user.emailVerifiedAt);
+
+    const uploads = useUploads({
+        kind: "avatar",
+        multiple: false,
+        maxFiles: 1,
+    });
 
     function initialsOf(name: string): string {
         const letters = name
@@ -22,6 +48,49 @@ export default function ProfileHeader({ user }: ProfileHeaderProps) {
         return letters || "?";
     }
 
+    const handleAvatarClick = () => {
+        if (isPending || uploads.isUploading) return;
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        uploads.addFiles(files);
+        e.target.value = "";
+
+        // আপলোড প্রসেস শুরু
+        const uploaded = await uploads.upload();
+
+        if (uploaded === null || !uploaded[0]) {
+            toast.error("Failed to upload avatar image. Please try again.");
+            return;
+        }
+
+        const newAvatarUrl = uploaded[0].url;
+
+        // আপডেট সার্ভার একশন ট্রিগার
+        const formData = new FormData();
+        formData.append("name", user.name);
+        formData.append("email", user.email);
+        if (user.phone) formData.append("phone", user.phone);
+        formData.append("avatarUrl", newAvatarUrl);
+
+        startTransition(async () => {
+            const res = await updateProfileAction({ error: "" }, formData);
+
+            if (res?.success) {
+                toast.success("Profile photo updated successfully!");
+                router.refresh();
+            } else {
+                toast.error(res?.error || "Failed to update profile photo.");
+            }
+        });
+    };
+
+    const isUploadingOrSaving = uploads.isUploading || isPending;
+
     return (
         <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
             <div className="h-32 border-b border-border bg-linear-to-r from-primary/20 via-primary/10 to-background sm:h-44" />
@@ -29,18 +98,43 @@ export default function ProfileHeader({ user }: ProfileHeaderProps) {
             <div className="px-6 pb-6 pt-0">
                 <div className="-mt-12 flex flex-col items-start justify-between gap-4 sm:-mt-16 sm:flex-row sm:items-end">
                     <div className="flex w-full flex-col items-center gap-4 text-center sm:w-auto sm:flex-row sm:items-end sm:text-left">
-                        <Avatar className="h-24 w-24 border-4 border-card shadow-md sm:h-28 sm:w-28">
-                            <AvatarImage
-                                src={user.avatarUrl ?? undefined}
-                                alt={user.name}
+                        {/* Avatar Image with Hover Effect & Hidden File Input */}
+                        <div className="relative group cursor-pointer">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                                className="hidden"
+                                disabled={isUploadingOrSaving}
                             />
-                            <AvatarFallback className="bg-primary/90 text-3xl font-semibold text-white">
-                                {initialsOf(user.name)}
-                            </AvatarFallback>
-                        </Avatar>
 
-                        <div className="space-y-1 mt-20">
-                            <div className="mt-20 flex items-center justify-center gap-2 sm:mt-0 sm:justify-start">
+                            <Avatar className="h-24 w-24 border-4 border-card shadow-md sm:h-28 sm:w-28 transition-opacity group-hover:opacity-80">
+                                <AvatarImage
+                                    src={user.avatarUrl ?? undefined}
+                                    alt={user.name}
+                                />
+                                <AvatarFallback className="bg-primary/90 text-3xl font-semibold text-white">
+                                    {initialsOf(user.name)}
+                                </AvatarFallback>
+                            </Avatar>
+
+                            <button
+                                type="button"
+                                onClick={handleAvatarClick}
+                                disabled={isUploadingOrSaving}
+                                className="absolute bottom-[12.5%] right-[12.5%] flex items-center justify-center rounded-full bg-black/30 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 border-4 border-transparent" title="Change profile photo"
+                            >
+                                {isUploadingOrSaving ? (
+                                    <Loader2 className="h-6 w-6 animate-spin" />
+                                ) : (
+                                    <Camera className="h-6 w-6" />
+                                )}
+                            </button>
+                        </div>
+
+                        <div className="space-y-1 mt-20 sm:mt-0">
+                            <div className="mt-2 flex items-center justify-center gap-2 sm:mt-0 sm:justify-start">
                                 <h2 className="text-xl font-black tracking-tight text-foreground sm:text-2xl">
                                     {user.name}
                                 </h2>
@@ -79,12 +173,18 @@ export default function ProfileHeader({ user }: ProfileHeaderProps) {
                         <span className="truncate">{user.email}</span>
 
                         {isEmailVerified ? (
-                            <Badge variant="outline" className="gap-1 border-emerald-500/30 bg-emerald-500/10 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                            <Badge
+                                variant="outline"
+                                className="gap-1 border-emerald-500/30 bg-emerald-500/10 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400"
+                            >
                                 <CheckCircle2 className="h-3 w-3" />
                                 Verified
                             </Badge>
                         ) : (
-                            <Badge variant="outline" className="gap-1 border-amber-500/30 bg-amber-500/10 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                            <Badge
+                                variant="outline"
+                                className="gap-1 border-amber-500/30 bg-amber-500/10 text-[10px] font-semibold text-amber-600 dark:text-amber-400"
+                            >
                                 <AlertCircle className="h-3 w-3" />
                                 Unverified
                             </Badge>
@@ -93,12 +193,126 @@ export default function ProfileHeader({ user }: ProfileHeaderProps) {
 
                     <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 shrink-0 text-primary" />
-                        <span>
-                            {user.phone || "Not provided"}
-                        </span>
+                        <span>{user.phone || "Not provided"}</span>
                     </div>
                 </div>
             </div>
         </div>
     );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+// import { User, ShieldCheck, Mail, Phone, CheckCircle2, AlertCircle } from "lucide-react";
+// import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+// import { Badge } from "@/components/ui/badge";
+// import type { AuthUser } from "@/types";
+
+// interface ProfileHeaderProps {
+//     user: AuthUser;
+// }
+
+// export default function ProfileHeader({ user }: ProfileHeaderProps) {
+//     const isAdmin = user.role === "super_admin";
+//     const isEmailVerified = Boolean(user.emailVerifiedAt);
+
+//     function initialsOf(name: string): string {
+//         const letters = name
+//             .split(/\s+/)
+//             .filter(Boolean)
+//             .slice(0, 2)
+//             .map((part) => part[0]?.toUpperCase() ?? "")
+//             .join("");
+
+//         return letters || "?";
+//     }
+
+//     return (
+//         <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
+//             <div className="h-32 border-b border-border bg-linear-to-r from-primary/20 via-primary/10 to-background sm:h-44" />
+
+//             <div className="px-6 pb-6 pt-0">
+//                 <div className="-mt-12 flex flex-col items-start justify-between gap-4 sm:-mt-16 sm:flex-row sm:items-end">
+//                     <div className="flex w-full flex-col items-center gap-4 text-center sm:w-auto sm:flex-row sm:items-end sm:text-left">
+//                         <Avatar className="h-24 w-24 border-4 border-card shadow-md sm:h-28 sm:w-28">
+//                             <AvatarImage
+//                                 src={user.avatarUrl ?? undefined}
+//                                 alt={user.name}
+//                             />
+//                             <AvatarFallback className="bg-primary/90 text-3xl font-semibold text-white">
+//                                 {initialsOf(user.name)}
+//                             </AvatarFallback>
+//                         </Avatar>
+
+//                         <div className="space-y-1 mt-20">
+//                             <div className="mt-20 flex items-center justify-center gap-2 sm:mt-0 sm:justify-start">
+//                                 <h2 className="text-xl font-black tracking-tight text-foreground sm:text-2xl">
+//                                     {user.name}
+//                                 </h2>
+
+//                                 {isAdmin ? (
+//                                     <Badge
+//                                         variant="default"
+//                                         className="gap-1 bg-primary font-bold text-primary-foreground"
+//                                     >
+//                                         <ShieldCheck className="h-3.5 w-3.5" />
+//                                         Admin
+//                                     </Badge>
+//                                 ) : (
+//                                     <Badge
+//                                         variant="secondary"
+//                                         className="gap-1 font-bold"
+//                                     >
+//                                         <User className="h-3.5 w-3.5" />
+//                                         Citizen
+//                                     </Badge>
+//                                 )}
+//                             </div>
+
+//                             <p className="text-xs font-medium text-muted-foreground">
+//                                 {isAdmin
+//                                     ? "Administrator account"
+//                                     : "Active citizen contributing to community improvements."}
+//                             </p>
+//                         </div>
+//                     </div>
+//                 </div>
+
+//                 <div className="mt-9 grid grid-cols-1 gap-3 border-t border-border pt-4 text-xs font-medium text-muted-foreground sm:grid-cols-2">
+//                     <div className="flex items-center gap-2">
+//                         <Mail className="h-4 w-4 shrink-0 text-primary" />
+//                         <span className="truncate">{user.email}</span>
+
+//                         {isEmailVerified ? (
+//                             <Badge variant="outline" className="gap-1 border-emerald-500/30 bg-emerald-500/10 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+//                                 <CheckCircle2 className="h-3 w-3" />
+//                                 Verified
+//                             </Badge>
+//                         ) : (
+//                             <Badge variant="outline" className="gap-1 border-amber-500/30 bg-amber-500/10 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+//                                 <AlertCircle className="h-3 w-3" />
+//                                 Unverified
+//                             </Badge>
+//                         )}
+//                     </div>
+
+//                     <div className="flex items-center gap-2">
+//                         <Phone className="h-4 w-4 shrink-0 text-primary" />
+//                         <span>
+//                             {user.phone || "Not provided"}
+//                         </span>
+//                     </div>
+//                 </div>
+//             </div>
+//         </div>
+//     );
+// }
