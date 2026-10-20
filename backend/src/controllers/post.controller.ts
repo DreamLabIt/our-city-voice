@@ -92,6 +92,15 @@ const CreateMediaSchema = z.object({
   durationSecs: z.coerce.number().int().nonnegative().nullish(),
 });
 
+// An edit resubmits attachments the API issued itself, and a stored row may
+// hold a path `mediaUrlSchema` refuses (`/fixture.jpeg`, a foreign host), so
+// only shape is checked here — `updatePost` runs the host check against the
+// report's own rows. Filing a new report keeps the strict schema above.
+const UpdateMediaSchema = CreateMediaSchema.extend({
+  url: z.string({ error: "Upload URL is not valid" }),
+  thumbnailUrl: z.string({ error: "Upload URL is not valid" }).nullish(),
+});
+
 const CreateLocationSchema = z
   .object({
     street: z.string().trim().max(160).nullish(),
@@ -159,7 +168,7 @@ const UpdatePostSchema = z
     isAnonymous: z.boolean().optional(),
     location: UpdateLocationSchema.optional(),
     // Sending media replaces the whole set; omitting it leaves it untouched.
-    media: z.array(CreateMediaSchema).max(6, "Up to 6 attachments are allowed").optional(),
+    media: z.array(UpdateMediaSchema).max(6, "Up to 6 attachments are allowed").optional(),
   })
   .refine(
     (body) =>
