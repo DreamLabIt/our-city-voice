@@ -88,6 +88,15 @@ Omitting `media` leaves the attachments alone, and sending `[]` clears them. The
 upload flow is the one from [create-report.md](create-report.md#3-media-is-uploaded-first-then-sent-here-by-url)
 — files go to Cloudinary first, the finished URLs are what arrive here.
 
+URLs are checked against the report's **own** rows first. An edit resubmits
+attachments the API itself issued, and a stored row may hold a path filing would
+refuse (seed data ships `/fixture.jpeg`-style keys), so a URL the report already
+has passes untouched. Anything the report does not already have must satisfy the
+same rule as filing — `https` plus an allowed host — so an edit cannot attach a
+link the create path would reject. A rejection arrives as `400` with
+`details["media.<n>.url"]`, same keys and messages as
+[`POST /posts`](create-report.md).
+
 ## Response — `200`
 
 ```json
@@ -116,7 +125,7 @@ read back exactly as they were. Only
 | Status | When |
 | --- | --- |
 | `200` | updated |
-| `400` | no fields sent, validation failed, an unknown `category`/`ward`, a lone coordinate, or a `null` `city`/`address`. `details` is field → messages |
+| `400` | no fields sent, validation failed, an unknown `category`/`ward`, a lone coordinate, a `null` `city`/`address`, or a new media URL that is not `https` on an allowed host. `details` is field → messages |
 | `401` | no/expired token |
 | `403` | signed in, but the report is not yours and you are not a super admin |
 | `404` | no such report, or it was moderated away |
@@ -129,9 +138,10 @@ restore endpoint yet. That is deliberate rather than an edge case to paper over.
 
 ## Cost
 
-A read, then a transaction: the read, up to two lookups (`category`, `ward`) when
-those change, the `UPDATE`, and — only when `media` is sent — a delete and an insert.
-Nothing fancier than a single report's own rows.
+A read, then — only when `media` is sent — a read of the report's stored
+attachment keys, the `category`/`ward` lookups when those change, and a
+transaction holding the `UPDATE` and, again only for `media`, a delete and an
+insert. Nothing fancier than a single report's own rows.
 
 ## See also
 
