@@ -369,8 +369,6 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
         }
     }, [queryTrackingCode, queryId, pins]);
 
-    console.log(pins)
-
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-180px)] min-h-150">
             <div className="lg:col-span-4 xl:col-span-4 flex flex-col bg-card border border-border rounded-2xl shadow-sm overflow-hidden h-full">

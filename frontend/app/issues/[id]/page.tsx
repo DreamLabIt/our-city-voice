@@ -30,8 +30,6 @@ export default async function IssuePage({
 
     const countView = !hasViewedBefore;
 
-    console.log("Server CountView Check:", { id, hasViewedBefore, countView });
-
     const [reportRes, commentsRes] = await Promise.all([
         getReportByCode(id, { countView })
             .then((data) => ({ data, failed: false as const }))
