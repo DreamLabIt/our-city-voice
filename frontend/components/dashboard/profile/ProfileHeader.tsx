@@ -96,7 +96,14 @@ export default function ProfileHeader({ user }: ProfileHeaderProps) {
             <div className="px-6 pb-6 pt-0">
                 <div className="-mt-12 flex flex-col items-start justify-between gap-4 sm:-mt-16 sm:flex-row sm:items-end">
                     <div className="flex w-full flex-col items-center gap-4 text-center sm:w-auto sm:flex-row sm:items-end sm:text-left">
-                        <div className="relative group cursor-pointer">
+                        <div
+                            className={`relative group ${isUploadingOrSaving
+                                ? "cursor-not-allowed"
+                                : "cursor-pointer"
+                                }`}
+                            onClick={handleAvatarClick}
+                            aria-disabled={isUploadingOrSaving}
+                        >
                             <input
                                 ref={fileInputRef}
                                 type="file"
@@ -118,9 +125,7 @@ export default function ProfileHeader({ user }: ProfileHeaderProps) {
 
                             <button
                                 type="button"
-                                onClick={handleAvatarClick}
-                                disabled={isUploadingOrSaving}
-                                className="absolute bottom-[12.5%] right-[12.5%] flex items-center justify-center rounded-full bg-black/30 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 border-4 border-transparent" title="Change profile photo"
+                                className="absolute bottom-[12.5%] right-[12.5%] flex items-center justify-center rounded-full bg-black/30 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 border-4 border-transparent cursor-pointer" title="Change profile photo"
                             >
                                 {isUploadingOrSaving ? (
                                     <Loader2 className="h-6 w-6 animate-spin" />
@@ -130,7 +135,7 @@ export default function ProfileHeader({ user }: ProfileHeaderProps) {
                             </button>
                         </div>
 
-                        <div className="space-y-1 mt-20 sm:mt-0">
+                        <div className="space-y-1 mt-2 sm:mt-18">
                             <div className="mt-2 flex items-center justify-center gap-2 sm:mt-0 sm:justify-start">
                                 <h2 className="text-xl font-black tracking-tight text-foreground sm:text-2xl">
                                     {user.name}
