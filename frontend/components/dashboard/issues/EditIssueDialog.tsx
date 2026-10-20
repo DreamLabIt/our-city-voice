@@ -52,7 +52,6 @@ const geocodeQuery = async (query: string): Promise<Coordinates | null> => {
         format: "json",
         q: query,
         limit: "1",
-        countrycodes: "bd",
         "accept-language": "en",
     });
 
@@ -90,11 +89,10 @@ const geocodeAddress = async (parts: {
     wardName?: string;
 }): Promise<Coordinates | null> => {
     const { address, city, street, postalCode, wardName } = parts;
-
     const attempts = [
-        [street, address, wardName, city, postalCode, "Bangladesh"],
-        [street, address, city, "Bangladesh"],
-        [address, city, "Bangladesh"],
+        [street, address, wardName, city, postalCode],
+        [street, address, city],
+        [address, city],
     ]
         .map((list) => list.filter(Boolean).join(", "))
         .filter(Boolean);

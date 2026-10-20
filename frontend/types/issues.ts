@@ -1,3 +1,5 @@
+import { AuthUser } from ".";
+
 export interface UploadedMediaItem {
     url: string;
     type: "image" | "video";
@@ -38,6 +40,7 @@ export interface ReportFormProps {
         categories: Array<{ name: string; value: string }>;
         wards: Array<{ name: string; code?: string; value?: string }>;
     };
+    user?: AuthUser | null;
 }
 
 export interface FormValues {

@@ -5,6 +5,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 import type { MediaType, PostPriority, PostStatus, UserRole } from "../generated/prisma/enums.js";
 import { AppError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
+import { mediaUrlSchema } from "../lib/media-url.js";
 import { isUniqueViolation } from "../lib/prisma-errors.js";
 import {
   PUBLIC_COMMENT_SELECT,
@@ -490,6 +491,53 @@ function buildMediaRows(items: CreatePostMediaInput[]) {
   }));
 }
 
+/**
+ * An edit resubmits attachments the API issued itself, and a stored row may
+ * hold a path `mediaUrlSchema` refuses — a seeded `/fixture.jpeg`, say, or a
+ * foreign host. A URL already on this report therefore passes untouched, while
+ * anything the report does not own must satisfy the same host check filing a
+ * new report gets, so an edit cannot attach a link the create path would
+ * reject. Failures carry the `media.<n>.url` keys `parseBody` produces, so the
+ * caller sees the same field errors it always did.
+ */
+async function validateEditedMedia(
+  postId: bigint,
+  items: CreatePostMediaInput[],
+): Promise<void> {
+  const rows = await prisma.media.findMany({
+    where: { postId },
+    select: { storageKey: true, thumbnailKey: true },
+  });
+
+  const stored = new Set<string>();
+  for (const row of rows) {
+    stored.add(row.storageKey);
+    if (row.thumbnailKey) stored.add(row.thumbnailKey);
+  }
+
+  const fieldErrors: Record<string, string[]> = {};
+
+  items.forEach((item, index) => {
+    for (const [field, value] of [
+      ["url", item.url],
+      ["thumbnailUrl", item.thumbnailUrl],
+    ] as const) {
+      if (!value || stored.has(value)) continue;
+
+      const parsed = mediaUrlSchema.safeParse(value);
+      if (!parsed.success) {
+        (fieldErrors[`media.${index}.${field}`] ??= []).push(
+          ...parsed.error.issues.map((issue) => issue.message),
+        );
+      }
+    }
+  });
+
+  if (Object.keys(fieldErrors).length > 0) {
+    throw AppError.badRequest("Some fields need attention", fieldErrors);
+  }
+}
+
 export async function createPost(userId: bigint, input: CreatePostInput): Promise<PublicPost> {
   const [category, ward] = await Promise.all([
     prisma.category.findUnique({
@@ -618,6 +666,13 @@ export async function updatePost(
 
   if (post.userId !== actor.id && actor.role !== "super_admin") {
     throw AppError.forbidden("You can only edit a report you filed");
+  }
+
+  // Before any other field lookup, so a bad attachment still reports first —
+  // the order a strict request schema used to give. No-op when media is
+  // omitted, which is most edits.
+  if (input.media !== undefined) {
+    await validateEditedMedia(post.id, input.media);
   }
 
   const data: Prisma.PostUpdateInput = {};
