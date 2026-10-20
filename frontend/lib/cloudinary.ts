@@ -1,29 +1,6 @@
 import { createHash } from "node:crypto";
-
 import { UPLOAD_RULES } from "@/lib/upload-rules";
 import type { UploadKind } from "@/types";
-
-/**
- * Signed direct uploads to Cloudinary.
- *
- * The browser sends the file straight to Cloudinary; this server only signs the
- * request. Two reasons that is the right shape here:
- *
- *   - a report can carry video. Routing a 40MB file through a Next.js server
- *     action means buffering it in our process and raising the body limit for
- *     every other action at the same time
- *   - an unsigned upload preset, which is the usual shortcut, is a public write
- *     credential. Anyone who reads the page source can upload to the account
- *     until it is turned off
- *
- * The signature covers the folder and the allowed formats, so a client cannot
- * move an upload somewhere else or widen what it may send without invalidating
- * it. Cloudinary also rejects a signature whose timestamp is more than an hour
- * old, so one cannot be hoarded.
- *
- * What a kind is allowed to be lives in lib/upload-rules.ts, which the browser
- * reads as well.
- */
 
 interface CloudinaryConfig {
   cloudName: string;
@@ -39,14 +16,6 @@ export class CloudinaryNotConfiguredError extends Error {
   }
 }
 
-/**
- * Read at call time, not at module load.
- *
- * Reading at module load would crash the whole app on boot when the keys are
- * absent, including every page that has nothing to do with uploading. This way
- * the uploader is the only thing that breaks, and it breaks with a message that
- * names the variable.
- */
 function readConfig(): CloudinaryConfig {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   const apiKey = process.env.CLOUDINARY_API_KEY;
@@ -68,24 +37,12 @@ function readConfig(): CloudinaryConfig {
     cloudName,
     apiKey,
     apiSecret,
-    rootFolder: process.env.CLOUDINARY_FOLDER?.replace(/^\/+|\/+$/g, "") || "ourcityvoice",
+    rootFolder:
+      process.env.CLOUDINARY_FOLDER?.replace(/^\/+|\/+$/g, "") ||
+      "ourcityvoice",
   };
 }
 
-/**
- * Cloudinary's scheme: sort the parameters by key, join them as a query string,
- * append the API secret, hash.
- *
- * Verified against the worked example in Cloudinary's "Generating authentication
- * signatures" page, which is the only way to be sure about the sorting and the
- * secret going on the end rather than the front.
- *
- * SHA-1 because it is what every Cloudinary SDK sends by default, so it is the
- * path guaranteed to be accepted. SHA-256 is also validated by default and would
- * be a one-line change here. Either is fine: this is a MAC over a handful of
- * short, server-chosen values with a secret suffix, and SHA-1's weakness is
- * collision resistance, which nothing here depends on.
- */
 function signParams(params: Record<string, string>, apiSecret: string): string {
   const canonical = Object.keys(params)
     .sort()
@@ -97,13 +54,6 @@ function signParams(params: Record<string, string>, apiSecret: string): string {
 
 export interface UploadTicket {
   uploadUrl: string;
-  /**
-   * Appended to the FormData verbatim, alongside the file.
-   *
-   * An opaque bag on purpose: adding another signed parameter later is a change
-   * here and nowhere else, because the client does not know what any of these
-   * mean.
-   */
   fields: Record<string, string>;
   constraints: {
     maxBytes: number;
@@ -142,4 +92,38 @@ export function createUploadTicket(kind: UploadKind): UploadTicket {
       resourceType: rules.resourceType,
     },
   };
+}
+
+export async function deleteCloudinaryAsset(publicId: string): Promise<boolean> {
+  try {
+    const config = readConfig();
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+
+    const signed: Record<string, string> = {
+      public_id: publicId,
+      timestamp,
+    };
+
+    const signature = signParams(signed, config.apiSecret);
+
+    const formData = new URLSearchParams();
+    formData.append("public_id", publicId);
+    formData.append("api_key", config.apiKey);
+    formData.append("timestamp", timestamp);
+    formData.append("signature", signature);
+
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${config.cloudName}/image/destroy`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    const data = await res.json();
+    return data.result === "ok";
+  } catch (error) {
+    console.error("Cloudinary delete failed:", error);
+    return false;
+  }
 }
