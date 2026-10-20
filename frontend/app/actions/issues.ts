@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { apiFetch } from "@/lib/api";
 import { clientForwardHeaders } from "@/lib/client-headers";
 import { getAccessToken } from "@/lib/session";
+import { deleteCloudinaryAsset } from "@/lib/cloudinary";
 import { type ReportIssueFormData, type CreateIssueResult, type UpdateReportInput, type MutationResult, VALID_PRIORITIES } from "@/types/issues";
 
 const MIME_BY_EXT: Record<string, string> = {
@@ -20,6 +21,18 @@ const MIME_BY_EXT: Record<string, string> = {
 function guessMimeType(url: string, type: string): string {
     const ext = url.split("?")[0].split(".").pop()?.toLowerCase() ?? "";
     return MIME_BY_EXT[ext] ?? (type === "image" ? "image/jpeg" : "video/mp4");
+}
+
+function extractPublicIdFromUrl(url: string): string | null {
+    try {
+        const parts = url.split("/upload/");
+        if (parts.length < 2) return null;
+        const pathWithoutVersion = parts[1].replace(/^v\d+\//, "");
+        const lastDotIndex = pathWithoutVersion.lastIndexOf(".");
+        return lastDotIndex === -1 ? pathWithoutVersion : pathWithoutVersion.substring(0, lastDotIndex);
+    } catch {
+        return null;
+    }
 }
 
 function revalidateReportPages(): void {
@@ -256,44 +269,67 @@ export async function updateReport(
         return { success: false, error: "Nothing to update." };
     }
 
-    const body: UpdateReportInput = { ...input };
-
-    if (input.media) {
-        if (input.media.length > 6) {
-            return {
-                success: false,
-                error: "You can upload a maximum of 6 media files.",
-                fieldErrors: { media: ["You can upload a maximum of 6 media files."] },
-            };
-        }
-
-        const invalidIndex = input.media.findIndex((item) => !item.url?.trim());
-        if (invalidIndex !== -1) {
-            return {
-                success: false,
-                error: "Media URL is required.",
-                fieldErrors: { [`media.${invalidIndex}.url`]: ["Media URL is required."] },
-            };
-        }
-
-        body.media = input.media.map((item) => {
-            const url = item.url.trim();
-
-            return {
-                url,
-                type: item.type,
-                thumbnailUrl: item.thumbnailUrl || null,
-                mimeType: item.mimeType || guessMimeType(url, item.type),
-                sizeBytes: Math.round(item.sizeBytes ?? 0),
-                durationSecs:
-                    item.type === "video" && item.durationSecs != null
-                        ? Math.round(item.durationSecs)
-                        : null,
-            };
-        });
-    }
-
     try {
+        const existingReportRes = await apiFetch<{ post?: { media?: { url: string }[] } }>(
+            `/posts/${encodeURIComponent(code)}`,
+            {
+                method: "GET",
+                token: token.trim(),
+                forward: await clientForwardHeaders(),
+            }
+        );
+
+        const oldMediaUrls = existingReportRes.ok && existingReportRes.data?.post?.media
+            ? existingReportRes.data.post.media.map((m) => m.url)
+            : [];
+
+        const body: UpdateReportInput = { ...input };
+
+        if (input.media) {
+            if (input.media.length > 6) {
+                return {
+                    success: false,
+                    error: "You can upload a maximum of 6 media files.",
+                    fieldErrors: { media: ["You can upload a maximum of 6 media files."] },
+                };
+            }
+
+            const invalidIndex = input.media.findIndex((item) => !item.url?.trim());
+            if (invalidIndex !== -1) {
+                return {
+                    success: false,
+                    error: "Media URL is required.",
+                    fieldErrors: { [`media.${invalidIndex}.url`]: ["Media URL is required."] },
+                };
+            }
+
+            body.media = input.media.map((item) => {
+                const url = item.url.trim();
+
+                return {
+                    url,
+                    type: item.type,
+                    thumbnailUrl: item.thumbnailUrl || null,
+                    mimeType: item.mimeType || guessMimeType(url, item.type),
+                    sizeBytes: Math.round(item.sizeBytes ?? 0),
+                    durationSecs:
+                        item.type === "video" && item.durationSecs != null
+                            ? Math.round(item.durationSecs)
+                            : null,
+                };
+            });
+
+            const newMediaUrls = body.media.map((m) => m.url);
+            const removedUrls = oldMediaUrls.filter((url) => !newMediaUrls.includes(url));
+
+            for (const oldUrl of removedUrls) {
+                const publicId = extractPublicIdFromUrl(oldUrl);
+                if (publicId) {
+                    await deleteCloudinaryAsset(publicId);
+                }
+            }
+        }
+
         const res = await apiFetch<{ post?: unknown }>(
             `/posts/${encodeURIComponent(code)}`,
             {
@@ -438,6 +474,19 @@ export async function deleteReport(code: string): Promise<MutationResult> {
     }
 
     try {
+        const existingReportRes = await apiFetch<{ post?: { media?: { url: string }[] } }>(
+            `/posts/${encodeURIComponent(code)}`,
+            {
+                method: "GET",
+                token: token.trim(),
+                forward: await clientForwardHeaders(),
+            }
+        );
+
+        const mediaUrls = existingReportRes.ok && existingReportRes.data?.post?.media
+            ? existingReportRes.data.post.media.map((m) => m.url)
+            : [];
+
         const res = await apiFetch<unknown>(
             `/posts/${encodeURIComponent(code)}`,
             {
@@ -464,6 +513,13 @@ export async function deleteReport(code: string): Promise<MutationResult> {
                         : res.error.message || "Failed to delete report.";
 
             return { success: false, error: message };
+        }
+
+        for (const url of mediaUrls) {
+            const publicId = extractPublicIdFromUrl(url);
+            if (publicId) {
+                await deleteCloudinaryAsset(publicId);
+            }
         }
 
         revalidateReportPages();
