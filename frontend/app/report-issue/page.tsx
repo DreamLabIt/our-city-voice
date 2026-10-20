@@ -9,6 +9,7 @@ import SectionContainer from "@/components/common/SectionContainer";
 import { getReportFilters, getReports } from "../actions/report";
 import type { Report } from "@/types/report";
 import { Suspense } from "react";
+import { getCurrentUser } from "@/lib/session";
 
 async function ReportIssueContent() {
     const [PostsRes, filtersRes] = await Promise.all([
@@ -21,6 +22,7 @@ async function ReportIssueContent() {
         })),
     ]);
 
+    const user = await getCurrentUser();
     const Reports: Report[] = PostsRes.posts || [];
 
     return (
@@ -35,7 +37,7 @@ async function ReportIssueContent() {
                 <div className="py-12 md:py-16">
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
                         <div className="lg:col-span-7 xl:col-span-8">
-                            <ReportForm reportFilters={filtersRes} />
+                            <ReportForm reportFilters={filtersRes} user={user} />
                         </div>
 
                         <div className="lg:col-span-5 xl:col-span-4 space-y-6">

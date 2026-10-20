@@ -100,7 +100,7 @@ const geocodeAddress = async (parts: {
     return null;
 };
 
-export default function ReportForm({ reportFilters }: ReportFormProps) {
+export default function ReportForm({ reportFilters, user }: ReportFormProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const isVideoMode = searchParams.get("type") === "video";
@@ -274,6 +274,12 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
     };
 
     const onSubmit: SubmitHandler<FormValues> = async (data) => {
+        if (!user) {
+            toast.error("Please log in to submit a report.");
+            const currentPath = window.location.pathname + window.location.search;
+            router.push(`/login?next=${encodeURIComponent(currentPath)}`);
+            return;
+        }
         if (pendingGeocodeRef.current) {
             await pendingGeocodeRef.current;
         }
@@ -292,8 +298,7 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
             if (!found) {
                 setFocus("location.address");
                 toast.error("Location not found", {
-                    description:
-                        "Please correct the address and try again.",
+                    description: "Please correct the address and try again.",
                 });
                 return;
             }
@@ -320,7 +325,6 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
 
         try {
             const uploadedFiles = await uploads.upload();
-
             if (uploadedFiles === null) {
                 toast.error("File upload failed", {
                     description:
@@ -364,7 +368,8 @@ export default function ReportForm({ reportFilters }: ReportFormProps) {
             if (!result.success) {
                 if (result.requiresAuth) {
                     toast.error("Please log in to submit a report.");
-                    router.push("/login?next=/report-issue");
+                    const currentPath = window.location.pathname + window.location.search;
+                    router.push(`/login?next=${encodeURIComponent(currentPath)}`);
                     return;
                 }
 
