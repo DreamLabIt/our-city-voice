@@ -7,89 +7,90 @@ import { parseBody } from "../lib/validate.js";
 import * as postService from "../services/post.service.js";
 
 function listOf<T extends z.ZodType>(schema: T) {
-  return z.preprocess(
-    (raw) => {
-      if (raw === undefined) return undefined;
-      const values = (Array.isArray(raw) ? raw : [raw]).flatMap((value) =>
-        typeof value === "string" ? value.split(",") : [value],
-      );
-      const cleaned = values
-        .map((value) => (typeof value === "string" ? value.trim() : value))
-        .filter((value) => value !== "");
+    return z.preprocess((raw) => {
+        if (raw === undefined) return undefined;
+        const values = (Array.isArray(raw) ? raw : [raw]).flatMap((value) =>
+            typeof value === "string" ? value.split(",") : [value],
+        );
+        const cleaned = values
+            .map((value) => (typeof value === "string" ? value.trim() : value))
+            .filter((value) => value !== "");
 
-      return cleaned.length === 0 ? undefined : cleaned;
-    },
-    z.array(schema).optional(),
-  );
+        return cleaned.length === 0 ? undefined : cleaned;
+    }, z.array(schema).optional());
 }
 
 function optional<T extends z.ZodType>(schema: T) {
-  return z.preprocess(
-    (raw) => (typeof raw === "string" && raw.trim() === "" ? undefined : raw),
-    schema,
-  );
+    return z.preprocess(
+        (raw) => (typeof raw === "string" && raw.trim() === "" ? undefined : raw),
+        schema,
+    );
 }
 
 const statusSchema = z.enum(["pending", "in_progress", "resolved", "rejected"]);
 const prioritySchema = z.enum(["low", "medium", "high", "critical"]);
 
 const slugSchema = z
-  .string()
-  .trim()
-  .min(1)
-  .max(80)
-  .regex(/^[a-z0-9][a-z0-9-]*$/, "Must be a lowercase slug, such as 'roads' or 'ward-22'");
+    .string()
+    .trim()
+    .min(1)
+    .max(80)
+    .regex(/^[a-z0-9][a-z0-9-]*$/, "Must be a lowercase slug, such as 'roads' or 'ward-22'");
 
 const ListQuerySchema = z.object({
-  page: optional(z.coerce.number().int().positive().default(1)),
-  limit: optional(z.coerce.number().int().positive().max(100).default(12)),
-  sort: optional(
-    z
-      .enum(["newest", "oldest", "most_liked", "most_commented", "most_viewed", "recently_updated"])
-      .default("newest"),
-  ),
-  search: optional(z.string().trim().min(1).max(120).optional()),
-  category: listOf(slugSchema),
-  ward: listOf(slugSchema),
-  status: listOf(statusSchema),
-  priority: listOf(prioritySchema),
+    page: optional(z.coerce.number().int().positive().default(1)),
+    limit: optional(z.coerce.number().int().positive().max(100).default(12)),
+    sort: optional(
+        z
+            .enum([
+                "newest",
+                "oldest",
+                "most_liked",
+                "most_commented",
+                "most_viewed",
+                "recently_updated",
+            ])
+            .default("newest"),
+    ),
+    search: optional(z.string().trim().min(1).max(120).optional()),
+    category: listOf(slugSchema),
+    ward: listOf(slugSchema),
+    status: listOf(statusSchema),
+    priority: listOf(prioritySchema),
 
-  
-  mine: optional(z.stringbool().default(false)),
-  
-  authorId: optional(
-    z.string().regex(/^\d+$/, "authorId must be a positive integer").optional(),
-  ),
-  
-  includeDeleted: optional(z.stringbool().default(false)),
+    mine: optional(z.stringbool().default(false)),
+
+    authorId: optional(z.string().regex(/^\d+$/, "authorId must be a positive integer").optional()),
+
+    includeDeleted: optional(z.stringbool().default(false)),
 });
 
 // A dedicated search is required, unlike a filter: there is no "no opinion"
 // blank. Two characters is the floor — a single letter matches almost every row
 // and cannot be ranked.
 const SearchTermSchema = z
-  .string({ error: "Send a search term" })
-  .trim()
-  .min(2, "Enter at least 2 characters to search")
-  .max(120, "Search is too long");
+    .string({ error: "Send a search term" })
+    .trim()
+    .min(2, "Enter at least 2 characters to search")
+    .max(120, "Search is too long");
 
 const SearchQuerySchema = z.object({
-  search: SearchTermSchema,
-  page: optional(z.coerce.number().int().positive().default(1)),
-  limit: optional(z.coerce.number().int().positive().max(100).default(12)),
+    search: SearchTermSchema,
+    page: optional(z.coerce.number().int().positive().default(1)),
+    limit: optional(z.coerce.number().int().positive().max(100).default(12)),
 });
 
 const SuggestQuerySchema = z.object({
-  search: SearchTermSchema,
+    search: SearchTermSchema,
 });
 
 const CreateMediaSchema = z.object({
-  url: mediaUrlSchema,
-  type: z.enum(["image", "video"]),
-  thumbnailUrl: mediaUrlSchema.nullish(),
-  mimeType: z.string().trim().max(120).nullish(),
-  sizeBytes: z.coerce.number().int().nonnegative().nullish(),
-  durationSecs: z.coerce.number().int().nonnegative().nullish(),
+    url: mediaUrlSchema,
+    type: z.enum(["image", "video"]),
+    thumbnailUrl: mediaUrlSchema.nullish(),
+    mimeType: z.string().trim().max(120).nullish(),
+    sizeBytes: z.coerce.number().int().nonnegative().nullish(),
+    durationSecs: z.coerce.number().int().nonnegative().nullish(),
 });
 
 // An edit resubmits attachments the API issued itself, and a stored row may
@@ -97,214 +98,244 @@ const CreateMediaSchema = z.object({
 // only shape is checked here — `updatePost` runs the host check against the
 // report's own rows. Filing a new report keeps the strict schema above.
 const UpdateMediaSchema = CreateMediaSchema.extend({
-  url: z.string({ error: "Upload URL is not valid" }),
-  thumbnailUrl: z.string({ error: "Upload URL is not valid" }).nullish(),
+    url: z.string({ error: "Upload URL is not valid" }),
+    thumbnailUrl: z.string({ error: "Upload URL is not valid" }).nullish(),
 });
 
 const CreateLocationSchema = z
-  .object({
-    street: z.string().trim().max(160).nullish(),
-    city: z.string().trim().min(1, "City is required").max(80, "City is too long"),
-    address: z.string().trim().min(1, "Address is required").max(240, "Address is too long"),
-    postalCode: z.string().trim().max(16).nullish(),
-    latitude: z.coerce.number().min(-90, "Latitude must be between -90 and 90").max(90, "Latitude must be between -90 and 90").nullish(),
-    longitude: z.coerce.number().min(-180, "Longitude must be between -180 and 180").max(180, "Longitude must be between -180 and 180").nullish(),
-  })
-  .refine(
-    (location) =>
-      (location.latitude === undefined || location.latitude === null) ===
-      (location.longitude === undefined || location.longitude === null),
-    { error: "Send latitude and longitude together, or neither", path: ["longitude"] },
-  );
+    .object({
+        street: z.string().trim().max(160).nullish(),
+        city: z.string().trim().min(1, "City is required").max(80, "City is too long"),
+        address: z.string().trim().min(1, "Address is required").max(240, "Address is too long"),
+        postalCode: z.string().trim().max(16).nullish(),
+        latitude: z.coerce
+            .number()
+            .min(-90, "Latitude must be between -90 and 90")
+            .max(90, "Latitude must be between -90 and 90")
+            .nullish(),
+        longitude: z.coerce
+            .number()
+            .min(-180, "Longitude must be between -180 and 180")
+            .max(180, "Longitude must be between -180 and 180")
+            .nullish(),
+    })
+    .refine(
+        (location) =>
+            (location.latitude === undefined || location.latitude === null) ===
+            (location.longitude === undefined || location.longitude === null),
+        { error: "Send latitude and longitude together, or neither", path: ["longitude"] },
+    );
 
 const CreatePostSchema = z.strictObject({
-  title: z
-    .string()
-    .trim()
-    .min(6, "Title must be at least 6 characters")
-    .max(160, "Title is too long"),
-  description: z
-    .string()
-    .trim()
-    .min(15, "Description must be at least 15 characters")
-    .max(5000, "Description is too long"),
-  category: z.string().trim().min(1, "Category is required").max(80),
-  ward: z.string().trim().min(1, "Ward is required").max(80),
-  priority: prioritySchema.optional(),
-  isAnonymous: z.boolean().optional().default(false),
-  location: CreateLocationSchema,
-  media: z.array(CreateMediaSchema).max(6, "Up to 6 attachments are allowed").optional(),
+    title: z
+        .string()
+        .trim()
+        .min(6, "Title must be at least 6 characters")
+        .max(160, "Title is too long"),
+    description: z
+        .string()
+        .trim()
+        .min(15, "Description must be at least 15 characters")
+        .max(5000, "Description is too long"),
+    category: z.string().trim().min(1, "Category is required").max(80),
+    ward: z.string().trim().min(1, "Ward is required").max(80),
+    priority: prioritySchema.optional(),
+    isAnonymous: z.boolean().optional().default(false),
+    location: CreateLocationSchema,
+    media: z.array(CreateMediaSchema).max(6, "Up to 6 attachments are allowed").optional(),
 });
 
 // Editing takes the same fields as filing, all optional, but `city`/`address`
 // stay required when present because their columns are NOT NULL.
 const UpdateLocationSchema = z
-  .object({
-    street: z.string().trim().max(160).nullish(),
-    city: z.string().trim().min(1, "City is required").max(80, "City is too long").optional(),
-    address: z.string().trim().min(1, "Address is required").max(240, "Address is too long").optional(),
-    postalCode: z.string().trim().max(16).nullish(),
-    latitude: z.coerce.number().min(-90, "Latitude must be between -90 and 90").max(90, "Latitude must be between -90 and 90").nullish(),
-    longitude: z.coerce.number().min(-180, "Longitude must be between -180 and 180").max(180, "Longitude must be between -180 and 180").nullish(),
-  })
-  .refine(
-    (location) => {
-      // A null and an absent coordinate both mean "no point"; anything else
-      // must arrive as a pair, so a lone value cannot half-clear the pair.
-      const latitude = location.latitude ?? null;
-      const longitude = location.longitude ?? null;
-      return (latitude === null) === (longitude === null);
-    },
-    { error: "Send latitude and longitude together, or neither", path: ["longitude"] },
-  );
+    .object({
+        street: z.string().trim().max(160).nullish(),
+        city: z.string().trim().min(1, "City is required").max(80, "City is too long").optional(),
+        address: z
+            .string()
+            .trim()
+            .min(1, "Address is required")
+            .max(240, "Address is too long")
+            .optional(),
+        postalCode: z.string().trim().max(16).nullish(),
+        latitude: z.coerce
+            .number()
+            .min(-90, "Latitude must be between -90 and 90")
+            .max(90, "Latitude must be between -90 and 90")
+            .nullish(),
+        longitude: z.coerce
+            .number()
+            .min(-180, "Longitude must be between -180 and 180")
+            .max(180, "Longitude must be between -180 and 180")
+            .nullish(),
+    })
+    .refine(
+        (location) => {
+            // A null and an absent coordinate both mean "no point"; anything else
+            // must arrive as a pair, so a lone value cannot half-clear the pair.
+            const latitude = location.latitude ?? null;
+            const longitude = location.longitude ?? null;
+            return (latitude === null) === (longitude === null);
+        },
+        { error: "Send latitude and longitude together, or neither", path: ["longitude"] },
+    );
 
 const UpdatePostSchema = z
-  .strictObject({
-    title: z.string().trim().min(6, "Title must be at least 6 characters").max(160, "Title is too long").optional(),
-    description: z.string().trim().min(15, "Description must be at least 15 characters").max(5000, "Description is too long").optional(),
-    category: z.string().trim().min(1, "Category is required").max(80).optional(),
-    ward: z.string().trim().min(1, "Ward is required").max(80).optional(),
-    priority: prioritySchema.optional(),
-    isAnonymous: z.boolean().optional(),
-    location: UpdateLocationSchema.optional(),
-    // Sending media replaces the whole set; omitting it leaves it untouched.
-    media: z.array(UpdateMediaSchema).max(6, "Up to 6 attachments are allowed").optional(),
-  })
-  .refine(
-    (body) =>
-      body.title !== undefined ||
-      body.description !== undefined ||
-      body.category !== undefined ||
-      body.ward !== undefined ||
-      body.priority !== undefined ||
-      body.isAnonymous !== undefined ||
-      body.location !== undefined ||
-      body.media !== undefined,
-    { error: "Send at least one field to update", path: ["_"] },
-  );
+    .strictObject({
+        title: z
+            .string()
+            .trim()
+            .min(6, "Title must be at least 6 characters")
+            .max(160, "Title is too long")
+            .optional(),
+        description: z
+            .string()
+            .trim()
+            .min(15, "Description must be at least 15 characters")
+            .max(5000, "Description is too long")
+            .optional(),
+        category: z.string().trim().min(1, "Category is required").max(80).optional(),
+        ward: z.string().trim().min(1, "Ward is required").max(80).optional(),
+        priority: prioritySchema.optional(),
+        isAnonymous: z.boolean().optional(),
+        location: UpdateLocationSchema.optional(),
+        // Sending media replaces the whole set; omitting it leaves it untouched.
+        media: z.array(UpdateMediaSchema).max(6, "Up to 6 attachments are allowed").optional(),
+    })
+    .refine(
+        (body) =>
+            body.title !== undefined ||
+            body.description !== undefined ||
+            body.category !== undefined ||
+            body.ward !== undefined ||
+            body.priority !== undefined ||
+            body.isAnonymous !== undefined ||
+            body.location !== undefined ||
+            body.media !== undefined,
+        { error: "Send at least one field to update", path: ["_"] },
+    );
 
 // A status change is its own write, not a field on PATCH /posts/:code: it
 // appends to the timeline, which an edit must not do.
 const UpdateStatusBodySchema = z.strictObject({
-  status: statusSchema,
-  note: z.string().trim().max(1000, "Note is too long").nullish(),
+    status: statusSchema,
+    note: z.string().trim().max(1000, "Note is too long").nullish(),
 });
 
 export async function create(req: Request, res: Response): Promise<void> {
-  if (!req.user) throw AppError.unauthorized();
+    if (!req.user) throw AppError.unauthorized();
 
-  const input = parseBody(CreatePostSchema, req.body ?? {});
-  const post = await postService.createPost(req.user.id, input);
+    const input = parseBody(CreatePostSchema, req.body ?? {});
+    const post = await postService.createPost(req.user.id, input);
 
-  res.status(201).json({ post });
+    res.status(201).json({ post });
 }
 
 export async function update(req: Request, res: Response): Promise<void> {
-  if (!req.user) throw AppError.unauthorized();
+    if (!req.user) throw AppError.unauthorized();
 
-  const input = parseBody(UpdatePostSchema, req.body ?? {});
-  const post = await postService.updatePost(req.user, parseIdentifier(req.params.code), input);
+    const input = parseBody(UpdatePostSchema, req.body ?? {});
+    const post = await postService.updatePost(req.user, parseIdentifier(req.params.code), input);
 
-  res.status(200).json({ post });
+    res.status(200).json({ post });
 }
 
 export async function remove(req: Request, res: Response): Promise<void> {
-  if (!req.user) throw AppError.unauthorized();
+    if (!req.user) throw AppError.unauthorized();
 
-  await postService.deletePost(req.user, parseIdentifier(req.params.code));
+    await postService.deletePost(req.user, parseIdentifier(req.params.code));
 
-  res.status(204).send();
+    res.status(204).send();
 }
 
 export async function updateStatus(req: Request, res: Response): Promise<void> {
-  if (!req.user) throw AppError.unauthorized();
+    if (!req.user) throw AppError.unauthorized();
 
-  const input = parseBody(UpdateStatusBodySchema, req.body ?? {});
-  const post = await postService.updatePostStatus(
-    req.user,
-    parseIdentifier(req.params.code),
-    input,
-  );
+    const input = parseBody(UpdateStatusBodySchema, req.body ?? {});
+    const post = await postService.updatePostStatus(
+        req.user,
+        parseIdentifier(req.params.code),
+        input,
+    );
 
-  res.status(200).json({ post });
+    res.status(200).json({ post });
 }
 
 export async function list(req: Request, res: Response): Promise<void> {
-  const query = parseBody(ListQuerySchema, req.query);
+    const query = parseBody(ListQuerySchema, req.query);
 
-  
-  if (query.mine && query.authorId !== undefined) {
-    throw AppError.badRequest("Send either mine or authorId, not both");
-  }
+    if (query.mine && query.authorId !== undefined) {
+        throw AppError.badRequest("Send either mine or authorId, not both");
+    }
 
-  let authorId: bigint | undefined;
+    let authorId: bigint | undefined;
 
-  if (query.mine) {
-    if (!req.user) throw AppError.unauthorized("Sign in to see your own reports");
-    authorId = req.user.id;
-  }
+    if (query.mine) {
+        if (!req.user) throw AppError.unauthorized("Sign in to see your own reports");
+        authorId = req.user.id;
+    }
 
-  if (query.authorId !== undefined) {
-    if (req.user?.role !== "super_admin") throw AppError.forbidden();
-    authorId = BigInt(query.authorId);
-  }
+    if (query.authorId !== undefined) {
+        if (req.user?.role !== "super_admin") throw AppError.forbidden();
+        authorId = BigInt(query.authorId);
+    }
 
-  if (query.includeDeleted && req.user?.role !== "super_admin") {
-    throw AppError.forbidden();
-  }
+    if (query.includeDeleted && req.user?.role !== "super_admin") {
+        throw AppError.forbidden();
+    }
 
-  const result = await postService.listPosts(
-    {
-      page: query.page,
-      limit: query.limit,
-      sort: query.sort,
-      search: query.search,
-      category: query.category,
-      ward: query.ward,
-      status: query.status,
-      priority: query.priority,
-      authorId,
-      includeDeleted: query.includeDeleted,
-    },
-    req.user?.id,
-  );
+    const result = await postService.listPosts(
+        {
+            page: query.page,
+            limit: query.limit,
+            sort: query.sort,
+            search: query.search,
+            category: query.category,
+            ward: query.ward,
+            status: query.status,
+            priority: query.priority,
+            authorId,
+            includeDeleted: query.includeDeleted,
+        },
+        req.user?.id,
+    );
 
-  res.status(200).json(result);
+    res.status(200).json(result);
 }
 
 export async function filters(_req: Request, res: Response): Promise<void> {
-  res.status(200).json(await postService.listFilterOptions());
+    res.status(200).json(await postService.listFilterOptions());
 }
 
 export async function search(req: Request, res: Response): Promise<void> {
-  const query = parseBody(SearchQuerySchema, req.query);
+    const query = parseBody(SearchQuerySchema, req.query);
 
-  const result = await postService.searchPosts(
-    { search: query.search, page: query.page, limit: query.limit },
-    req.user?.id,
-  );
+    const result = await postService.searchPosts(
+        { search: query.search, page: query.page, limit: query.limit },
+        req.user?.id,
+    );
 
-  res.status(200).json(result);
+    res.status(200).json(result);
 }
 
 export async function suggestions(req: Request, res: Response): Promise<void> {
-  const query = parseBody(SuggestQuerySchema, req.query);
+    const query = parseBody(SuggestQuerySchema, req.query);
 
-  res.status(200).json({ suggestions: await postService.suggestPosts(query.search) });
+    res.status(200).json({ suggestions: await postService.suggestPosts(query.search) });
 }
 
 function parseIdentifier(raw: string | string[] | undefined): postService.PostIdentifier {
-  if (typeof raw !== "string" || raw.length === 0 || raw.length > 64) {
-    throw AppError.badRequest("Give a report's tracking code, such as OCV-2026-000123");
-  }
+    if (typeof raw !== "string" || raw.length === 0 || raw.length > 64) {
+        throw AppError.badRequest("Give a report's tracking code, such as OCV-2026-000123");
+    }
 
-  if (/^\d+$/.test(raw)) return { id: BigInt(raw) };
+    if (/^\d+$/.test(raw)) return { id: BigInt(raw) };
 
-  if (!/^[A-Za-z0-9-]+$/.test(raw)) {
-    throw AppError.badRequest("Give a report's tracking code, such as OCV-2026-000123");
-  }
+    if (!/^[A-Za-z0-9-]+$/.test(raw)) {
+        throw AppError.badRequest("Give a report's tracking code, such as OCV-2026-000123");
+    }
 
-  return { trackingCode: raw.toUpperCase() };
+    return { trackingCode: raw.toUpperCase() };
 }
 
 /**
@@ -313,125 +344,121 @@ function parseIdentifier(raw: string | string[] | undefined): postService.PostId
  * before any query runs, not a `404`.
  */
 function parseCommentId(raw: string | string[] | undefined): bigint {
-  if (typeof raw !== "string" || !/^\d{1,19}$/.test(raw)) {
-    throw AppError.badRequest("Give a comment id, such as 42");
-  }
+    if (typeof raw !== "string" || !/^\d{1,19}$/.test(raw)) {
+        throw AppError.badRequest("Give a comment id, such as 42");
+    }
 
-  return BigInt(raw);
+    return BigInt(raw);
 }
 
 const DetailQuerySchema = z.object({
-  includeDeleted: optional(z.stringbool().default(false)),
+    includeDeleted: optional(z.stringbool().default(false)),
+    countView: optional(z.stringbool().default(false)),
 });
 
 export async function detail(req: Request, res: Response): Promise<void> {
-  const query = parseBody(DetailQuerySchema, req.query);
+    const query = parseBody(DetailQuerySchema, req.query);
 
-  if (query.includeDeleted && req.user?.role !== "super_admin") {
-    throw AppError.forbidden();
-  }
+    if (query.includeDeleted && req.user?.role !== "super_admin") {
+        throw AppError.forbidden();
+    }
 
-  const result = await postService.getPost(parseIdentifier(req.params.code), req.user?.id, {
-    includeDeleted: query.includeDeleted,
-    countView: true,
-  });
+    const result = await postService.getPost(parseIdentifier(req.params.code), req.user?.id, {
+        includeDeleted: query.includeDeleted,
+        countView: query.countView,
+    });
 
-  res.status(200).json(result);
+    res.status(200).json(result);
 }
 
 const CommentsQuerySchema = z.object({
-  page: optional(z.coerce.number().int().positive().default(1)),
-  limit: optional(z.coerce.number().int().positive().max(100).default(20)),
+    page: optional(z.coerce.number().int().positive().default(1)),
+    limit: optional(z.coerce.number().int().positive().max(100).default(20)),
 });
 
 // One body shape for both a comment and a reply: they differ only in where the
 // parent comes from — the URL for a reply, nothing for a top-level comment.
 const CommentBodySchema = z.strictObject({
-  message: z
-    .string()
-    .trim()
-    .min(1, "Write something before posting")
-    .max(2000, "Comment is too long"),
+    message: z
+        .string()
+        .trim()
+        .min(1, "Write something before posting")
+        .max(2000, "Comment is too long"),
 });
 
 export async function comments(req: Request, res: Response): Promise<void> {
-  const query = parseBody(CommentsQuerySchema, req.query);
+    const query = parseBody(CommentsQuerySchema, req.query);
 
-  
-  const post = await postService.findPostId(parseIdentifier(req.params.code));
+    const post = await postService.findPostId(parseIdentifier(req.params.code));
 
-  const result = await postService.listComments(
-    post,
-    { page: query.page, limit: query.limit },
-    req.user?.id,
-  );
+    const result = await postService.listComments(
+        post,
+        { page: query.page, limit: query.limit },
+        req.user?.id,
+    );
 
-  res.status(200).json(result);
+    res.status(200).json(result);
 }
 
 export async function like(req: Request, res: Response): Promise<void> {
-  if (!req.user) throw AppError.unauthorized();
+    if (!req.user) throw AppError.unauthorized();
 
-  res.status(200).json(await postService.likePost(req.user, parseIdentifier(req.params.code)));
+    res.status(200).json(await postService.likePost(req.user, parseIdentifier(req.params.code)));
 }
 
 export async function unlike(req: Request, res: Response): Promise<void> {
-  if (!req.user) throw AppError.unauthorized();
+    if (!req.user) throw AppError.unauthorized();
 
-  res.status(200).json(await postService.unlikePost(req.user, parseIdentifier(req.params.code)));
+    res.status(200).json(await postService.unlikePost(req.user, parseIdentifier(req.params.code)));
 }
 
 export async function addComment(req: Request, res: Response): Promise<void> {
-  if (!req.user) throw AppError.unauthorized();
+    if (!req.user) throw AppError.unauthorized();
 
-  const input = parseBody(CommentBodySchema, req.body ?? {});
-  const comment = await postService.createComment(
-    req.user,
-    parseIdentifier(req.params.code),
-    input,
-  );
+    const input = parseBody(CommentBodySchema, req.body ?? {});
+    const comment = await postService.createComment(
+        req.user,
+        parseIdentifier(req.params.code),
+        input,
+    );
 
-  res.status(201).json({ comment });
+    res.status(201).json({ comment });
 }
 
 export async function addReply(req: Request, res: Response): Promise<void> {
-  if (!req.user) throw AppError.unauthorized();
+    if (!req.user) throw AppError.unauthorized();
 
-  const input = parseBody(CommentBodySchema, req.body ?? {});
-  const comment = await postService.createReply(
-    req.user,
-    parseIdentifier(req.params.code),
-    parseCommentId(req.params.commentId),
-    input,
-  );
-
-  res.status(201).json({ comment });
-}
-
-export async function likeComment(req: Request, res: Response): Promise<void> {
-  if (!req.user) throw AppError.unauthorized();
-
-  res
-    .status(200)
-    .json(
-      await postService.likeComment(
+    const input = parseBody(CommentBodySchema, req.body ?? {});
+    const comment = await postService.createReply(
         req.user,
         parseIdentifier(req.params.code),
         parseCommentId(req.params.commentId),
-      ),
+        input,
+    );
+
+    res.status(201).json({ comment });
+}
+
+export async function likeComment(req: Request, res: Response): Promise<void> {
+    if (!req.user) throw AppError.unauthorized();
+
+    res.status(200).json(
+        await postService.likeComment(
+            req.user,
+            parseIdentifier(req.params.code),
+            parseCommentId(req.params.commentId),
+        ),
     );
 }
 
 export async function unlikeComment(req: Request, res: Response): Promise<void> {
-  if (!req.user) throw AppError.unauthorized();
+    if (!req.user) throw AppError.unauthorized();
 
-  res
-    .status(200)
-    .json(
-      await postService.unlikeComment(
-        req.user,
-        parseIdentifier(req.params.code),
-        parseCommentId(req.params.commentId),
-      ),
+    res.status(200).json(
+        await postService.unlikeComment(
+            req.user,
+            parseIdentifier(req.params.code),
+            parseCommentId(req.params.commentId),
+        ),
     );
 }
