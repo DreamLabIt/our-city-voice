@@ -32,13 +32,6 @@ export const markerIcon = L.icon({
     shadowSize: [41, 41],
 });
 
-/**
- * Keeps the viewport on the data.
- *
- * `pins` has to be a stable reference, which IssuesMapLayout guarantees with
- * useMemo. A fresh array on every render would refit the bounds continuously
- * and fight the flyTo below.
- */
 function MapViewport({
     pins,
     selectedPin,
@@ -52,20 +45,8 @@ function MapViewport({
         const bounds = pinBounds(pins);
         if (!bounds) return;
 
-        // animate: false, because this runs on mount and when the filter
-        // changes. The map should already be framed when it first paints
-        // rather than pan in from the placeholder centre.
-        //
-        // It also means the fit does not depend on requestAnimationFrame,
-        // which Leaflet's animated path needs. Headless browsers and
-        // background tabs throttle rAF to nothing, and an animated fit there
-        // never completes: the map keeps whatever zoom it was constructed
-        // with and the outlying pins sit outside the viewport. Worth knowing
-        // if this is ever asserted on in a test.
         const options = { padding: [48, 48] as [number, number], animate: false };
 
-        // fitBounds on a single point zooms to the maximum, which lands the
-        // viewport on an unreadable close-up of one building.
         if (pins.length === 1) {
             map.setView([pins[0]!.lat, pins[0]!.lng], 15, { animate: false });
             return;
@@ -87,9 +68,7 @@ export default function IssueMap({
     selectedPin,
     onSelectPin,
 }: IssueMapProps) {
-    // MapContainer needs a centre before MapViewport can correct it. Taking
-    // the first pin rather than a literal keeps the first paint on the right
-    // city; the fallback is Toronto City Hall, which matches site_contact_info.
+
     const initialCenter: [number, number] = pins[0]
         ? [pins[0].lat, pins[0].lng]
         : [43.653226, -79.383184];
@@ -99,6 +78,7 @@ export default function IssueMap({
             center={initialCenter}
             zoom={12}
             scrollWheelZoom={true}
+            attributionControl={false}
             className="w-full h-full"
         >
             <TileLayer
@@ -118,7 +98,7 @@ export default function IssueMap({
                     }}
                 >
                     <Popup>
-                        <div className="space-y-1 min-w-[180px]">
+                        <div className="space-y-1 min-w-45">
                             <p className="font-semibold text-sm">{pin.title}</p>
                             <p className="text-xs text-gray-500">{pin.address}</p>
                             <p className="text-xs text-gray-500">
