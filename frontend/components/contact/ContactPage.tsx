@@ -457,12 +457,14 @@ export default function ContactPage({
                                     width="100%"
                                     height="100%"
                                     style={{
-                                        border: 0,
+                                        border: 1,
                                         filter: "grayscale(0.2) opacity(0.9)",
                                     }}
                                     allowFullScreen
                                     loading="lazy"
                                     referrerPolicy="no-referrer-when-downgrade"
+                                    className="w-full h-full top-[0%] left-[0%]  relative border-0 pointer-events-auto"
+
                                 />
                             </Card>
 

@@ -143,8 +143,6 @@ export async function getReportByCode(
 
     const queryString = query.toString();
 
-    console.log(queryString, `/posts/${encodeURIComponent(code)}${queryString ? `?${queryString}` : ""}`)
-
     const res = await apiFetch<ReportDetailResponse>(
         `/posts/${encodeURIComponent(code)}${queryString ? `?${queryString}` : ""}`,
         {
