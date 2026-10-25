@@ -39,9 +39,9 @@ export default async function IssuePage({
             .catch(() => ({ data: null, failed: true as const })),
     ]);
 
-    let post = reportRes.data?.post;
-    let related = reportRes.data?.related ?? [];
-    let comments = commentsRes.data?.comments ?? [];
+    const post = reportRes.data?.post;
+    const related = reportRes.data?.related ?? [];
+    const comments = commentsRes.data?.comments ?? [];
 
     if (!post) {
         notFound();

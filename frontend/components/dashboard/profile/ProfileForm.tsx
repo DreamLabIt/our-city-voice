@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useActionState, useEffect, useState } from "react";
+import React, { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,15 +20,9 @@ export default function ProfileForm({ user }: ProfileFormProps) {
     );
 
     const [emailValue, setEmailValue] = useState(user?.email ?? "");
-    const [showPasswordInput, setShowPasswordInput] = useState(false);
+    const showPasswordInput = Boolean(state.fieldErrors?.currentPassword);
 
     const isEmailChanged = emailValue.trim().toLowerCase() !== (user?.email ?? "").toLowerCase();
-
-    useEffect(() => {
-        if (state.fieldErrors?.currentPassword) {
-            setShowPasswordInput(true);
-        }
-    }, [state.fieldErrors]);
 
     return (
         <Card className="rounded-2xl border-border shadow-xs">

@@ -122,18 +122,31 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
     const [lastVisiblePage, setLastVisiblePage] = useState<number>(1);
 
     const [hasMoreNext, setHasMoreNext] = useState<boolean>(true);
-    const [isLoadingNext, setIsLoadingNext] = useState<boolean>(false);
+    const [isLoadingNextState, setIsLoadingNext] = useState<boolean>(false);
     const [isLoadingPrev, setIsLoadingPrev] = useState<boolean>(false);
 
     const [visiblePosts, setVisiblePosts] = useState<Report[]>([]);
-    const [selectedPin, setSelectedPin] = useState<IssueMapPin | null>(null);
+    const [loadedQuery, setLoadedQuery] = useState<string | null>(null);
+    const [failedQuery, setFailedQuery] = useState<string | null>(null);
+    const [manualSelection, setManualSelection] = useState<{
+        query: string | null;
+        pin: IssueMapPin | null;
+    } | null>(null);
 
-    const cacheRef = useRef<Map<number, Report[]>>(new Map());
+    const cacheRef = useRef<Map<string, Report[]>>(new Map());
     const requestIdRef = useRef<number>(0);
 
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
     const topSentinelRef = useRef<HTMLDivElement | null>(null);
     const bottomSentinelRef = useRef<HTMLDivElement | null>(null);
+    const currentQuery = debouncedQuery.trim();
+    const isLoadingNext = loadedQuery !== currentQuery || isLoadingNextState;
+    const currentVisiblePosts = useMemo(
+        () => (loadedQuery === currentQuery ? visiblePosts : []),
+        [loadedQuery, currentQuery, visiblePosts],
+    );
+    const hasLoadError =
+        loadedQuery === currentQuery && failedQuery === currentQuery;
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -144,16 +157,16 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
     }, [searchQuery]);
 
     const loadPageData = useCallback(async (pageNum: number, query: string) => {
-        if (cacheRef.current.has(pageNum)) {
-            return cacheRef.current.get(pageNum) || [];
-        }
-
         const trimmedQuery = query.trim();
+        const cacheKey = JSON.stringify([trimmedQuery, pageNum]);
+        if (cacheRef.current.has(cacheKey)) {
+            return cacheRef.current.get(cacheKey) ?? [];
+        }
 
         if (trimmedQuery.length >= 2) {
             const res = await getSearchResults(trimmedQuery, pageNum, PAGE_LIMIT);
             if (res && res.posts) {
-                cacheRef.current.set(pageNum, res.posts);
+                cacheRef.current.set(cacheKey, res.posts);
                 return res.posts;
             } else {
                 return [];
@@ -162,29 +175,40 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
             const start = (pageNum - 1) * PAGE_LIMIT;
             const end = start + PAGE_LIMIT;
             const sliced = AllPosts.slice(start, end);
-            cacheRef.current.set(pageNum, sliced);
+            cacheRef.current.set(cacheKey, sliced);
             return sliced;
         }
     }, [AllPosts]);
 
     useEffect(() => {
         const currentReqId = ++requestIdRef.current;
-        const query = debouncedQuery.trim();
+        const query = currentQuery;
 
         cacheRef.current.clear();
-        setFirstVisiblePage(1);
-        setLastVisiblePage(1);
-        setHasMoreNext(true);
-        setIsLoadingNext(true);
 
         loadPageData(1, query).then((initialPosts) => {
             if (currentReqId === requestIdRef.current) {
-                setVisiblePosts(initialPosts);
+                setFirstVisiblePage(1);
+                setLastVisiblePage(1);
                 setHasMoreNext(initialPosts.length === PAGE_LIMIT);
+                setVisiblePosts(initialPosts);
+                setFailedQuery(null);
+                setLoadedQuery(query);
+                setIsLoadingNext(false);
+            }
+        }).catch((error: unknown) => {
+            if (currentReqId === requestIdRef.current) {
+                console.error("Failed to load map reports:", error);
+                setFirstVisiblePage(1);
+                setLastVisiblePage(1);
+                setHasMoreNext(false);
+                setVisiblePosts([]);
+                setFailedQuery(query);
+                setLoadedQuery(query);
                 setIsLoadingNext(false);
             }
         });
-    }, [debouncedQuery, loadPageData]);
+    }, [currentQuery, loadPageData]);
 
     const loadNextPage = useCallback(async () => {
         if (isLoadingNext || !hasMoreNext) return;
@@ -329,7 +353,7 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
     const pins = useMemo<IssueMapPin[]>(() => {
         const mapped: IssueMapPin[] = [];
 
-        for (const report of visiblePosts) {
+        for (const report of currentVisiblePosts) {
             const lat = report.latitude;
             const lng = report.longitude;
 
@@ -352,22 +376,24 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
         }
 
         return mapped;
-    }, [visiblePosts]);
+    }, [currentVisiblePosts]);
 
-    useEffect(() => {
-        const targetCode = queryTrackingCode || queryId;
-        if (targetCode && pins.length > 0) {
-            const matchedPin = pins.find(
-                (pin) =>
-                    pin.trackingCode.toLowerCase() === targetCode.toLowerCase() ||
-                    pin.id.toLowerCase() === targetCode.toLowerCase()
-            );
-
-            if (matchedPin) {
-                setSelectedPin(matchedPin);
-            }
-        }
-    }, [queryTrackingCode, queryId, pins]);
+    const targetCode = queryTrackingCode || queryId;
+    const queryMatchedPin = useMemo(() => {
+        if (!targetCode) return null;
+        return pins.find(
+            (pin) =>
+                pin.trackingCode.toLowerCase() === targetCode.toLowerCase() ||
+                pin.id.toLowerCase() === targetCode.toLowerCase(),
+        ) ?? null;
+    }, [pins, targetCode]);
+    const selectedPin =
+        manualSelection?.query === targetCode
+            ? manualSelection.pin
+            : queryMatchedPin;
+    const selectPin = useCallback((pin: IssueMapPin | null) => {
+        setManualSelection({ query: targetCode, pin });
+    }, [targetCode]);
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-180px)] min-h-150">
@@ -400,8 +426,8 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
                 <div ref={scrollContainerRef} className="flex-1 min-h-0 w-full overflow-hidden">
                     <ScrollArea className="h-full w-full">
                         <div className="p-3 sm:p-4 space-y-4">
-                            {visiblePosts.length > 0 ? (
-                                visiblePosts.map((post) => {
+                            {currentVisiblePosts.length > 0 ? (
+                                currentVisiblePosts.map((post) => {
                                     const isSelected = selectedPin?.id === post.id;
                                     const categoryName = post.category?.name || "N/A";
                                     const addressText = post.address || "Location not specified";
@@ -412,7 +438,7 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
                                             key={post.id}
                                             onClick={() => {
                                                 const matched = pins.find(p => p.id === post.id);
-                                                if (matched) setSelectedPin(matched);
+                                                if (matched) selectPin(matched);
                                             }}
                                             className={`cursor-pointer transition-all duration-200 border hover:border-primary/50 ${isSelected
                                                 ? "border-primary bg-primary/5 shadow-sm"
@@ -450,7 +476,14 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
                                 !isLoadingNext && !isLoadingPrev && (
                                     <div className="text-center py-12 px-4 space-y-3">
                                         <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto" />
-                                        <p className="text-sm text-muted-foreground">No issues found matching your criteria.</p>
+                                        <p
+                                            className="text-sm text-muted-foreground"
+                                            role={hasLoadError ? "alert" : undefined}
+                                        >
+                                            {hasLoadError
+                                                ? "Could not load issues. Please try again."
+                                                : "No issues found matching your criteria."}
+                                        </p>
                                     </div>
                                 )
                             )}
@@ -489,7 +522,7 @@ export default function IssuesMapLayout({ AllPosts = [] }: IssuesMapLayoutProps)
                     <IssueMap
                         pins={pins}
                         selectedPin={selectedPin}
-                        onSelectPin={setSelectedPin}
+                        onSelectPin={selectPin}
                     />
 
                     {selectedPin && (

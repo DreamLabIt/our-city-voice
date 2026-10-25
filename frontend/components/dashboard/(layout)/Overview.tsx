@@ -17,9 +17,8 @@ import {
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CategoryItem, CategoryItemTable, OverviewProps, WardItem } from "@/types";
+import { CategoryItemTable, OverviewProps, WardItem } from "@/types";
 
 export default function Overview({
     user,
@@ -95,7 +94,7 @@ export default function Overview({
                             <span className="text-xs text-muted-foreground">pending triage</span>
                         </div>
                         <p className="text-lg text-muted-foreground text-center">
-                            In Progress: <strong className="text-foreground">{stats.byStatus?.find((s: any) => s.status === 'in_progress')?.count || 0}</strong>
+                            In Progress: <strong className="text-foreground">{stats.byStatus?.find((s) => s.status === 'in_progress')?.count || 0}</strong>
                         </p>
                     </CardContent>
                 </Card>
@@ -194,7 +193,7 @@ export default function Overview({
                         <CardDescription className="text-xs">Distribution of issues across different workflow stages.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {stats.byStatus?.map((item: any) => {
+                        {stats.byStatus?.map((item) => {
                             const percent = stats.total > 0 ? (item.count / stats.total) * 100 : 0;
                             return (
                                 <div key={item.status} className="space-y-1">
@@ -226,7 +225,7 @@ export default function Overview({
                         <CardDescription className="text-xs">Severity levels assigned during triage.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {stats.byPriority?.map((item: any) => {
+                        {stats.byPriority?.map((item) => {
                             const percent = stats.total > 0 ? (item.count / stats.total) * 100 : 0;
                             return (
                                 <div key={item.label} className="space-y-1">

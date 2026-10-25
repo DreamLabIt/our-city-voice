@@ -1,21 +1,30 @@
 import { Film, Play, X } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import type { UploadSlot } from "@/hooks/use-uploads";
 
 function useObjectUrl(file: File | undefined) {
-    const [url, setUrl] = useState<string | null>(null);
+    const [preview, setPreview] = useState<{
+        file: File;
+        url: string;
+    } | null>(null);
 
     useEffect(() => {
         if (!file) {
-            setUrl(null);
             return;
         }
         const objectUrl = URL.createObjectURL(file);
-        setUrl(objectUrl);
-        return () => URL.revokeObjectURL(objectUrl);
+        let cancelled = false;
+        queueMicrotask(() => {
+            if (!cancelled) setPreview({ file, url: objectUrl });
+        });
+        return () => {
+            cancelled = true;
+            URL.revokeObjectURL(objectUrl);
+        };
     }, [file]);
 
-    return url;
+    return preview && preview.file === file ? preview.url : null;
 }
 
 export function MediaSlot({
@@ -23,7 +32,7 @@ export function MediaSlot({
     isBusy,
     onRemove,
 }: {
-    slot: any;
+    slot: UploadSlot;
     isBusy: boolean;
     onRemove: (id: string) => void;
 }) {

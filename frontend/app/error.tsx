@@ -31,7 +31,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps): React.React
                         Something Went Wrong!
                     </h1>
                     <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-lg mx-auto">
-                        An unexpected error occurred while loading this page on <strong>OurCityVoice</strong>. Don't worry, your data and submitted reports are safe.
+                        An unexpected error occurred while loading this page on <strong>OurCityVoice</strong>. Don&apos;t worry, your data and submitted reports are safe.
                     </p>
                 </div>
 

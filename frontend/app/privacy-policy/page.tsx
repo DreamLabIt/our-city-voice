@@ -166,7 +166,7 @@ export default function PrivacyPolicyPage(): React.ReactNode {
                             type: "multiple",
                             defaultValue: ["clause-1"],
                             className: "w-full",
-                        } as any)}>
+                        })}>
                             <AccordionItem value="clause-1">
                                 <AccordionTrigger className="text-sm font-bold text-foreground hover:no-underline">
                                     1. How Public Reporting Works vs Private Data
@@ -238,7 +238,7 @@ export default function PrivacyPolicyPage(): React.ReactNode {
 
                             <AccordionItem value="clause-5">
                                 <AccordionTrigger className="text-sm font-bold text-foreground hover:no-underline">
-                                    5. Children's Data Protection
+                                    5. Children&apos;s Data Protection
                                 </AccordionTrigger>
                                 <AccordionContent className="text-xs sm:text-sm text-muted-foreground leading-relaxed space-y-2">
                                     <p>
