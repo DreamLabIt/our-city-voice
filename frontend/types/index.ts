@@ -208,6 +208,7 @@ export type FormState = {
     error?: string;
     fieldErrors?: Record<string, string[]>;
     success?: boolean;
+    warning?: string;
 };
 
 export type RegisterFormState = FormState;

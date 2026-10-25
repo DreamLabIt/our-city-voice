@@ -40,6 +40,16 @@ export default function ProfileForm({ user }: ProfileFormProps) {
                     </div>
                 )}
 
+                {state.warning && (
+                    <div
+                        role="status"
+                        className="mb-4 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400"
+                    >
+                        <AlertCircle className="h-4 w-4 shrink-0" />
+                        <span>{state.warning}</span>
+                    </div>
+                )}
+
                 {state.success && (
                     <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-600 dark:text-emerald-400">
                         <CheckCircle2 className="h-4 w-4 shrink-0" />
