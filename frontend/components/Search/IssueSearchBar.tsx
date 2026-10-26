@@ -22,7 +22,16 @@ export default function IssueSearchBar(): React.JSX.Element {
                 className="flex items-center gap-3 relative"
             >
                 <div
-                    ref={search.containerRef}
+                    onBlur={(event) => {
+                        if (
+                            !event.relatedTarget ||
+                            !event.currentTarget.contains(
+                                event.relatedTarget as Node,
+                            )
+                        ) {
+                            search.closeDropdown();
+                        }
+                    }}
                     className="relative flex-1 flex items-center"
                 >
                     <Search className="absolute left-3.5 sm:left-4 w-5 h-5 text-muted-foreground pointer-events-none stroke-2 z-10" />

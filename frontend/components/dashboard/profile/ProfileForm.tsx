@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useActionState, useEffect, useState } from "react";
+import React, { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,15 +20,9 @@ export default function ProfileForm({ user }: ProfileFormProps) {
     );
 
     const [emailValue, setEmailValue] = useState(user?.email ?? "");
-    const [showPasswordInput, setShowPasswordInput] = useState(false);
+    const showPasswordInput = Boolean(state.fieldErrors?.currentPassword);
 
     const isEmailChanged = emailValue.trim().toLowerCase() !== (user?.email ?? "").toLowerCase();
-
-    useEffect(() => {
-        if (state.fieldErrors?.currentPassword) {
-            setShowPasswordInput(true);
-        }
-    }, [state.fieldErrors]);
 
     return (
         <Card className="rounded-2xl border-border shadow-xs">
@@ -43,6 +37,16 @@ export default function ProfileForm({ user }: ProfileFormProps) {
                     <div className="mb-4 flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
                         <AlertCircle className="h-4 w-4 shrink-0" />
                         <span>{state.error}</span>
+                    </div>
+                )}
+
+                {state.warning && (
+                    <div
+                        role="status"
+                        className="mb-4 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400"
+                    >
+                        <AlertCircle className="h-4 w-4 shrink-0" />
+                        <span>{state.warning}</span>
                     </div>
                 )}
 

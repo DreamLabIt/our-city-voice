@@ -44,13 +44,6 @@ export async function updateProfileAction(
         const currentUser = await getCurrentUser();
         const oldAvatarUrl = currentUser?.avatarUrl;
 
-        if (newAvatarUrl && oldAvatarUrl && newAvatarUrl !== oldAvatarUrl) {
-            const publicId = extractPublicIdFromUrl(oldAvatarUrl);
-            if (publicId) {
-                await deleteCloudinaryAsset(publicId);
-            }
-        }
-
         const payload: Record<string, unknown> = {
             name,
             email,
@@ -79,8 +72,28 @@ export async function updateProfileAction(
 
         revalidatePath("/dashboard/profile");
 
+        let warning: string | undefined;
+
+        if (newAvatarUrl && oldAvatarUrl && newAvatarUrl !== oldAvatarUrl) {
+            const publicId = extractPublicIdFromUrl(oldAvatarUrl);
+
+            if (publicId) {
+                try {
+                    const deleted = await deleteCloudinaryAsset(publicId);
+
+                    if (!deleted) {
+                        warning = "Your profile was updated, but the previous profile photo could not be deleted.";
+                    }
+                } catch (error) {
+                    console.error("Failed to delete previous profile photo:", error);
+                    warning = "Your profile was updated, but the previous profile photo could not be deleted.";
+                }
+            }
+        }
+
         return {
             success: true,
+            ...(warning ? { warning } : {}),
         };
     } catch (err: unknown) {
         console.error("Error in updateProfileAction:", err);

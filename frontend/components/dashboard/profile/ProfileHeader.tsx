@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useTransition, type ChangeEvent } from "react";
+import { useRef, useState, useTransition, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
     User,
@@ -27,6 +27,7 @@ export default function ProfileHeader({ user }: ProfileHeaderProps) {
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const [isPending, startTransition] = useTransition();
+    const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
 
     const isAdmin = user.role === "super_admin";
     const isEmailVerified = Boolean(user.emailVerifiedAt);
@@ -57,6 +58,7 @@ export default function ProfileHeader({ user }: ProfileHeaderProps) {
         const files = e.target.files;
         if (!files || files.length === 0) return;
 
+        setIsUpdatingAvatar(true);
         uploads.addFiles(files);
         e.target.value = "";
 
@@ -64,6 +66,7 @@ export default function ProfileHeader({ user }: ProfileHeaderProps) {
 
         if (uploaded === null || !uploaded[0]) {
             toast.error("Failed to upload avatar image. Please try again.");
+            setIsUpdatingAvatar(false);
             return;
         }
 
@@ -76,18 +79,28 @@ export default function ProfileHeader({ user }: ProfileHeaderProps) {
         formData.append("avatarUrl", newAvatarUrl);
 
         startTransition(async () => {
-            const res = await updateProfileAction({ error: "" }, formData);
+            try {
+                const res = await updateProfileAction({ error: "" }, formData);
 
-            if (res?.success) {
-                toast.success("Profile photo updated successfully!");
-                router.refresh();
-            } else {
-                toast.error(res?.error || "Failed to update profile photo.");
+                if (res?.success) {
+                    if (res.warning) {
+                        toast.warning("Profile photo updated with a cleanup warning.", {
+                            description: res.warning,
+                        });
+                    } else {
+                        toast.success("Profile photo updated successfully!");
+                    }
+                    router.refresh();
+                } else {
+                    toast.error(res?.error || "Failed to update profile photo.");
+                }
+            } finally {
+                setIsUpdatingAvatar(false);
             }
         });
     };
 
-    const isUploadingOrSaving = uploads.isUploading || isPending;
+    const isUploadingOrSaving = isUpdatingAvatar || uploads.isUploading || isPending;
 
     return (
         <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
@@ -123,16 +136,23 @@ export default function ProfileHeader({ user }: ProfileHeaderProps) {
                                 </AvatarFallback>
                             </Avatar>
 
-                            <button
-                                type="button"
-                                className="absolute bottom-[12.5%] right-[12.5%] flex items-center justify-center rounded-full bg-black/30 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 border-4 border-transparent cursor-pointer" title="Change profile photo"
-                            >
-                                {isUploadingOrSaving ? (
+                            {isUploadingOrSaving ? (
+                                <div
+                                    role="status"
+                                    aria-label="Updating profile photo"
+                                    className="absolute inset-1 z-10 flex items-center justify-center rounded-full bg-primary/85 text-primary-foreground"
+                                >
                                     <Loader2 className="h-6 w-6 animate-spin" />
-                                ) : (
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className="absolute bottom-[12.5%] right-[12.5%] flex items-center justify-center rounded-full border-4 border-transparent bg-black/30 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 cursor-pointer"
+                                    title="Change profile photo"
+                                >
                                     <Camera className="h-6 w-6" />
-                                )}
-                            </button>
+                                </button>
+                            )}
                         </div>
 
                         <div className="space-y-1 mt-2 sm:mt-18">

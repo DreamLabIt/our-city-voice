@@ -29,7 +29,7 @@ export interface ReportIssueFormData {
 
 export interface CreateIssueResult {
     success: boolean;
-    data?: any;
+    data?: { trackingCode?: string };
     error?: string;
     fieldErrors?: Record<string, string[] | string>;
     requiresAuth?: boolean

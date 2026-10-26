@@ -1,6 +1,5 @@
-import { exportTraceState } from "next/dist/trace";
 import type { Report } from "./report";
-import { ReportSearchState } from "@/hooks/use-report-search";
+import type { ReportSearchState } from "@/hooks/use-report-search";
 
 export interface ReportSuggestion {
     trackingCode: string;

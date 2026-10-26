@@ -93,41 +93,40 @@ and restarting the API does not fix the database.
 
 ## Architecture
 
-The backend is layered, and the dependency direction only goes one way:
+The backend separates HTTP wiring from application logic:
 
 ```
 routes/        HTTP wiring. Path, method, middleware chain.
 controllers/   Read the request, call a service, pick a status code.
-services/      Business rules, transactions, authorization.
-repositories/  Database access. The only layer that imports the ORM.
+services/      Business rules, authorization, transactions, and database access.
+repositories/  Reserved for a future repository layer; not used yet.
 ```
 
-Two rules keep it honest. Nothing above `repositories/` touches the ORM, and
-nothing below `controllers/` knows what HTTP is. A service never sees a `req`
-or a `res`, which is what makes it testable by calling it with plain
-arguments.
+Services currently use Prisma directly. They do not receive Express `req` or
+`res` objects, so their business logic can be called independently of HTTP.
 
-`src/modules/health/` is the worked example of the shape.
-
-Everything the app reads from the environment is declared in
-`src/config/env.ts` and parsed with Zod at boot. A missing variable kills the
-process immediately with a readable message instead of surfacing as a
-confusing failure on the third request after a deploy. No `process.env`
-access anywhere else.
+Backend environment variables are declared in `backend/src/config/env.ts` and
+validated with Zod at startup. The frontend also reads its own server-side and
+public build-time environment variables in the relevant Next.js modules.
 
 ## Database
 
-The schema lives in `backend/docs/generate-er.py`, which is both the readable
-source of truth and the generator for `backend/docs/database-er.txt`.
+The database schema lives in `backend/prisma/schema.prisma`. The ER diagram
+source and generated drawing are in `backend/docs/generate-er.py` and
+`backend/docs/database-er.txt`; they document the schema but are not its source
+of truth.
 
 To view the diagram: copy the contents of `database-er.txt` and paste into
 [excalidraw.com](https://excalidraw.com).
 
-To change the schema: edit the `SCHEMA` block in the generator, run
-`python3 backend/docs/generate-er.py`, and paste again. The diff stays
-readable because the Python is what you edit, not the 90KB of JSON.
+To change the database, edit `backend/prisma/schema.prisma`, create and apply a
+migration with the database workflow below, and update the ER diagram if the
+schema changed.
 
-Migrations do not exist yet. They are the next thing to build.
+The repository currently has one Prisma migration. Development migration
+commands are provided by `dev.sh`; production deploys do not apply migrations
+automatically. Apply pending migrations with Prisma tooling against the
+production database as a separate, controlled deployment step.
 
 ## Accounts and auth
 
@@ -161,11 +160,11 @@ credential that JavaScript can read and there are no cross-site cookie rules to
 fight. `frontend/proxy.ts` is the one place a session gets refreshed; it is the
 only part of the app that runs before a page and can still write cookies.
 
-**Nothing is behind a login yet.** proxy.ts guards no routes; it runs on every
-page purely to refresh. It has to, because the access cookie lasts fifteen
-minutes and the refresh cookie lasts a month, and without it the navbar would
-quietly revert to a Login button for somebody who was still signed in. When
-there is a page worth protecting, the guard goes back in the same file.
+Dashboard pages check the session on the server and redirect signed-out
+visitors to the login page; the users and contact-message pages also require a
+super admin. `frontend/proxy.ts` refreshes sessions and redirects signed-in
+visitors away from the login and registration pages. It is not the only access
+control: the page checks and backend authorization middleware enforce access.
 
 Signing in is visible in the navbar: the Login button is replaced by the
 account's avatar, or its initials when there is no photo, and the menu behind it
@@ -175,13 +174,12 @@ has sign out.
 signing key with a fallback ships to production as the fallback.
 
 **The API is documented in [`api-docs/`](api-docs/)**, one file per endpoint,
-with `api-docs/README.md` as the index. Six endpoints so far: your own account
-(`GET` and `PATCH /api/v1/me`), the filtered report feed (`GET /api/v1/posts`),
-the filter dropdown options (`/posts/filters`), one report with its gallery and
-status timeline (`/posts/:code`), and its comments (`/posts/:code/comments`).
-Shared rules live in `conventions.md`, response shapes in `objects.md`, failures
-in `errors.md`, and `not-implemented.md` is the honest list of what does not exist
-yet. The frontend is not wired up to any of it.
+with `api-docs/README.md` as the index. It covers account and profile
+management, report listing/search/detail and editing, comments and likes,
+contact messages, and statistics. The Next.js frontend calls the API through
+server actions and server-side helpers. Shared rules live in `conventions.md`,
+response shapes in `objects.md`, failures in `errors.md`, and
+`not-implemented.md` lists known API gaps.
 
 ## File uploads
 
@@ -194,20 +192,18 @@ None of those variables are `NEXT_PUBLIC_`, so the secret is not compiled into
 the client bundle. Until they are set, the uploader answers 503 with a readable
 message and the rest of the app works.
 
-Two pieces, both reusable:
+The reusable upload controls are:
 
 - `components/common/FileUpload.tsx` for several files with thumbnails and
-  per-file progress, which is what report media will use
+  per-file progress
 - `components/common/AvatarUpload.tsx` for one profile photo
 
-Both sit on `hooks/use-uploads.ts`, which holds the queue and the progress. The
-form owns the hook and the picker takes it as a prop, because **nothing is
-uploaded until the form is submitted**. Choosing a file only shows a local
-preview; the submit handler calls `upload()`, waits, and sends the URL it gets
-back. Uploading on selection made the submit instant but left a file in
-Cloudinary every time somebody abandoned the form, swapped their photo or
-pressed remove, and nothing in the database ever referred to those. The API
-refuses to store a URL on any host outside `ALLOWED_MEDIA_HOSTS`.
+Registration uses the avatar control. Report media uses the report form's
+`MediaSlot` component. Both share `hooks/use-uploads.ts`, which holds the
+queue and progress. **Nothing is uploaded until the form is submitted.**
+Choosing a file only shows a local preview; the submit handler calls `upload()`,
+waits, and sends the URL it gets back. The API refuses to store a URL on any
+host outside `ALLOWED_MEDIA_HOSTS`.
 
 ## Production
 

@@ -46,29 +46,40 @@ export default function ReportFilters({
     const searchParams = useSearchParams();
 
     const [isPending, startTransition] = useTransition();
-    const [searchValue, setSearchValue] = useState(searchQuery);
-
-    useEffect(() => {
-        setSearchValue(searchQuery);
-    }, [searchQuery]);
+    const [searchState, setSearchState] = useState({
+        syncedValue: searchQuery,
+        value: searchQuery,
+    });
+    const searchValue =
+        searchState.syncedValue === searchQuery
+            ? searchState.value
+            : searchQuery;
+    const setSearchValue = (value: string) => {
+        setSearchState({ syncedValue: searchQuery, value });
+    };
 
     const appliedFiltersKey = `${selectedCategory}|${selectedStatus}|${selectedWard}`;
-    const [previousFiltersKey, setPreviousFiltersKey] =
-        useState(appliedFiltersKey);
-    const [draft, setDraft] = useState<DraftFilters>({
+    const appliedDraft: DraftFilters = {
         category: selectedCategory,
         status: selectedStatus,
         ward: selectedWard,
+    };
+    const [draftState, setDraftState] = useState({
+        key: appliedFiltersKey,
+        value: appliedDraft,
     });
-
-    if (appliedFiltersKey !== previousFiltersKey) {
-        setPreviousFiltersKey(appliedFiltersKey);
-        setDraft({
-            category: selectedCategory,
-            status: selectedStatus,
-            ward: selectedWard,
-        });
-    }
+    const draft =
+        draftState.key === appliedFiltersKey ? draftState.value : appliedDraft;
+    const setDraft = (update: (previous: DraftFilters) => DraftFilters) => {
+        setDraftState((previous) => ({
+            key: appliedFiltersKey,
+            value: update(
+                previous.key === appliedFiltersKey
+                    ? previous.value
+                    : appliedDraft,
+            ),
+        }));
+    };
 
     const updateFilter = useCallback(
         (key: FilterKey, value: string | null) => {

@@ -12,7 +12,17 @@ export default function ReportSearchInput({
     const hasQuery = search.query.length > 0;
 
     return (
-        <div ref={search.containerRef} className="relative">
+        <div
+            className="relative"
+            onBlur={(event) => {
+                if (
+                    !event.relatedTarget ||
+                    !event.currentTarget.contains(event.relatedTarget as Node)
+                ) {
+                    search.closeDropdown();
+                }
+            }}
+        >
             <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 
             <Input

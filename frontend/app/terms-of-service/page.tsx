@@ -151,7 +151,7 @@ export default function TermsOfServicePage(): React.ReactNode {
                             type: "multiple",
                             defaultValue: ["clause-1"],
                             className: "w-full",
-                        } as any)}>
+                        })}>
                             <AccordionItem value="clause-1">
                                 <AccordionTrigger className="text-sm font-bold text-foreground hover:no-underline">
                                     1. User Account Registration & Security

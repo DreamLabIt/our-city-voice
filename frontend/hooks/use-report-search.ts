@@ -1,7 +1,7 @@
 "use client";
 
 import {
-    FormEvent,
+    type FormEvent,
     useEffect,
     useRef,
     useState,
@@ -32,8 +32,6 @@ export function useReportSearch({
 }: UseReportSearchOptions = {}) {
     const router = useRouter();
     const [isNavigating, startTransition] = useTransition();
-    const containerRef = useRef<HTMLDivElement | null>(null);
-
     const [query, setQuery] = useState<string>(syncedQuery ?? "");
     const [previousSyncedQuery, setPreviousSyncedQuery] = useState<
         string | undefined
@@ -86,22 +84,6 @@ export function useReportSearch({
         };
     }, [trimmed, isEnabled]);
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (
-                containerRef.current &&
-                !containerRef.current.contains(event.target as Node)
-            ) {
-                setIsOpen(false);
-            }
-        };
-
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, []);
-
     const isSettled = isEnabled && result !== null && result.term === trimmed;
 
     const status: SearchStatus = !isEnabled
@@ -138,6 +120,10 @@ export function useReportSearch({
 
     const openDropdown = (): void => {
         if (isEnabled) setIsOpen(true);
+    };
+
+    const closeDropdown = (): void => {
+        setIsOpen(false);
     };
 
     const openIssue = (trackingCode: string): void => {
@@ -204,9 +190,9 @@ export function useReportSearch({
         suggestions,
         showDropdown,
         isNavigating,
-        containerRef,
         handleInputChange,
         openDropdown,
+        closeDropdown,
         handleSubmit,
         openIssue,
         fillQuery,

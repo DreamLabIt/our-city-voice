@@ -21,7 +21,7 @@ export default function NotFound(): React.ReactNode {
                         Page Not Found
                     </h1>
                     <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-sm mx-auto">
-                        The OurCityVoice report, ward, or page you are looking for doesn't exist, has been moved, or is temporarily unavailable.
+                        The OurCityVoice report, ward, or page you are looking for doesn&apos;t exist, has been moved, or is temporarily unavailable.
                     </p>
                 </div>
 

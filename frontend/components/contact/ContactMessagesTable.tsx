@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
     Mail,
     Phone,
@@ -53,6 +53,10 @@ function formatDate(value: string): string {
     });
 }
 
+const subscribeToMount = () => () => {};
+const getMountedSnapshot = () => true;
+const getServerMountedSnapshot = () => false;
+
 export default function ContactMessagesTable({
     messages,
     total,
@@ -61,11 +65,11 @@ export default function ContactMessagesTable({
     basePath,
 }: ContactMessagesTableProps) {
     const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
-    const [isMounted, setIsMounted] = useState(false);
-
-    useEffect(() => {
-        setIsMounted(true);
-    }, []);
+    const isMounted = useSyncExternalStore(
+        subscribeToMount,
+        getMountedSnapshot,
+        getServerMountedSnapshot,
+    );
 
     const pageUrl = (page: number): string => {
         return `${basePath}?page=${page}`;
@@ -75,7 +79,7 @@ export default function ContactMessagesTable({
         const pages = [];
         const maxVisible = 5;
         let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-        let end = Math.min(totalPages, start + maxVisible - 1);
+        const end = Math.min(totalPages, start + maxVisible - 1);
 
         if (end - start + 1 < maxVisible) {
             start = Math.max(1, end - maxVisible + 1);

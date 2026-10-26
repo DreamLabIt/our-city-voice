@@ -145,7 +145,9 @@ export default function IssueComments({
     const [comments, setComments] = useState<ReportCommentThread[]>([]);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(false);
-    const [loading, setLoading] = useState(true);
+    const issueKey = JSON.stringify([issueCode, issueId]);
+    const [loadedIssueKey, setLoadedIssueKey] = useState<string | null>(null);
+    const loading = loadedIssueKey !== issueKey;
     const [loadingMore, setLoadingMore] = useState(false);
     const [usingMock, setUsingMock] = useState(false);
 
@@ -183,14 +185,32 @@ export default function IssueComments({
     useEffect(() => {
         let cancelled = false;
 
-        loadPage(1).finally(() => {
-            if (!cancelled) setLoading(false);
-        });
+        getReportComments(issueCode, { page: 1, limit: LIMIT })
+            .then((res) => {
+                if (cancelled) return;
+                const fetched = res.comments ?? [];
+                setComments(fetched);
+                setHasMore(fetched.length >= LIMIT);
+                setPage(1);
+                setUsingMock(false);
+                setLoadedIssueKey(issueKey);
+            })
+            .catch(() => {
+                if (cancelled) return;
+                setComments(
+                    mockComments.filter(
+                        (comment) => comment.postId === issueId,
+                    ),
+                );
+                setHasMore(false);
+                setUsingMock(true);
+                setLoadedIssueKey(issueKey);
+            });
 
         return () => {
             cancelled = true;
         };
-    }, [loadPage]);
+    }, [issueCode, issueId, issueKey]);
 
     const handleLoadMore = async (): Promise<void> => {
         setLoadingMore(true);
