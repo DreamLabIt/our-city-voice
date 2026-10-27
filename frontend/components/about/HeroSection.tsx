@@ -2,8 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, FileText, HeartHandshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { HeroSectionProps } from "@/types";
 
-export default function HeroSection() {
+export default function HeroSection({ stats }: HeroSectionProps) {
+    const resolvedCount =
+        stats?.resolved ??
+        stats?.byStatus?.find((status) => status.status === "resolved")?.count ?? 0;
+
     return (
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
             <div className="lg:col-span-6 space-y-6">
@@ -19,14 +24,14 @@ export default function HeroSection() {
 
                 <div className="pt-2 flex flex-wrap items-center gap-4">
                     <Button className="px-6 py-6 bg-primary hover:bg-primary-hover text-white font-semibold text-sm rounded-lg transition-colors inline-flex items-center gap-2 shadow-sm">
-                        <Link href="/reports" className="inline-flex items-center gap-2 justify-between ">
+                        <Link href="/reports" className="flex gap-3 justify-center items-center">
                             <FileText className="w-4 h-4" />
                             <span>Explore Recent Reports</span>
                             <ArrowRight className="w-4 h-4" />
                         </Link>
                     </Button>
                     <Button variant="outline" className="px-6 py-6 bg-section hover:bg-card border border-border-custom text-foreground font-semibold text-sm rounded-lg transition-colors inline-flex items-center gap-2 justify-between">
-                        <Link href="/contact" className="inline-flex items-center gap-2 justify-between ">
+                        <Link href="/contact" className="flex gap-3 justify-center items-center">
                             <HeartHandshake className="w-4 h-4 text-primary" />
                             <span>Contact Our Team</span>
                         </Link>
@@ -44,10 +49,12 @@ export default function HeroSection() {
                     />
                     <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-transparent" />
 
-                    <div className="absolute bottom-4 left-6 right-6 bg-card/60 p-5 rounded-xl shadow-lg flex items-center justify-between">
+                    <div className="absolute bottom-4 left-6 right-6 bg-card/60 backdrop-blur-md p-5 rounded-xl shadow-lg flex items-center justify-between">
                         <div className="space-y-1">
                             <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Impact Created</p>
-                            <p className="text-xl sm:text-2xl font-extrabold text-foreground">12,500+ Issues Resolved</p>
+                            <p className="text-xl sm:text-2xl font-extrabold text-foreground">
+                                {resolvedCount > 0 ? `${resolvedCount.toLocaleString()}+` : "0+"} Issues Resolved
+                            </p>
                         </div>
                         <div className="p-3 bg-primary/10 text-primary rounded-lg shrink-0">
                             <CheckCircle2 className="w-7 h-7" />

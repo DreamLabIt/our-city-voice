@@ -344,3 +344,10 @@ export interface CloudinaryConfig {
     apiSecret: string;
     rootFolder: string;
 }
+
+export interface HeroSectionProps {
+    stats: ReportStatistics | null | undefined;
+}
+export interface ImpactStatsSectionProps {
+    stats: ReportStatistics | null | undefined;
+}
