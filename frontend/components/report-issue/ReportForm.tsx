@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -110,7 +110,7 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const isVideoMode = searchParams.get("type") === "video";
-    const [showLocationModal, setShowLocationModal] = useState(false);
+
     const [uploadingMedia, setUploadingMedia] = useState(false);
     const [isGeocoding, setIsGeocoding] = useState(false);
     const [isLocating, setIsLocating] = useState(false);
@@ -199,7 +199,6 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
             return true;
         } catch (err) {
             console.error("Device location error:", err);
-            setShowLocationModal(true);
 
             if (err instanceof GpsError) {
                 setLocationErrorMsg("Location is turned off or permission denied. Please turn on GPS/Location and try again.");
@@ -213,23 +212,20 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
         }
     };
 
-    const handleUploadBoxClick = async (e: MouseEvent<HTMLDivElement>) => {
-        const phoneCheck = isPhoneDevice();
-        if (phoneCheck) {
-            const typedLocation = getValues("location");
-            const hasCity = Boolean(typedLocation.city?.trim());
-            const hasAddress = Boolean(typedLocation.address?.trim());
-
-            if (!hasCity && !hasAddress) {
-                await fillLocationFromDevice();
-            }
-        }
-    };
-
     const handleFileChange = async (
         event: ChangeEvent<HTMLInputElement>,
     ): Promise<void> => {
         if (event.target.files && event.target.files.length > 0) {
+            if (isPhone) {
+                const typedLocation = getValues("location");
+                const hasCity = Boolean(typedLocation.city?.trim());
+                const hasAddress = Boolean(typedLocation.address?.trim());
+
+                if (!hasCity && !hasAddress) {
+                    await fillLocationFromDevice();
+                }
+            }
+
             uploads.addFiles(event.target.files);
             event.target.value = "";
         }
@@ -528,6 +524,8 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                     </p>
                 </div>
 
+                <p> {isPhone ? "Phone": "web"}</p> 
+
                 <form
                     onSubmit={handleSubmit(onSubmit)}
                     className="space-y-7"
@@ -596,11 +594,7 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                             </span>
                         </label>
 
-                        {/* Added onClick wrapper handler to trigger location request on mobile user touch gesture */}
-                        <div 
-                            onClick={handleUploadBoxClick}
-                            className="border-2 border-dashed border-border-custom rounded-xl p-6 text-center bg-section/50 mt-2 cursor-pointer"
-                        >
+                        <div className="border-2 border-dashed border-border-custom rounded-xl p-6 text-center bg-section/50 mt-2">
                             <input
                                 type="file"
                                 id="media-upload"
@@ -701,36 +695,6 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                         )}
                     </Button>
                 </form>
-
-                {showLocationModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                        <div className="bg-card border border-border-custom rounded-xl p-6 max-w-sm w-full space-y-4 shadow-xl">
-                            <h3 className="text-lg font-bold text-foreground">
-                                Location Access Required
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                                Your device location is turned off or blocked. Please turn on GPS / Location services in your phone settings and allow permission to continue.
-                            </p>
-                            <div className="flex justify-end gap-3 pt-2">
-                                <Button
-                                    variant="outline"
-                                    onClick={() => setShowLocationModal(false)}
-                                >
-                                    Close
-                                </Button>
-                                <Button
-                                    onClick={() => {
-                                        setShowLocationModal(false);
-                                        void fillLocationFromDevice();
-                                    }}
-                                    className="bg-primary text-white"
-                                >
-                                    Turned
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </CardContent>
         </Card>
     );
