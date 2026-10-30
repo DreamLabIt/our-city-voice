@@ -8,6 +8,7 @@ import CallToActionSection from "@/components/about/CallToActionSection";
 import SectionContainer from "@/components/common/SectionContainer";
 import { getPublicStats } from "@/app/actions/statistics";
 
+export const dynamic = "force-dynamic";
 export const revalidate = 60;
 
 export default async function AboutPage(): Promise<React.ReactNode> {
