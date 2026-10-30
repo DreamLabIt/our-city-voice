@@ -21,7 +21,6 @@ import { useUploads } from "@/hooks/use-uploads";
 import {
     GpsError,
     getCurrentCoordinates,
-    getGpsErrorMessage,
     isPhoneDevice,
     reverseGeocode,
 } from "@/lib/device-location";
@@ -111,11 +110,12 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const isVideoMode = searchParams.get("type") === "video";
-
+    const [showLocationModal, setShowLocationModal] = useState(false);
     const [uploadingMedia, setUploadingMedia] = useState(false);
     const [isGeocoding, setIsGeocoding] = useState(false);
     const [isLocating, setIsLocating] = useState(false);
     const [isPhone, setIsPhone] = useState(false);
+    const [locationErrorMsg, setLocationErrorMsg] = useState<string | null>(null);
     const geocodeRequestRef = useRef(0);
     const pendingGeocodeRef = useRef<Promise<boolean> | null>(null);
 
@@ -175,15 +175,14 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
 
     const fillLocationFromDevice = async (): Promise<boolean> => {
         setIsLocating(true);
+        setLocationErrorMsg(null);
 
         try {
             const { latitude, longitude } = await getCurrentCoordinates();
             const place = await reverseGeocode(latitude, longitude);
 
             if (!place) {
-                toast.error("We found your location but not its address", {
-                    description: "Please enter the City and Address yourself.",
-                });
+                setLocationErrorMsg("Could not find the address for your current location. Please turn on GPS or enter manually.");
                 setFocus("location.city");
                 return false;
             }
@@ -195,19 +194,17 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
             setValue("location.latitude", latitude);
             setValue("location.longitude", longitude);
             clearErrors(["location.city", "location.address"]);
+            setLocationErrorMsg(null);
 
             return true;
         } catch (err) {
             console.error("Device location error:", err);
+            setShowLocationModal(true);
 
             if (err instanceof GpsError) {
-                toast.error("Could not get your location", {
-                    description: getGpsErrorMessage(err),
-                });
+                setLocationErrorMsg("Location is turned off or permission denied. Please turn on GPS/Location and try again.");
             } else {
-                toast.error("Could not find the address of your location", {
-                    description: GEOCODER_UNREACHABLE_MESSAGE,
-                });
+                setLocationErrorMsg("Could not find the address of your location. Please check your connection.");
             }
 
             return false;
@@ -226,9 +223,6 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                 const hasAddress = Boolean(typedLocation.address?.trim());
 
                 if (!hasCity && !hasAddress) {
-                    toast.info("Fetching your current location...", {
-                        description: "Please allow location access if prompted.",
-                    });
                     await fillLocationFromDevice();
                 }
             }
@@ -601,7 +595,7 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                             </span>
                         </label>
 
-                        <div className="border-2 border-dashed border-border-custom rounded-xl p-6 text-center bg-section/50/50 mt-2">
+                        <div className="border-2 border-dashed border-border-custom rounded-xl p-6 text-center bg-section/50 mt-2">
                             <input
                                 type="file"
                                 id="media-upload"
@@ -629,6 +623,14 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                                 </p>
                             </label>
                         </div>
+
+                        {locationErrorMsg && (
+                            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg mt-2">
+                                <p className="text-xs text-destructive font-medium flex items-center gap-1.5">
+                                    <span>⚠️</span> {locationErrorMsg}
+                                </p>
+                            </div>
+                        )}
 
                         {uploads.batchError && (
                             <p className="text-xs text-destructive">
@@ -694,6 +696,36 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                         )}
                     </Button>
                 </form>
+
+                {showLocationModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                        <div className="bg-card border border-border-custom rounded-xl p-6 max-w-sm w-full space-y-4 shadow-xl">
+                            <h3 className="text-lg font-bold text-foreground">
+                                Location Access Required
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                                Your device location is turned off or blocked. Please turn on GPS / Location services in your phone settings and allow permission to continue.
+                            </p>
+                            <div className="flex justify-end gap-3 pt-2">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setShowLocationModal(false)}
+                                >
+                                    Close
+                                </Button>
+                                <Button
+                                    onClick={() => {
+                                        setShowLocationModal(false);
+                                        void fillLocationFromDevice();
+                                    }}
+                                    className="bg-primary text-white"
+                                >
+                                    Try Again
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );
