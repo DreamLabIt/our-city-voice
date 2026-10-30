@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type MouseEvent } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -213,20 +213,23 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
         }
     };
 
+    const handleUploadBoxClick = async (e: MouseEvent<HTMLDivElement>) => {
+        const phoneCheck = isPhoneDevice();
+        if (phoneCheck) {
+            const typedLocation = getValues("location");
+            const hasCity = Boolean(typedLocation.city?.trim());
+            const hasAddress = Boolean(typedLocation.address?.trim());
+
+            if (!hasCity && !hasAddress) {
+                await fillLocationFromDevice();
+            }
+        }
+    };
+
     const handleFileChange = async (
         event: ChangeEvent<HTMLInputElement>,
     ): Promise<void> => {
         if (event.target.files && event.target.files.length > 0) {
-            if (isPhone) {
-                const typedLocation = getValues("location");
-                const hasCity = Boolean(typedLocation.city?.trim());
-                const hasAddress = Boolean(typedLocation.address?.trim());
-
-                if (!hasCity && !hasAddress) {
-                    await fillLocationFromDevice();
-                }
-            }
-
             uploads.addFiles(event.target.files);
             event.target.value = "";
         }
@@ -525,8 +528,6 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                     </p>
                 </div>
 
-                <p> {isPhone ? "Phone": "web"}</p> 
-
                 <form
                     onSubmit={handleSubmit(onSubmit)}
                     className="space-y-7"
@@ -595,7 +596,11 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                             </span>
                         </label>
 
-                        <div className="border-2 border-dashed border-border-custom rounded-xl p-6 text-center bg-section/50 mt-2">
+                        {/* Added onClick wrapper handler to trigger location request on mobile user touch gesture */}
+                        <div 
+                            onClick={handleUploadBoxClick}
+                            className="border-2 border-dashed border-border-custom rounded-xl p-6 text-center bg-section/50 mt-2 cursor-pointer"
+                        >
                             <input
                                 type="file"
                                 id="media-upload"
@@ -720,7 +725,7 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                                     }}
                                     className="bg-primary text-white"
                                 >
-                                    Try Again
+                                    Turned
                                 </Button>
                             </div>
                         </div>
