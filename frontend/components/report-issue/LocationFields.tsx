@@ -13,6 +13,7 @@ type LocationFieldsProps = {
     invalidateAddressCoordinates: () => void;
     handleAddressChange: () => void;
     handleLocationBlur: () => void;
+    locationOptional?: boolean;
 };
 
 export function LocationFields({
@@ -23,12 +24,22 @@ export function LocationFields({
     invalidateAddressCoordinates,
     handleAddressChange,
     handleLocationBlur,
+    locationOptional = false,
 }: LocationFieldsProps) {
     return (
         <div className="space-y-4 pt-2">
-            <span className="text-xs font-bold text-foreground uppercase tracking-wide block">
-                Location Information
-            </span>
+            <div className="space-y-1">
+                <span className="text-xs font-bold text-foreground uppercase tracking-wide block">
+                    Location Information
+                </span>
+
+                {locationOptional && (
+                    <p className="text-xs text-muted-foreground">
+                        Leave City and Address empty to use your phone&apos;s
+                        current location.
+                    </p>
+                )}
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-1.5">
@@ -37,14 +48,18 @@ export function LocationFields({
                         className="text-xs font-bold text-foreground uppercase tracking-wide"
                     >
                         City{" "}
-                        <span className="text-primary">*</span>
+                        {!locationOptional && (
+                            <span className="text-primary">*</span>
+                        )}
                     </label>
 
                     <Input
                         id="city"
                         placeholder="Enter city"
                         {...register("location.city", {
-                            required: "City is required.",
+                            required: locationOptional
+                                ? false
+                                : "City is required.",
                             maxLength: {
                                 value: 80,
                                 message:
@@ -69,7 +84,9 @@ export function LocationFields({
                         className="text-xs font-bold text-foreground uppercase tracking-wide"
                     >
                         Location Address{" "}
-                        <span className="text-primary">*</span>
+                        {!locationOptional && (
+                            <span className="text-primary">*</span>
+                        )}
                     </label>
 
                     <div className="relative mt-2">
@@ -77,8 +94,9 @@ export function LocationFields({
                             id="location"
                             placeholder="Street address or nearby landmark"
                             {...register("location.address", {
-                                required:
-                                    "Location address is required.",
+                                required: locationOptional
+                                    ? false
+                                    : "Location address is required.",
                                 maxLength: {
                                     value: 240,
                                     message:

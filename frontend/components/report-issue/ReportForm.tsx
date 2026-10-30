@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -18,6 +18,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useUploads } from "@/hooks/use-uploads";
+import {
+    GpsError,
+    getCurrentCoordinates,
+    getGpsErrorMessage,
+    isPhoneDevice,
+    reverseGeocode,
+} from "@/lib/device-location";
 import { MediaSlot } from "./MediaSlot";
 import IssueDetailsFields from "./IssueDetailsFields";
 import LocationFields from "./LocationFields";
@@ -107,8 +114,14 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
 
     const [uploadingMedia, setUploadingMedia] = useState(false);
     const [isGeocoding, setIsGeocoding] = useState(false);
+    const [isLocating, setIsLocating] = useState(false);
+    const [isPhone, setIsPhone] = useState(false);
     const geocodeRequestRef = useRef(0);
     const pendingGeocodeRef = useRef<Promise<boolean> | null>(null);
+
+    useEffect(() => {
+        setIsPhone(isPhoneDevice());
+    }, []);
 
     const maxMediaFiles = isVideoMode
         ? MAX_VIDEO_FILES
@@ -273,6 +286,49 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
         void runAddressLookup();
     };
 
+    const fillLocationFromDevice = async (): Promise<boolean> => {
+        setIsLocating(true);
+
+        try {
+            const { latitude, longitude } = await getCurrentCoordinates();
+            const place = await reverseGeocode(latitude, longitude);
+
+            if (!place) {
+                toast.error("We found your location but not its address", {
+                    description: "Please enter the City and Address yourself.",
+                });
+                setFocus("location.city");
+                return false;
+            }
+
+            setValue("location.city", place.city);
+            setValue("location.address", place.address);
+            setValue("location.street", place.street);
+            setValue("location.postalCode", place.postalCode);
+            setValue("location.latitude", latitude);
+            setValue("location.longitude", longitude);
+            clearErrors(["location.city", "location.address"]);
+
+            return true;
+        } catch (err) {
+            console.error("Device location error:", err);
+
+            if (err instanceof GpsError) {
+                toast.error("Could not get your location", {
+                    description: getGpsErrorMessage(err),
+                });
+            } else {
+                toast.error("Could not find the address of your location", {
+                    description: GEOCODER_UNREACHABLE_MESSAGE,
+                });
+            }
+
+            return false;
+        } finally {
+            setIsLocating(false);
+        }
+    };
+
     const onSubmit: SubmitHandler<FormValues> = async (data) => {
         if (!user) {
             toast.error("Please log in to submit a report.");
@@ -282,6 +338,27 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
         }
         if (pendingGeocodeRef.current) {
             await pendingGeocodeRef.current;
+        }
+
+        if (isPhone) {
+            const typedLocation = getValues("location");
+            const hasCity = Boolean(typedLocation.city?.trim());
+            const hasAddress = Boolean(typedLocation.address?.trim());
+
+            if (hasCity !== hasAddress) {
+                setFocus(hasCity ? "location.address" : "location.city");
+                toast.error("Fill in both City and Address", {
+                    description:
+                        "Or leave both empty to use your current location.",
+                });
+                return;
+            }
+
+            if (!hasCity && !hasAddress) {
+                const filled = await fillLocationFromDevice();
+
+                if (!filled) return;
+            }
         }
 
         let finalLat = getValues("location.latitude");
@@ -345,6 +422,8 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                     thumbnailUrl: null,
                 }));
 
+            const submittedLocation = getValues("location");
+
             const payload: ReportIssueFormData = {
                 title: data.title.trim(),
                 description: data.description.trim(),
@@ -353,10 +432,10 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                 priority: data.priority,
                 isAnonymous: data.isAnonymous,
                 location: {
-                    address: data.location.address.trim(),
-                    city: data.location.city.trim(),
-                    street: data.location.street?.trim() || null,
-                    postalCode: data.location.postalCode?.trim() || null,
+                    address: submittedLocation.address.trim(),
+                    city: submittedLocation.city.trim(),
+                    street: submittedLocation.street?.trim() || null,
+                    postalCode: submittedLocation.postalCode?.trim() || null,
                     latitude: finalLat,
                     longitude: finalLng,
                 },
@@ -422,7 +501,8 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
         isSubmitting ||
         uploadingMedia ||
         uploads.isUploading ||
-        isGeocoding;
+        isGeocoding ||
+        isLocating;
 
     return (
         <Card className="bg-card border border-border-custom rounded-2xl p-6 sm:p-8 md:p-10 shadow space-y-4">
@@ -437,6 +517,8 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                         quickly.
                     </p>
                 </div>
+
+                <p> {isPhone ? "Phone": "web"}</p> 
 
                 <form
                     onSubmit={handleSubmit(onSubmit)}
@@ -458,6 +540,7 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                         invalidateAddressCoordinates={invalidateAddressCoordinates}
                         handleAddressChange={handleAddressChange}
                         handleLocationBlur={handleLocationBlur}
+                        locationOptional={isPhone}
                     />
 
                     <div className="space-y-1.5">
@@ -583,9 +666,11 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                                 <span>
                                     {uploads.isUploading
                                         ? `Uploading (${uploads.progress}%)...`
-                                        : isGeocoding
-                                            ? "Checking address..."
-                                            : "Submitting Report..."}
+                                        : isLocating
+                                            ? "Detecting location..."
+                                            : isGeocoding
+                                                ? "Checking address..."
+                                                : "Submitting Report..."}
                                 </span>
                             </>
                         ) : (

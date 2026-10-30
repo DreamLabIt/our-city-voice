@@ -25,7 +25,7 @@ export default function Navbar({ user }: NavbarProps): React.ReactNode {
                         className="flex items-center gap-3 group shrink-0"
                         onClick={() => setIsMobileMenuOpen(false)}
                     >
-                        <div className="relative flex items-center justify-center -ml-3">
+                        <div className="relative hidden md:flex items-center justify-center -ml-3">
                             <Image
                                 src="/logo.png"
                                 alt="OurCityVoice Logo"
@@ -41,7 +41,7 @@ export default function Navbar({ user }: NavbarProps): React.ReactNode {
                                 <span className="text-foreground">OurCity</span>
                                 <span className="text-primary">Voice</span>
                             </div>
-                            <p className="text-[11px] sm:text-[14px] font-semibold text-muted-foreground tracking-wide mt-1">
+                            <p className="text-[7.5px] sm:text-[12px] font-semibold text-muted-foreground tracking-wide mt-1">
                                 Report &nbsp;&nbsp;·&nbsp;&nbsp;Share&nbsp;&nbsp;·&nbsp;&nbsp;Improve&nbsp;&nbsp;·&nbsp;&nbsp;Together
                             </p>
                         </div>
