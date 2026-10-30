@@ -173,10 +173,66 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
         Number.isFinite(watchedLatitude) &&
         Number.isFinite(watchedLongitude);
 
-    const handleFileChange = (
+    const fillLocationFromDevice = async (): Promise<boolean> => {
+        setIsLocating(true);
+
+        try {
+            const { latitude, longitude } = await getCurrentCoordinates();
+            const place = await reverseGeocode(latitude, longitude);
+
+            if (!place) {
+                toast.error("We found your location but not its address", {
+                    description: "Please enter the City and Address yourself.",
+                });
+                setFocus("location.city");
+                return false;
+            }
+
+            setValue("location.city", place.city);
+            setValue("location.address", place.address);
+            setValue("location.street", place.street);
+            setValue("location.postalCode", place.postalCode);
+            setValue("location.latitude", latitude);
+            setValue("location.longitude", longitude);
+            clearErrors(["location.city", "location.address"]);
+
+            return true;
+        } catch (err) {
+            console.error("Device location error:", err);
+
+            if (err instanceof GpsError) {
+                toast.error("Could not get your location", {
+                    description: getGpsErrorMessage(err),
+                });
+            } else {
+                toast.error("Could not find the address of your location", {
+                    description: GEOCODER_UNREACHABLE_MESSAGE,
+                });
+            }
+
+            return false;
+        } finally {
+            setIsLocating(false);
+        }
+    };
+
+    const handleFileChange = async (
         event: ChangeEvent<HTMLInputElement>,
-    ): void => {
-        if (event.target.files) {
+    ): Promise<void> => {
+        if (event.target.files && event.target.files.length > 0) {
+            if (isPhone) {
+                const typedLocation = getValues("location");
+                const hasCity = Boolean(typedLocation.city?.trim());
+                const hasAddress = Boolean(typedLocation.address?.trim());
+
+                if (!hasCity && !hasAddress) {
+                    toast.info("Fetching your current location...", {
+                        description: "Please allow location access if prompted.",
+                    });
+                    await fillLocationFromDevice();
+                }
+            }
+
             uploads.addFiles(event.target.files);
             event.target.value = "";
         }
@@ -286,49 +342,6 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
         void runAddressLookup();
     };
 
-    const fillLocationFromDevice = async (): Promise<boolean> => {
-        setIsLocating(true);
-
-        try {
-            const { latitude, longitude } = await getCurrentCoordinates();
-            const place = await reverseGeocode(latitude, longitude);
-
-            if (!place) {
-                toast.error("We found your location but not its address", {
-                    description: "Please enter the City and Address yourself.",
-                });
-                setFocus("location.city");
-                return false;
-            }
-
-            setValue("location.city", place.city);
-            setValue("location.address", place.address);
-            setValue("location.street", place.street);
-            setValue("location.postalCode", place.postalCode);
-            setValue("location.latitude", latitude);
-            setValue("location.longitude", longitude);
-            clearErrors(["location.city", "location.address"]);
-
-            return true;
-        } catch (err) {
-            console.error("Device location error:", err);
-
-            if (err instanceof GpsError) {
-                toast.error("Could not get your location", {
-                    description: getGpsErrorMessage(err),
-                });
-            } else {
-                toast.error("Could not find the address of your location", {
-                    description: GEOCODER_UNREACHABLE_MESSAGE,
-                });
-            }
-
-            return false;
-        } finally {
-            setIsLocating(false);
-        }
-    };
-
     const onSubmit: SubmitHandler<FormValues> = async (data) => {
         if (!user) {
             toast.error("Please log in to submit a report.");
@@ -433,7 +446,7 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                 isAnonymous: data.isAnonymous,
                 location: {
                     address: submittedLocation.address.trim(),
-                    city: submittedLocation.city.trim(),
+                    city: data.location?.city || submittedLocation.city.trim(),
                     street: submittedLocation.street?.trim() || null,
                     postalCode: submittedLocation.postalCode?.trim() || null,
                     latitude: finalLat,
@@ -588,7 +601,7 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                             </span>
                         </label>
 
-                        <div className="border-2 border-dashed border-border-custom rounded-xl p-6 text-center bg-section/50 mt-2">
+                        <div className="border-2 border-dashed border-border-custom rounded-xl p-6 text-center bg-section/50/50 mt-2">
                             <input
                                 type="file"
                                 id="media-upload"
