@@ -178,6 +178,23 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
         setIsLocating(true);
         setLocationErrorMsg(null);
 
+        if (navigator.permissions && navigator.permissions.query) {
+            try {
+                const permissionStatus = await navigator.permissions.query({ name: "geolocation" as PermissionName });
+                if (permissionStatus.state === "denied") {
+                    const deniedMsg = "Location permission is blocked. Please allow location access from your browser's site settings, then try again.";
+                    setLocationErrorMsg(deniedMsg);
+                    toast.error("Location Permission Blocked", {
+                        description: "Please enable location access in your browser settings.",
+                    });
+                    setIsLocating(false);
+                    return false;
+                }
+            } catch {
+                // Ignore if permissions.query fails or is unsupported
+            }
+        }
+
         try {
             const { latitude, longitude } = await getCurrentCoordinates();
             const place = await reverseGeocode(latitude, longitude);
@@ -204,10 +221,13 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
             console.error("Device location error:", err);
 
             if (err instanceof GpsError) {
-                setLocationErrorMsg(getGpsErrorMessage(err));
+                const errorMsg = getGpsErrorMessage(err);
+                setLocationErrorMsg(errorMsg);
 
+                toast.error("Could not detect location", { description: errorMsg });
             } else {
                 setLocationErrorMsg(GEOCODER_UNREACHABLE_MESSAGE);
+                toast.error("Location Error", { description: GEOCODER_UNREACHABLE_MESSAGE });
             }
 
             return false;
