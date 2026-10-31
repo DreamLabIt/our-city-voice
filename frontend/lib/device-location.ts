@@ -50,7 +50,6 @@ export function isPhoneDevice(): boolean {
     );
 }
 
-
 export function getCurrentCoordinates(): Promise<DeviceCoordinates> {
     return new Promise((resolve, reject) => {
         if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
@@ -66,9 +65,9 @@ export function getCurrentCoordinates(): Promise<DeviceCoordinates> {
                 });
             },
             (error) => {
-                if (error.code === error.PERMISSION_DENIED) {
+                if (error.code === 1) {
                     reject(new GpsError("denied"));
-                } else if (error.code === error.TIMEOUT) {
+                } else if (error.code === 3) {
                     reject(new GpsError("timeout"));
                 } else {
                     reject(new GpsError("unavailable"));
@@ -84,11 +83,11 @@ export function getGpsErrorMessage(error: GpsError): string {
         case "denied":
             return "Location permission was denied. Allow location access for this site in your browser settings, or fill in the City and Address.";
         case "timeout":
-            return "Getting your location took too long. Please try again, or fill in the City and Address.";
+            return "Getting your location took too long. Please turn on GPS and try again, or fill in the City and Address.";
         case "unsupported":
             return "Your browser does not support location. Please fill in the City and Address.";
         default:
-            return "Your location is not available. Turn on GPS and try again, or fill in the City and Address.";
+            return "Your location is not available. Please ensure your device GPS is turned on and try again, or fill in the City and Address.";
     }
 }
 
@@ -174,22 +173,4 @@ export async function reverseGeocode(
         street: street.slice(0, STREET_MAX_LENGTH),
         postalCode: pick("postcode").slice(0, POSTAL_CODE_MAX_LENGTH),
     };
-}
-
-export type LocationPermissionState = "granted" | "prompt" | "denied" | "unknown";
-
-export async function getLocationPermissionState(): Promise<LocationPermissionState> {
-    try {
-        if (typeof navigator === "undefined" || !navigator.permissions) {
-            return "unknown";
-        }
-
-        const status = await navigator.permissions.query({
-            name: "geolocation",
-        });
-
-        return status.state;
-    } catch {
-        return "unknown";
-    }
 }
