@@ -208,7 +208,7 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                 setLocationErrorMsg(errorMsg);
 
                 if (err.reason === "denied") {
-                    toast.error("Location Permission Blocked", {
+                    toast.error("Location Permission Not Allow", {
                         description: "Please allow location access from your browser's site settings and try again.",
                     });
                 } else if (err.reason === "unavailable" || err.reason === "timeout") {
