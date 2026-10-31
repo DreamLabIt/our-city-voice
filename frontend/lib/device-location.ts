@@ -50,6 +50,7 @@ export function isPhoneDevice(): boolean {
     );
 }
 
+
 export function getCurrentCoordinates(): Promise<DeviceCoordinates> {
     return new Promise((resolve, reject) => {
         if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
@@ -173,4 +174,22 @@ export async function reverseGeocode(
         street: street.slice(0, STREET_MAX_LENGTH),
         postalCode: pick("postcode").slice(0, POSTAL_CODE_MAX_LENGTH),
     };
+}
+
+export type LocationPermissionState = "granted" | "prompt" | "denied" | "unknown";
+
+export async function getLocationPermissionState(): Promise<LocationPermissionState> {
+    try {
+        if (typeof navigator === "undefined" || !navigator.permissions) {
+            return "unknown";
+        }
+
+        const status = await navigator.permissions.query({
+            name: "geolocation",
+        });
+
+        return status.state;
+    } catch {
+        return "unknown";
+    }
 }

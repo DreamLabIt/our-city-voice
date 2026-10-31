@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -17,12 +17,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { useUploads } from "@/hooks/use-uploads";
 import {
     GpsError,
     getCurrentCoordinates,
+    getGpsErrorMessage,
+    getLocationPermissionState,
     isPhoneDevice,
     reverseGeocode,
+    type LocationPermissionState,
 } from "@/lib/device-location";
 import { MediaSlot } from "./MediaSlot";
 import IssueDetailsFields from "./IssueDetailsFields";
@@ -111,6 +122,8 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
     const searchParams = useSearchParams();
     const isVideoMode = searchParams.get("type") === "video";
     const [showLocationModal, setShowLocationModal] = useState(false);
+    const [locationPermission, setLocationPermission] =
+        useState<LocationPermissionState>("unknown");
     const [uploadingMedia, setUploadingMedia] = useState(false);
     const [isGeocoding, setIsGeocoding] = useState(false);
     const [isLocating, setIsLocating] = useState(false);
@@ -118,6 +131,7 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
     const [locationErrorMsg, setLocationErrorMsg] = useState<string | null>(null);
     const geocodeRequestRef = useRef(0);
     const pendingGeocodeRef = useRef<Promise<boolean> | null>(null);
+    const deviceLocationRef = useRef<Promise<boolean> | null>(null);
 
     useEffect(() => {
         setIsPhone(isPhoneDevice());
@@ -173,7 +187,7 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
         Number.isFinite(watchedLatitude) &&
         Number.isFinite(watchedLongitude);
 
-    const fillLocationFromDevice = async (): Promise<boolean> => {
+    const detectDeviceLocation = async (): Promise<boolean> => {
         setIsLocating(true);
         setLocationErrorMsg(null);
 
@@ -182,7 +196,9 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
             const place = await reverseGeocode(latitude, longitude);
 
             if (!place) {
-                setLocationErrorMsg("Could not find the address for your current location. Please turn on GPS or enter manually.");
+                setLocationErrorMsg(
+                    "We found your location but could not find its address. Please enter the City and Address yourself.",
+                );
                 setFocus("location.city");
                 return false;
             }
@@ -199,12 +215,16 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
             return true;
         } catch (err) {
             console.error("Device location error:", err);
-            setShowLocationModal(true);
 
             if (err instanceof GpsError) {
-                setLocationErrorMsg("Location is turned off or permission denied. Please turn on GPS/Location and try again.");
+                setLocationErrorMsg(getGpsErrorMessage(err));
+
+                if (err.reason !== "unsupported") {
+                    setLocationPermission(await getLocationPermissionState());
+                    setShowLocationModal(true);
+                }
             } else {
-                setLocationErrorMsg("Could not find the address of your location. Please check your connection.");
+                setLocationErrorMsg(GEOCODER_UNREACHABLE_MESSAGE);
             }
 
             return false;
@@ -213,17 +233,18 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
         }
     };
 
-    const handleUploadBoxClick = async (e: MouseEvent<HTMLDivElement>) => {
-        const phoneCheck = isPhoneDevice();
-        if (phoneCheck) {
-            const typedLocation = getValues("location");
-            const hasCity = Boolean(typedLocation.city?.trim());
-            const hasAddress = Boolean(typedLocation.address?.trim());
-
-            if (!hasCity && !hasAddress) {
-                await fillLocationFromDevice();
-            }
+    const fillLocationFromDevice = (): Promise<boolean> => {
+        if (deviceLocationRef.current) {
+            return deviceLocationRef.current;
         }
+
+        const promise = detectDeviceLocation().finally(() => {
+            deviceLocationRef.current = null;
+        });
+
+        deviceLocationRef.current = promise;
+
+        return promise;
     };
 
     const handleFileChange = async (
@@ -232,6 +253,17 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
         if (event.target.files && event.target.files.length > 0) {
             uploads.addFiles(event.target.files);
             event.target.value = "";
+
+            if (isPhone) {
+                const typedLocation = getValues("location");
+
+                if (
+                    !typedLocation.city?.trim() &&
+                    !typedLocation.address?.trim()
+                ) {
+                    void fillLocationFromDevice();
+                }
+            }
         }
     };
 
@@ -317,6 +349,7 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
         setIsGeocoding(false);
         clearErrors("location.address");
         clearCoordinates();
+        setLocationErrorMsg(null);
     };
 
     const invalidateAddressCoordinates = () => {
@@ -348,6 +381,10 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
         }
         if (pendingGeocodeRef.current) {
             await pendingGeocodeRef.current;
+        }
+
+        if (deviceLocationRef.current) {
+            await deviceLocationRef.current;
         }
 
         if (isPhone) {
@@ -443,7 +480,7 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                 isAnonymous: data.isAnonymous,
                 location: {
                     address: submittedLocation.address.trim(),
-                    city: data.location?.city || submittedLocation.city.trim(),
+                    city: submittedLocation.city.trim(),
                     street: submittedLocation.street?.trim() || null,
                     postalCode: submittedLocation.postalCode?.trim() || null,
                     latitude: finalLat,
@@ -528,8 +565,6 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                     </p>
                 </div>
 
-                <p> {isPhone ? "Phone": "web"}</p> 
-
                 <form
                     onSubmit={handleSubmit(onSubmit)}
                     className="space-y-7"
@@ -598,10 +633,7 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                             </span>
                         </label>
 
-                        <div 
-                            onClick={handleUploadBoxClick}
-                            className="border-2 border-dashed border-border-custom rounded-xl p-6 text-center bg-section/50 mt-2 cursor-pointer"
-                        >
+                        <div className="border-2 border-dashed border-border-custom rounded-xl p-6 text-center bg-section/50 mt-2">
                             <input
                                 type="file"
                                 id="media-upload"
@@ -631,10 +663,25 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                         </div>
 
                         {locationErrorMsg && (
-                            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg mt-2">
-                                <p className="text-xs text-destructive font-medium flex items-center gap-1.5">
-                                    <span>⚠️</span> {locationErrorMsg}
+                            <div
+                                role="alert"
+                                className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg mt-2 space-y-2"
+                            >
+                                <p className="text-xs text-destructive font-medium flex items-start gap-1.5">
+                                    <span>⚠️</span>
+                                    <span>{locationErrorMsg}</span>
                                 </p>
+
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={isBusy}
+                                    onClick={() => void fillLocationFromDevice()}
+                                    className="h-7 text-xs"
+                                >
+                                    Try again
+                                </Button>
                             </div>
                         )}
 
@@ -703,35 +750,42 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                     </Button>
                 </form>
 
-                {showLocationModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                        <div className="bg-card border border-border-custom rounded-xl p-6 max-w-sm w-full space-y-4 shadow-xl">
-                            <h3 className="text-lg font-bold text-foreground">
-                                Location Access Required
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                                Your device location is turned off or blocked. Please turn on GPS / Location services in your phone settings and allow permission to continue.
-                            </p>
-                            <div className="flex justify-end gap-3 pt-2">
-                                <Button
-                                    variant="outline"
-                                    onClick={() => setShowLocationModal(false)}
-                                >
-                                    Close
-                                </Button>
-                                <Button
-                                    onClick={() => {
-                                        setShowLocationModal(false);
-                                        void fillLocationFromDevice();
-                                    }}
-                                    className="bg-primary text-white"
-                                >
-                                    Turned
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                <Dialog
+                    open={showLocationModal}
+                    onOpenChange={setShowLocationModal}
+                >
+                    <DialogContent className="sm:max-w-sm">
+                        <DialogHeader>
+                            <DialogTitle>Location access required</DialogTitle>
+                            <DialogDescription>
+                                {locationPermission === "denied"
+                                    ? "Location is blocked for this site. Open your browser's site settings (tap the icon next to the web address), set Location to Allow, then press Try again."
+                                    : "Your phone's location is turned off, or this site is not allowed to use it. Press Allow location: your browser will ask for permission or ask you to turn on your device location."}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setShowLocationModal(false)}
+                            >
+                                Close
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={() => {
+                                    setShowLocationModal(false);
+                                    void fillLocationFromDevice();
+                                }}
+                            >
+                                {locationPermission === "denied"
+                                    ? "Try again"
+                                    : "Allow location"}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </CardContent>
         </Card>
     );
