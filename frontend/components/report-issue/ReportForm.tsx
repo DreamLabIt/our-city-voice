@@ -17,23 +17,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
 import { useUploads } from "@/hooks/use-uploads";
 import {
     GpsError,
     getCurrentCoordinates,
     getGpsErrorMessage,
-    getLocationPermissionState,
     isPhoneDevice,
     reverseGeocode,
-    type LocationPermissionState,
 } from "@/lib/device-location";
 import { MediaSlot } from "./MediaSlot";
 import IssueDetailsFields from "./IssueDetailsFields";
@@ -121,9 +111,6 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const isVideoMode = searchParams.get("type") === "video";
-    const [showLocationModal, setShowLocationModal] = useState(false);
-    const [locationPermission, setLocationPermission] =
-        useState<LocationPermissionState>("unknown");
     const [uploadingMedia, setUploadingMedia] = useState(false);
     const [isGeocoding, setIsGeocoding] = useState(false);
     const [isLocating, setIsLocating] = useState(false);
@@ -219,10 +206,6 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
             if (err instanceof GpsError) {
                 setLocationErrorMsg(getGpsErrorMessage(err));
 
-                if (err.reason !== "unsupported") {
-                    setLocationPermission(await getLocationPermissionState());
-                    setShowLocationModal(true);
-                }
             } else {
                 setLocationErrorMsg(GEOCODER_UNREACHABLE_MESSAGE);
             }
@@ -247,9 +230,9 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
         return promise;
     };
 
-    const handleFileChange = async (
+    const handleFileChange = (
         event: ChangeEvent<HTMLInputElement>,
-    ): Promise<void> => {
+    ): void => {
         if (event.target.files && event.target.files.length > 0) {
             uploads.addFiles(event.target.files);
             event.target.value = "";
@@ -332,6 +315,10 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
     };
 
     const runAddressLookup = (): Promise<boolean> => {
+        if (pendingGeocodeRef.current) {
+            return pendingGeocodeRef.current;
+        }
+
         const promise = resolveAddressCoordinates();
         pendingGeocodeRef.current = promise;
 
@@ -356,6 +343,7 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
         geocodeRequestRef.current += 1;
         setIsGeocoding(false);
         clearCoordinates();
+        clearErrors("location.address");
     };
 
     const handleLocationBlur = () => {
@@ -479,8 +467,8 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                 priority: data.priority,
                 isAnonymous: data.isAnonymous,
                 location: {
-                    address: submittedLocation.address.trim(),
-                    city: submittedLocation.city.trim(),
+                    address: submittedLocation.address?.trim() ?? "",
+                    city: submittedLocation.city?.trim() ?? "",
                     street: submittedLocation.street?.trim() || null,
                     postalCode: submittedLocation.postalCode?.trim() || null,
                     latitude: finalLat,
@@ -750,42 +738,7 @@ export default function ReportForm({ reportFilters, user }: ReportFormProps) {
                     </Button>
                 </form>
 
-                <Dialog
-                    open={showLocationModal}
-                    onOpenChange={setShowLocationModal}
-                >
-                    <DialogContent className="sm:max-w-sm">
-                        <DialogHeader>
-                            <DialogTitle>Location access required</DialogTitle>
-                            <DialogDescription>
-                                {locationPermission === "denied"
-                                    ? "Location is blocked for this site. Open your browser's site settings (tap the icon next to the web address), set Location to Allow, then press Try again."
-                                    : "Your phone's location is turned off, or this site is not allowed to use it. Press Allow location: your browser will ask for permission or ask you to turn on your device location."}
-                            </DialogDescription>
-                        </DialogHeader>
 
-                        <DialogFooter>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setShowLocationModal(false)}
-                            >
-                                Close
-                            </Button>
-                            <Button
-                                type="button"
-                                onClick={() => {
-                                    setShowLocationModal(false);
-                                    void fillLocationFromDevice();
-                                }}
-                            >
-                                {locationPermission === "denied"
-                                    ? "Try again"
-                                    : "Allow location"}
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
             </CardContent>
         </Card>
     );
