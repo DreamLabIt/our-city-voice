@@ -113,8 +113,6 @@ export default function FileUpload({
                         >
                             <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden shrink-0 flex items-center justify-center">
                                 {slot.previewUrl ? (
-                                    // A plain img, not next/image: this is a blob: URL from the
-                                    // local file and the image optimiser cannot fetch one.
                                     <Image
                                         src={slot.previewUrl}
                                         alt=""
