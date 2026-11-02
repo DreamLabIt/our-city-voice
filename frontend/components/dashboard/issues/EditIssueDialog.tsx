@@ -34,6 +34,7 @@ import type {
 } from "@/types/issues";
 import type { Report, ReportMedia } from "@/types/report";
 import { MediaSlot } from "@/components/report-issue/MediaSlot";
+import Image from "next/image";
 
 const MAX_MEDIA = 6;
 
@@ -253,10 +254,12 @@ function ExistingMediaTile({
                     preload="metadata"
                 />
             ) : (
-                <img
+                <Image
                     src={src}
                     alt="Attachment"
                     className="h-full w-full object-cover"
+                    width={128} 
+                    height={128}
                 />
             )}
 

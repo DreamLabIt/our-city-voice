@@ -119,6 +119,8 @@ export default function FileUpload({
                                         src={slot.previewUrl}
                                         alt=""
                                         className="w-full h-full object-cover"
+                                        width={100}
+                                        height={100}
                                     />
                                 ) : slot.uploaded?.resourceType === "video" ? (
                                     <Film className="w-4 h-4 text-muted-foreground" />
