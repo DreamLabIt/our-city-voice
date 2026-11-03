@@ -2,10 +2,16 @@ import { randomInt } from "node:crypto";
 
 import { prisma } from "../db/prisma.js";
 import type { Prisma } from "../generated/prisma/client.js";
-import type { MediaType, PostPriority, PostStatus, UserRole } from "../generated/prisma/enums.js";
+import type {
+  MediaType,
+  PostPriority,
+  PostStatus,
+  UserRole,
+} from "../generated/prisma/enums.js";
 import { AppError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
 import { mediaUrlSchema } from "../lib/media-url.js";
+import { upsertPostEmbeddingAsync } from "./ai/embeddings.service.js";
 import { isUniqueViolation } from "../lib/prisma-errors.js";
 import {
   PUBLIC_COMMENT_SELECT,
@@ -39,15 +45,15 @@ export interface ListPostsOptions {
   limit: number;
   sort: PostSort;
   search?: string | undefined;
-  
+
   category?: string[] | undefined;
-  
+
   ward?: string[] | undefined;
   status?: PostStatus[] | undefined;
   priority?: PostPriority[] | undefined;
-  
+
   authorId?: bigint | undefined;
-  
+
   includeDeleted?: boolean | undefined;
 }
 
@@ -69,7 +75,8 @@ const ORDER_BY: Record<PostSort, Prisma.PostOrderByWithRelationInput[]> = {
 };
 
 function buildWhere(options: ListPostsOptions): Prisma.PostWhereInput {
-  const { search, category, ward, status, priority, authorId, includeDeleted } = options;
+  const { search, category, ward, status, priority, authorId, includeDeleted } =
+    options;
 
   return {
     ...(includeDeleted ? {} : { deletedAt: null }),
@@ -92,7 +99,10 @@ function buildWhere(options: ListPostsOptions): Prisma.PostWhereInput {
   };
 }
 
-async function likedPostIds(viewerId: bigint | undefined, postIds: bigint[]): Promise<Set<string>> {
+async function likedPostIds(
+  viewerId: bigint | undefined,
+  postIds: bigint[],
+): Promise<Set<string>> {
   if (viewerId === undefined || postIds.length === 0) return new Set();
 
   const rows = await prisma.postLike.findMany({
@@ -230,7 +240,9 @@ function matchScore(row: SuggestionRow, query: string): number {
  * newest first — because `Array.prototype.sort` is stable, so equal scores read
  * as a recency tiebreak rather than an arbitrary one.
  */
-export async function suggestPosts(search: string): Promise<ReportSuggestion[]> {
+export async function suggestPosts(
+  search: string,
+): Promise<ReportSuggestion[]> {
   const rows = await prisma.post.findMany({
     where: searchWhere(search),
     select: PUBLIC_SUGGESTION_SELECT,
@@ -248,7 +260,7 @@ export async function suggestPosts(search: string): Promise<ReportSuggestion[]> 
 export interface FilterOption {
   id: string;
   name: string;
-  
+
   value: string;
   postCount: number;
 }
@@ -268,45 +280,48 @@ export interface FilterOptions {
 export async function listFilterOptions(): Promise<FilterOptions> {
   const where: Prisma.PostWhereInput = { deletedAt: null };
 
-  const [categories, wards, byCategory, byWard, byStatus, byPriority] = await Promise.all([
-    prisma.category.findMany({
-      select: { id: true, name: true, slug: true, icon: true },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    }),
-    prisma.ward.findMany({
-      select: { id: true, name: true, code: true },
-      orderBy: { name: "asc" },
-    }),
-    prisma.post.groupBy({
-      by: ["categoryId"],
-      where,
-      _count: { _all: true },
-      orderBy: { _count: { categoryId: "desc" } },
-    }),
-    prisma.post.groupBy({
-      by: ["wardId"],
-      where,
-      _count: { _all: true },
-      orderBy: { _count: { wardId: "desc" } },
-    }),
-    prisma.post.groupBy({
-      by: ["status"],
-      where,
-      _count: { _all: true },
-      orderBy: { _count: { status: "desc" } },
-    }),
-    prisma.post.groupBy({
-      by: ["priority"],
-      where,
-      _count: { _all: true },
-      orderBy: { _count: { priority: "desc" } },
-    }),
-  ]);
+  const [categories, wards, byCategory, byWard, byStatus, byPriority] =
+    await Promise.all([
+      prisma.category.findMany({
+        select: { id: true, name: true, slug: true, icon: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      }),
+      prisma.ward.findMany({
+        select: { id: true, name: true, code: true },
+        orderBy: { name: "asc" },
+      }),
+      prisma.post.groupBy({
+        by: ["categoryId"],
+        where,
+        _count: { _all: true },
+        orderBy: { _count: { categoryId: "desc" } },
+      }),
+      prisma.post.groupBy({
+        by: ["wardId"],
+        where,
+        _count: { _all: true },
+        orderBy: { _count: { wardId: "desc" } },
+      }),
+      prisma.post.groupBy({
+        by: ["status"],
+        where,
+        _count: { _all: true },
+        orderBy: { _count: { status: "desc" } },
+      }),
+      prisma.post.groupBy({
+        by: ["priority"],
+        where,
+        _count: { _all: true },
+        orderBy: { _count: { priority: "desc" } },
+      }),
+    ]);
 
   const perCategory = new Map(
     byCategory.map((group) => [group.categoryId.toString(), group._count._all]),
   );
-  const perWard = new Map(byWard.map((group) => [group.wardId.toString(), group._count._all]));
+  const perWard = new Map(
+    byWard.map((group) => [group.wardId.toString(), group._count._all]),
+  );
 
   return {
     categories: categories.map((category) => ({
@@ -336,15 +351,14 @@ export async function listFilterOptions(): Promise<FilterOptions> {
 export type PostIdentifier = { trackingCode: string } | { id: bigint };
 
 export interface GetPostOptions {
-  
   includeDeleted?: boolean | undefined;
-  
+
   countView?: boolean | undefined;
 }
 
 export interface GetPostResult {
   post: PublicPostDetail;
-  
+
   related: PublicPost[];
 }
 
@@ -385,7 +399,10 @@ async function listRelated(
 }
 
 export async function findPostId(identifier: PostIdentifier): Promise<bigint> {
-  const post = await prisma.post.findFirst({ where: identifier, select: { id: true } });
+  const post = await prisma.post.findFirst({
+    where: identifier,
+    select: { id: true },
+  });
   if (!post) throw AppError.notFound("No report with that tracking code");
 
   return post.id;
@@ -401,11 +418,13 @@ export async function getPost(
     ...(options.includeDeleted ? {} : { deletedAt: null }),
   };
 
-  const post = await prisma.post.findFirst({ where, select: PUBLIC_POST_DETAIL_SELECT });
+  const post = await prisma.post.findFirst({
+    where,
+    select: PUBLIC_POST_DETAIL_SELECT,
+  });
 
   if (!post) throw AppError.notFound("No report with that tracking code");
 
-  
   let viewCount = post.viewCount;
   if (options.countView) {
     const updated = await prisma.post.update({
@@ -467,9 +486,15 @@ function generateTrackingCode(year: number): string {
   return `OCV-${year}-${serial}`;
 }
 
-function unknownField(field: string, value: string, collection: string): AppError {
+function unknownField(
+  field: string,
+  value: string,
+  collection: string,
+): AppError {
   return AppError.badRequest("Some fields need attention", {
-    [field]: [`No ${collection} with the value "${value}". See GET /posts/filters for the valid options.`],
+    [field]: [
+      `No ${collection} with the value "${value}". See GET /posts/filters for the valid options.`,
+    ],
   });
 }
 
@@ -538,13 +563,19 @@ async function validateEditedMedia(
   }
 }
 
-export async function createPost(userId: bigint, input: CreatePostInput): Promise<PublicPost> {
+export async function createPost(
+  userId: bigint,
+  input: CreatePostInput,
+): Promise<PublicPost> {
   const [category, ward] = await Promise.all([
     prisma.category.findUnique({
       where: { slug: input.category },
       select: { id: true, defaultDepartmentId: true },
     }),
-    prisma.ward.findUnique({ where: { code: input.ward }, select: { id: true } }),
+    prisma.ward.findUnique({
+      where: { code: input.ward },
+      select: { id: true },
+    }),
   ]);
 
   if (!category) throw unknownField("category", input.category, "category");
@@ -556,7 +587,7 @@ export async function createPost(userId: bigint, input: CreatePostInput): Promis
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
-      return await prisma.$transaction(async (tx) => {
+      const created = await prisma.$transaction(async (tx) => {
         const created = await tx.post.create({
           data: {
             trackingCode: generateTrackingCode(year),
@@ -576,7 +607,7 @@ export async function createPost(userId: bigint, input: CreatePostInput): Promis
             longitude: input.location.longitude ?? null,
             ...(media?.length ? { media: { create: media } } : {}),
           },
-          select: PUBLIC_POST_SELECT,
+          select: { id: true },
         });
 
         await tx.postStatusHistory.create({
@@ -590,15 +621,24 @@ export async function createPost(userId: bigint, input: CreatePostInput): Promis
           },
         });
 
-        return toPublicPost(created, false);
+        return created;
       });
+
+      upsertPostEmbeddingAsync(created.id);
+      const full = await prisma.post.findUniqueOrThrow({
+        where: { id: created.id },
+        select: PUBLIC_POST_SELECT,
+      });
+      return toPublicPost(full, false);
     } catch (error) {
       if (isUniqueViolation(error)) continue;
       throw error;
     }
   }
 
-  throw AppError.serviceUnavailable("Could not assign a tracking code. Please try again.");
+  throw AppError.serviceUnavailable(
+    "Could not assign a tracking code. Please try again.",
+  );
 }
 
 /** The signed-in caller on a write, reduced to what authorisation needs. */
@@ -633,9 +673,7 @@ export interface UpdatePostInput {
  * delete start by looking the row up without the `deletedAt` filter so the two
  * cases stay distinguishable, then treat a soft-deleted report as gone.
  */
-async function findPostForWrite(
-  identifier: PostIdentifier,
-): Promise<{
+async function findPostForWrite(identifier: PostIdentifier): Promise<{
   id: bigint;
   userId: bigint;
   categoryId: bigint;
@@ -644,7 +682,13 @@ async function findPostForWrite(
 }> {
   const post = await prisma.post.findFirst({
     where: identifier,
-    select: { id: true, userId: true, categoryId: true, status: true, deletedAt: true },
+    select: {
+      id: true,
+      userId: true,
+      categoryId: true,
+      status: true,
+      deletedAt: true,
+    },
   });
 
   if (!post) throw AppError.notFound("No report with that tracking code");
@@ -691,7 +735,10 @@ export async function updatePost(
         }),
     input.ward === undefined
       ? Promise.resolve(null)
-      : prisma.ward.findUnique({ where: { code: input.ward }, select: { id: true } }),
+      : prisma.ward.findUnique({
+          where: { code: input.ward },
+          select: { id: true },
+        }),
   ]);
 
   if (input.category !== undefined && !category) {
@@ -716,10 +763,12 @@ export async function updatePost(
 
   const location = input.location;
   if (location) {
-    if (location.street !== undefined) data.street = location.street?.trim() || null;
+    if (location.street !== undefined)
+      data.street = location.street?.trim() || null;
     if (location.city !== undefined) data.city = location.city;
     if (location.address !== undefined) data.address = location.address;
-    if (location.postalCode !== undefined) data.postalCode = location.postalCode?.trim() || null;
+    if (location.postalCode !== undefined)
+      data.postalCode = location.postalCode?.trim() || null;
     // Coordinates are a pair: sending either replaces both, and null clears.
     if (location.latitude !== undefined || location.longitude !== undefined) {
       data.latitude = location.latitude ?? null;
@@ -727,7 +776,8 @@ export async function updatePost(
     }
   }
 
-  const media = input.media === undefined ? undefined : buildMediaRows(input.media);
+  const media =
+    input.media === undefined ? undefined : buildMediaRows(input.media);
 
   const updated = await prisma.$transaction(async (tx) => {
     if (media !== undefined) {
@@ -737,20 +787,33 @@ export async function updatePost(
       if (media.length) data.media = { create: media };
     }
 
-    return tx.post.update({ where: { id: post.id }, data, select: PUBLIC_POST_SELECT });
+    return tx.post.update({
+      where: { id: post.id },
+      data,
+      select: PUBLIC_POST_SELECT,
+    });
   });
+
+  upsertPostEmbeddingAsync(post.id);
 
   const liked = await likedPostIds(actor.id, [post.id]);
 
   logger.info(
-    { postId: post.id.toString(), actorId: actor.id.toString(), fields: Object.keys(data) },
+    {
+      postId: post.id.toString(),
+      actorId: actor.id.toString(),
+      fields: Object.keys(data),
+    },
     "report updated",
   );
 
   return toPublicPost(updated, liked.has(post.id.toString()));
 }
 
-export async function deletePost(actor: PostActor, identifier: PostIdentifier): Promise<void> {
+export async function deletePost(
+  actor: PostActor,
+  identifier: PostIdentifier,
+): Promise<void> {
   const post = await findPostForWrite(identifier);
 
   // Already gone. Same answer as a code that never existed.
@@ -865,7 +928,7 @@ export interface ListCommentsOptions {
 
 export interface ListCommentsResult {
   comments: PublicCommentThread[];
-  
+
   total: number;
   page: number;
   limit: number;
@@ -892,7 +955,11 @@ export async function listComments(
   viewerId?: bigint | undefined,
 ): Promise<ListCommentsResult> {
   const { page, limit } = options;
-  const where: Prisma.CommentWhereInput = { postId, parentId: null, deletedAt: null };
+  const where: Prisma.CommentWhereInput = {
+    postId,
+    parentId: null,
+    deletedAt: null,
+  };
 
   const [parents, total] = await prisma.$transaction([
     prisma.comment.findMany({
@@ -960,11 +1027,15 @@ export interface LikeResult {
  * the row is genuinely new, and the cached count follows the insert, not the
  * request.
  */
-export async function likePost(actor: PostActor, identifier: PostIdentifier): Promise<LikeResult> {
+export async function likePost(
+  actor: PostActor,
+  identifier: PostIdentifier,
+): Promise<LikeResult> {
   const post = await findPostForWrite(identifier);
 
   // A moderated-away report is gone as far as the public surface is concerned.
-  if (post.deletedAt !== null) throw AppError.notFound("No report with that tracking code");
+  if (post.deletedAt !== null)
+    throw AppError.notFound("No report with that tracking code");
 
   return prisma.$transaction(async (tx) => {
     const { count } = await tx.postLike.createMany({
@@ -979,7 +1050,10 @@ export async function likePost(actor: PostActor, identifier: PostIdentifier): Pr
             data: { likeCount: { increment: 1 } },
             select: { likeCount: true },
           })
-        : await tx.post.findUniqueOrThrow({ where: { id: post.id }, select: { likeCount: true } });
+        : await tx.post.findUniqueOrThrow({
+            where: { id: post.id },
+            select: { likeCount: true },
+          });
 
     return { likedByMe: true, likeCount: updated.likeCount };
   });
@@ -997,7 +1071,8 @@ export async function unlikePost(
 ): Promise<LikeResult> {
   const post = await findPostForWrite(identifier);
 
-  if (post.deletedAt !== null) throw AppError.notFound("No report with that tracking code");
+  if (post.deletedAt !== null)
+    throw AppError.notFound("No report with that tracking code");
 
   return prisma.$transaction(async (tx) => {
     const { count } = await tx.postLike.deleteMany({
@@ -1011,7 +1086,10 @@ export async function unlikePost(
             data: { likeCount: { decrement: 1 } },
             select: { likeCount: true },
           })
-        : await tx.post.findUniqueOrThrow({ where: { id: post.id }, select: { likeCount: true } });
+        : await tx.post.findUniqueOrThrow({
+            where: { id: post.id },
+            select: { likeCount: true },
+          });
 
     return { likedByMe: false, likeCount: updated.likeCount };
   });
@@ -1030,7 +1108,8 @@ export interface CreateCommentInput {
  */
 async function findPostForComment(identifier: PostIdentifier): Promise<bigint> {
   const post = await findPostForWrite(identifier);
-  if (post.deletedAt !== null) throw AppError.notFound("No report with that tracking code");
+  if (post.deletedAt !== null)
+    throw AppError.notFound("No report with that tracking code");
 
   return post.id;
 }
@@ -1044,19 +1123,31 @@ export async function createComment(
 
   const created = await prisma.$transaction(async (tx) => {
     const comment = await tx.comment.create({
-      data: { postId, userId: actor.id, parentId: null, message: input.message },
+      data: {
+        postId,
+        userId: actor.id,
+        parentId: null,
+        message: input.message,
+      },
       select: PUBLIC_COMMENT_SELECT,
     });
 
     // commentCount is the all-in number — top-level comments and replies both
     // move it — which is how the seed reconciles it (every non-deleted row).
-    await tx.post.update({ where: { id: postId }, data: { commentCount: { increment: 1 } } });
+    await tx.post.update({
+      where: { id: postId },
+      data: { commentCount: { increment: 1 } },
+    });
 
     return comment;
   });
 
   logger.info(
-    { postId: postId.toString(), commentId: created.id.toString(), actorId: actor.id.toString() },
+    {
+      postId: postId.toString(),
+      commentId: created.id.toString(),
+      actorId: actor.id.toString(),
+    },
     "comment created",
   );
 
@@ -1085,16 +1176,26 @@ export async function createReply(
   // One level only. The frontend offers "Reply" on top-level comments, and a
   // reply to a reply would have nowhere to render depth-wise.
   if (parent.parentId !== null) {
-    throw AppError.badRequest("Replies go one level deep. Reply to the original comment instead.");
+    throw AppError.badRequest(
+      "Replies go one level deep. Reply to the original comment instead.",
+    );
   }
 
   const created = await prisma.$transaction(async (tx) => {
     const reply = await tx.comment.create({
-      data: { postId, userId: actor.id, parentId: parent.id, message: input.message },
+      data: {
+        postId,
+        userId: actor.id,
+        parentId: parent.id,
+        message: input.message,
+      },
       select: PUBLIC_COMMENT_SELECT,
     });
 
-    await tx.post.update({ where: { id: postId }, data: { commentCount: { increment: 1 } } });
+    await tx.post.update({
+      where: { id: postId },
+      data: { commentCount: { increment: 1 } },
+    });
 
     return reply;
   });
@@ -1163,7 +1264,10 @@ export async function likeComment(
             data: { likeCount: { increment: 1 } },
             select: { likeCount: true },
           })
-        : await tx.comment.findUniqueOrThrow({ where: { id }, select: { likeCount: true } });
+        : await tx.comment.findUniqueOrThrow({
+            where: { id },
+            select: { likeCount: true },
+          });
 
     return { likedByMe: true, likeCount: updated.likeCount };
   });
@@ -1188,7 +1292,10 @@ export async function unlikeComment(
             data: { likeCount: { decrement: 1 } },
             select: { likeCount: true },
           })
-        : await tx.comment.findUniqueOrThrow({ where: { id }, select: { likeCount: true } });
+        : await tx.comment.findUniqueOrThrow({
+            where: { id },
+            select: { likeCount: true },
+          });
 
     return { likedByMe: false, likeCount: updated.likeCount };
   });

@@ -10,7 +10,7 @@ name: ourcityvoice-dev
 services:
   # ── postgres ──────────────────────────────────────────────────────
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     container_name: ocv-postgres
     restart: unless-stopped
     environment:
@@ -63,7 +63,7 @@ services:
       ACCESS_TOKEN_TTL_MINUTES: ${ACCESS_TOKEN_TTL_MINUTES:-15}
       REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-30}
       ALLOWED_MEDIA_HOSTS: ${ALLOWED_MEDIA_HOSTS:-res.cloudinary.com}
-    ports:
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       - "${BACKEND_PORT:-4000}:4000"
     volumes:
       - ./backend:/app

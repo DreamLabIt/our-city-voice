@@ -49,6 +49,10 @@ const EnvSchema = z.object({
   // failures: the endpoint is open, so a successful spam run is the risk.
   CONTACT_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
   CONTACT_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60 * 60_000),
+
+  GEMINI_API_KEY: z.string().min(1).optional(),
+  GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
+  GEMINI_EMBED_MODEL: z.string().default("text-embedding-004"),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

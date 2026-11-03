@@ -28,7 +28,7 @@ name: ourcityvoice-prod
 services:
   # ── postgres ──────────────────────────────────────────────────────
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -65,7 +65,7 @@ services:
       ACCESS_TOKEN_TTL_MINUTES: ${ACCESS_TOKEN_TTL_MINUTES:-15}
       REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-30}
       ALLOWED_MEDIA_HOSTS: ${ALLOWED_MEDIA_HOSTS:-res.cloudinary.com}
-    expose:
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       - "4000"
     depends_on:
       postgres:

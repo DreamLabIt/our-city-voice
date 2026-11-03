@@ -1,5 +1,6 @@
 import { Router } from "express";
 
+import { aiRouter } from "./ai/index.js";
 import { authRouter } from "./auth.routes.js";
 import { contactRouter } from "./contact.routes.js";
 import { healthRouter } from "./health.routes.js";
@@ -17,3 +18,4 @@ apiRouter.use("/stats", statsRouter);
 apiRouter.use("/me", profileRouter);
 apiRouter.use("/posts", postRouter);
 apiRouter.use("/users", userRouter);
+apiRouter.use("/ai", aiRouter);
