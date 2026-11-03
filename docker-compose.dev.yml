@@ -64,6 +64,7 @@ services:
       REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-30}
       ALLOWED_MEDIA_HOSTS: ${ALLOWED_MEDIA_HOSTS:-res.cloudinary.com}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports:
       - "${BACKEND_PORT:-4000}:4000"
     volumes:
       - ./backend:/app
