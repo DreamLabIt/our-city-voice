@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import React from "react";
 import PageHeader from "@/components/common/PageHeader";
 import IssuesMapLayout from "@/components/issues-map/IssuesMapLayout";
@@ -6,6 +7,11 @@ import { getReportFilters, getReports } from "../actions/report";
 import type { Report } from "@/types/report";
 import { posts as mockPosts } from "@/data/mock-data";
 
+export const metadata: Metadata = {
+    title: "Issues Map | Our City Voice",
+    description:
+        "Explore reported community issues on an interactive map and follow local infrastructure updates.",
+};
 
 export default async function IssuesMapPage(): Promise<React.ReactNode> {
     const [PostsRes] = await Promise.all([

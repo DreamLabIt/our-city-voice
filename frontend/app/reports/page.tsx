@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import PageHeader from "@/components/common/PageHeader";
 import SectionContainer from "@/components/common/SectionContainer";
@@ -30,6 +31,12 @@ import type {
     ReportFiltersResponse,
     PageProps,
 } from "@/types/report";
+
+export const metadata: Metadata = {
+    title: "Public Reports | Our City Voice",
+    description:
+        "Browse and filter community-reported civic issues, track their progress, and support improvements across municipal wards.",
+};
 
 function getValidPage(value?: string): number {
     const page = Number(value);

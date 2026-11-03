@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import React from "react";
 import Link from "next/link";
 import { Home, Search, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+export const metadata: Metadata = {
+    title: "Page Not Found | Our City Voice",
+    description:
+        "The page you are looking for could not be found. Return to Our City Voice to browse community reports.",
+};
 
 export default function NotFound(): React.ReactNode {
     return (

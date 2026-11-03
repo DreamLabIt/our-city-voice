@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import React from "react";
 import PageHeader from "@/components/common/PageHeader";
 import SectionContainer from "@/components/common/SectionContainer";
@@ -11,6 +12,12 @@ import StatsWardTable from "@/components/statistics/StatsWardTable";
 import CommunityResponse from "@/components/statistics/CommunityResponse";
 import { ReportStatistics } from "@/types/statistics";
 import { getPublicStats } from "../actions/statistics";
+
+export const metadata: Metadata = {
+    title: "Platform Statistics | Our City Voice",
+    description:
+        "Explore civic issue reports, their locations, and resolution progress across the platform.",
+};
 
 export const dynamic = "force-dynamic";
 export const revalidate = 60;

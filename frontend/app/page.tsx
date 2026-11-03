@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import CategoryFilter from "@/components/landing/CategoryFilter";
 import HeroSection from "@/components/landing/hero";
 import HowItWorks from "@/components/landing/HowItWorks";
@@ -8,6 +9,12 @@ import { getActivityStats } from "./actions/statistics";
 import type { Report, FilterOption } from "@/types/report";
 import { posts as mockPosts, categories as mockCategories } from "@/data/mock-data";
 import { CategoryItem } from "@/types";
+
+export const metadata: Metadata = {
+    title: "Home | Our City Voice",
+    description:
+        "Report local issues, follow community updates, and work together to improve your city.",
+};
 
 export const dynamic = "force-dynamic";
 export const revalidate = 60;

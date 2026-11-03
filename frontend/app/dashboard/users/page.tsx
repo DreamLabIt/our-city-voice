@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/(layout)/DashboardLayout";
 import { getCurrentUser } from "@/lib/session";
@@ -5,6 +6,12 @@ import { getUsersList } from "@/app/actions/users";
 import { isUserRole } from "@/components/dashboard/users/user-utils";
 import UsersTable from "@/components/dashboard/users/UsersTable";
 import { UsersPageProps } from "@/types/user";
+
+export const metadata: Metadata = {
+    title: "Manage Users | Our City Voice",
+    description:
+        "Review and manage user accounts in the Our City Voice administration dashboard.",
+};
 
 export const dynamic = "force-dynamic";
 export const revalidate = 60;

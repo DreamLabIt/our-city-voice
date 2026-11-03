@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import PageHeader from "@/components/common/PageHeader";
 import HeroSection from "@/components/about/HeroSection";
 import MissionVisionSection from "@/components/about/MissionVisionSection";
@@ -7,6 +8,12 @@ import FaqSection from "@/components/about/FaqSection";
 import CallToActionSection from "@/components/about/CallToActionSection";
 import SectionContainer from "@/components/common/SectionContainer";
 import { getPublicStats } from "@/app/actions/statistics";
+
+export const metadata: Metadata = {
+    title: "About Us | Our City Voice",
+    description:
+        "Learn how Our City Voice empowers communities to report civic issues and improve local infrastructure together.",
+};
 
 export const dynamic = "force-dynamic";
 export const revalidate = 60;

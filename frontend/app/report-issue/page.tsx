@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import PageHeader from "@/components/common/PageHeader";
 import { Loader2 } from "lucide-react";
 import ReportForm from "@/components/report-issue/ReportForm";
@@ -10,6 +11,12 @@ import { getReportFilters, getReports } from "../actions/report";
 import type { Report } from "@/types/report";
 import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/session";
+
+export const metadata: Metadata = {
+    title: "Report an Issue | Our City Voice",
+    description:
+        "Report damaged public infrastructure with photos and location details to alert municipal authorities.",
+};
 
 async function ReportIssueContent() {
     const [PostsRes, filtersRes] = await Promise.all([

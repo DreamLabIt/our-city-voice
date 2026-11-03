@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { usePathname } from "next/navigation";
 import type { ErrorPageProps } from "@/types";
+import { Metadata } from "next/dist/lib/metadata/types/metadata-interface";
 
+export const metadata: Metadata = {
+    title: "Page Error | Our City Voice",
+    description:
+        "The page you are looking for encountered an error. Return to Our City Voice to browse community reports.",
+};
 
 export default function ErrorPage({ error, reset }: ErrorPageProps): React.ReactNode {
     useEffect(() => {

@@ -1,9 +1,16 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/(layout)/DashboardLayout";
 import { getCurrentUser } from "@/lib/session";
 import { getAdminContactMessages } from "@/app/actions/contact";
 import type { ContactMessage } from "@/types/contact";
 import ContactMessagesTable from "@/components/contact/ContactMessagesTable";
+
+export const metadata: Metadata = {
+    title: "Contact Messages | Our City Voice",
+    description:
+        "Review messages submitted through the Our City Voice contact form.",
+};
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;

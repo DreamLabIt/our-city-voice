@@ -1,8 +1,15 @@
+import type { Metadata } from "next";
 import DashboardLayout from "@/components/dashboard/(layout)/DashboardLayout";
 import Overview from "@/components/dashboard/(layout)/Overview";
 import { getCurrentUser } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { getAdminOverview, getMyStats } from "../actions/statistics";
+
+export const metadata: Metadata = {
+    title: "Dashboard | Our City Voice",
+    description:
+        "View your civic reports and account activity in the Our City Voice dashboard.",
+};
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -38,4 +45,3 @@ export default async function DashboardPage() {
         </DashboardLayout>
     );
 }
-

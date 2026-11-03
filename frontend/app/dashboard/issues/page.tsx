@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/(layout)/DashboardLayout";
 import IssuesTable from "@/components/dashboard/issues/IssuesTable";
@@ -18,6 +19,12 @@ import type {
     Report,
     ReportFiltersResponse,
 } from "@/types/report";
+
+export const metadata: Metadata = {
+    title: "Manage Issues | Our City Voice",
+    description:
+        "Review and manage civic issue reports in the Our City Voice dashboard.",
+};
 
 export const dynamic = "force-dynamic";
 export const revalidate = 60;

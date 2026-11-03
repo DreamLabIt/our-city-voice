@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import IssueDetails from "@/components/issues/IssueDetails/IssueDetails";
@@ -10,6 +11,28 @@ import type { IssuePageProps } from "@/types/IssueDetails";
 import ViewTrackerServerSync from "@/components/issues/IssueDetails/ViewTrackerClient";
 
 export const revalidate = 60;
+
+export async function generateMetadata({
+    params,
+}: IssuePageProps): Promise<Metadata> {
+    const { id } = await params;
+
+    try {
+        const { post } = await getReportByCode(id, { countView: false });
+
+        return {
+            title: `${post.title} | Our City Voice`,
+            description:
+                post.description ||
+                `View the details and updates for civic issue ${post.trackingCode}.`,
+        };
+    } catch {
+        return {
+            title: `Issue ${id} | Our City Voice`,
+            description: `View details and updates for civic issue ${id} on Our City Voice.`,
+        };
+    }
+}
 
 export default async function IssuePage({
     params,

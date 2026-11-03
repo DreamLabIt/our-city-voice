@@ -1,20 +1,15 @@
+import type { Metadata } from "next";
+
 import Link from "next/link";
 import LoginForm from "@/components/auth/LoginForm";
 import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
 
-export const metadata = {
-    title: "Login | Civic Portal",
+export const metadata: Metadata = {
+    title: "Login | Our City Voice",
     description: "Sign in to access your account dashboard.",
 };
 
-/**
- * `next` is read here rather than with useSearchParams inside LoginForm.
- *
- * useSearchParams in a client component forces the page to be either dynamic or
- * wrapped in Suspense, and Next fails the build if it is neither. Reading it in
- * the server component and passing it down avoids both.
- */
 export default async function LoginPage({
     searchParams,
 }: {
