@@ -52,7 +52,7 @@ const EnvSchema = z.object({
 
   GEMINI_API_KEY: z.string().min(1).optional(),
   GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
-  GEMINI_EMBED_MODEL: z.string().default("text-embedding-004"),
+  GEMINI_EMBED_MODEL: z.string().default("gemini-embedding-001"),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

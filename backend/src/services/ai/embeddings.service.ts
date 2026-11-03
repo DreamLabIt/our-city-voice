@@ -44,7 +44,7 @@ export async function upsertPostEmbedding(postId: bigint): Promise<void> {
 
   await prisma.$executeRaw`
     INSERT INTO post_embeddings (post_id, embedding, model, dimensions, updated_at)
-    VALUES (${postId}, ${JSON.stringify(values)}::vector, 'text-embedding-004', ${values.length}, NOW())
+    VALUES (${postId}, ${JSON.stringify(values)}::vector, 'gemini-embedding-001', ${values.length}, NOW())
     ON CONFLICT (post_id)
     DO UPDATE SET
       embedding = EXCLUDED.embedding,
