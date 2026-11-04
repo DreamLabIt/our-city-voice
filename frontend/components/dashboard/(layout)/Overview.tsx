@@ -142,7 +142,7 @@ export default function Overview({
                                 <span className="text-4xl font-extrabold text-foreground">{stats.resolutionRate}%</span>
                                 <span className="text-xs text-muted-foreground">success</span>
                             </div>
-                            <p className="text-lg text-muted-foreground text-center">
+                                        <p className="text-lg text-muted-foreground text-center">
                                 Sample Size: <strong className="text-foreground">{stats.resolutionSampleSize}</strong> resolved
                             </p>
                         </CardContent>

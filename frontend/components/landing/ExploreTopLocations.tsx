@@ -105,10 +105,8 @@ export default function ExploreTopLocations({
                                                 src={sampleImage}
                                                 alt={item.ward}
                                                 fill
-                                                unoptimized
                                                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                                                 className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
-                                                priority
                                             />
 
                                             <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-transparent transition-opacity duration-200 group-hover:from-black/90" />

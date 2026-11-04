@@ -31,7 +31,13 @@ export default function ReportCard({ report, isUpvoted, onUpvote, onClick }: Rep
         >
             <div>
                 <div className="relative -mt-4 h-48 w-full overflow-hidden bg-muted">
-                    <Image src={coverImage} alt={report.title} fill className="object-cover" />
+                    <Image
+                        src={coverImage}
+                        alt={report.title}
+                        fill
+                        sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                        className="object-cover"
+                    />
                     <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent" />
 
                     <Badge

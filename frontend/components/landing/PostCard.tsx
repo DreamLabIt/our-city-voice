@@ -115,6 +115,7 @@ export default function PostCard({ post }: { post: Report }): React.ReactNode {
                         alt={post.title}
                         width={400}
                         height={200}
+                        sizes="(min-width: 1280px) 21vw, (min-width: 1024px) 26vw, (min-width: 640px) 46vw, 100vw"
                         className="w-full h-full object-cover transition-transform duration-100 group-hover/media:scale-[1.01]"
                     />
                 </Link>

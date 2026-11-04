@@ -29,8 +29,8 @@ export default function Header({ isAdmin, user }: HeaderProps) {
                                         alt="OurCityVoice Logo"
                                         width={180}
                                         height={45}
+                                        sizes="180px"
                                         className="h-12 w-auto object-contain"
-                                        priority
                                     />
                                 </div>
                                 <div className="flex flex-col truncate gap-">

@@ -48,8 +48,8 @@ export default function Footer(): React.ReactNode {
                                     alt="OurCityVoice Logo"
                                     width={180}
                                     height={45}
+                                    sizes="180px"
                                     className="h-10 sm:h-12 w-auto object-contain"
-                                    priority
                                 />
                             </div>
 

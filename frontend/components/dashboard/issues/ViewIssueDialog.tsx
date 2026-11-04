@@ -216,6 +216,7 @@ export default function ViewIssueDialog({
                                                             width={100}
                                                             height={100}
                                                             alt=""
+                                                            sizes="56px"
                                                             className="h-full w-full"
                                                         />
                                                     ) : (
@@ -229,6 +230,7 @@ export default function ViewIssueDialog({
                                                     width={100}
                                                     height={100}
                                                     alt=""
+                                                    sizes="56px"
                                                     className="h-full w-full "
                                                 />
                                             )}

@@ -28,8 +28,8 @@ export default function Sidebar({ isAdmin, user, isCollapsed, setIsCollapsed }: 
                             alt="OurCityVoice Logo"
                             width={180}
                             height={45}
+                            sizes="180px"
                             className="h-12 w-auto object-contain"
-                            priority
                         />
                     </div>
                     {!isCollapsed && (

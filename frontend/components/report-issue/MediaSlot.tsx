@@ -88,6 +88,7 @@ export function MediaSlot({
                         src={src}
                         alt={slot.name}
                         fill
+                        sizes="(max-width: 640px) 100vw, 50vw"
                         unoptimized
                         className="object-cover"
                     />

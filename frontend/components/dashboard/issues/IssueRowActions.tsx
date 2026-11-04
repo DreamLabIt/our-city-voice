@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, Pencil, Trash2 } from "lucide-react";
@@ -7,11 +8,18 @@ import { toast } from "sonner";
 
 import { deleteReport } from "@/app/actions/issues";
 import DeleteIssueDialog from "@/components/dashboard/issues/DeleteIssueDialog";
-import EditIssueDialog from "@/components/dashboard/issues/EditIssueDialog";
-import ViewIssueDialog from "@/components/dashboard/issues/ViewIssueDialog";
 import { Button } from "@/components/ui/button";
 import type { EditOption } from "@/types/issues";
 import type { Report } from "@/types/report";
+
+const EditIssueDialog = dynamic(
+    () => import("@/components/dashboard/issues/EditIssueDialog"),
+    { ssr: false },
+);
+const ViewIssueDialog = dynamic(
+    () => import("@/components/dashboard/issues/ViewIssueDialog"),
+    { ssr: false },
+);
 
 interface IssueRowActionsProps {
     issue: Report;

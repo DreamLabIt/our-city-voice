@@ -26,6 +26,7 @@ export default function PageHeader({
                     alt={title}
                     fill
                     priority
+                    sizes="100vw"
                     className="object-cover object-center"
                 />
                 <div className="absolute inset-0 bg-linear-to-r from-slate-800/40 via-slate-800/50 to-slate-800/40" />

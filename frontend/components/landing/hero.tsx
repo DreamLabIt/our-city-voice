@@ -14,6 +14,7 @@ export default function HeroSection(): React.ReactNode {
                     alt="City skyline background"
                     fill
                     priority
+                    sizes="100vw"
                     className="object-cover object-center"
                 />
                 <div className="absolute inset-0 bg-linear-to-r from-slate-800/25 via-slate-800/27 to-slate-800/30" />

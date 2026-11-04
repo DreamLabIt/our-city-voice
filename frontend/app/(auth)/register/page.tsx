@@ -21,6 +21,7 @@ export default function RegisterPage() {
                     src="https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?fm=jpg&q=60&w=3000&auto=format&fit=crop"
                     width={1470}
                     height={800}
+                    sizes="(min-width: 1024px) 56vw, 100vw"
                     alt="Community Development"
                     className="w-full h-full object-cover"
                 />

@@ -45,6 +45,7 @@ export default function HeroSection({ stats }: HeroSectionProps) {
                         src="/isue.jpeg"
                         alt="Community Infrastructure Project"
                         fill
+                        sizes="(max-width: 1023px) 100vw, 50vw"
                         className="object-cover"
                     />
                     <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-transparent" />
