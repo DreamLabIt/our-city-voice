@@ -1,18 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { User, Menu, X } from "lucide-react";
+import dynamic from "next/dynamic";
+import { User, Menu, X, Search } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { navItems } from "@/data/mock-data";
 import type { NavbarProps, NavItem } from "@/types";
-import SearchDialog from "../Dialog/SearchDialog";
 import SectionContainer from "./SectionContainer";
 import UserMenu from "./UserMenu";
 
+const SearchDialog = dynamic(() => import("../Dialog/SearchDialog"), {
+    ssr: false,
+});
+
 export default function Navbar({ user }: NavbarProps): React.ReactNode {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
     const pathname = usePathname();
 
     return (
@@ -66,7 +71,20 @@ export default function Navbar({ user }: NavbarProps): React.ReactNode {
                     </nav>
 
                     <div className="flex items-center gap-2 sm:gap-4">
-                        <SearchDialog />
+                        <button
+                            type="button"
+                            onClick={() => setIsSearchOpen(true)}
+                            className="p-2 text-foreground/80 hover:text-primary hover:bg-section rounded-full transition cursor-pointer"
+                            aria-label="Search"
+                        >
+                            <Search className="w-6 h-6 stroke-[2.2]" />
+                        </button>
+                        {isSearchOpen && (
+                            <SearchDialog
+                                isOpen={isSearchOpen}
+                                onOpenChange={setIsSearchOpen}
+                            />
+                        )}
 
                         {user ? (
                             <UserMenu user={user} />

@@ -1,6 +1,4 @@
-"use client";
-
-import React, { useMemo } from "react";
+import React from "react";
 import { MessageSquare, FileText, Users, Calendar, ArrowUp, ArrowDown } from "lucide-react";
 import { stats as mockStats, chartMonths as mockChartMonths, yTicks as mockYTicks } from "@/data/mock-data";
 import type { ChartMonth, CommunityActivityProps } from "@/types";
@@ -16,7 +14,7 @@ export default function CommunityActivity({ activityData }: CommunityActivityPro
     const changePercent = activityData?.reportsChangePercent;
     const currentYear = activityData?.year ?? new Date().getFullYear();
 
-    const currentMonthLabel = useMemo<string>(() => {
+    const currentMonthLabel = (() => {
         const utcMonthIndex = new Date().getUTCMonth();
         return (
             monthly[utcMonthIndex]?.month ??
@@ -25,9 +23,9 @@ export default function CommunityActivity({ activityData }: CommunityActivityPro
                 timeZone: "UTC",
             }).format(new Date())
         );
-    }, [monthly]);
+    })();
 
-    const displayStats = useMemo<DisplayStatItem[]>(() => {
+    const displayStats: DisplayStatItem[] = (() => {
         if (!activityData) {
             return mockStats.map((item) => ({
                 ...item,
@@ -82,18 +80,9 @@ export default function CommunityActivity({ activityData }: CommunityActivityPro
                 icon: Calendar,
             },
         ];
-    }, [
-        activityData,
-        reports,
-        comments,
-        activeUsers,
-        reportsThisMonth,
-        reportsLastMonth,
-        changePercent,
-        currentMonthLabel,
-    ]);
+    })();
 
-    const { chartData, calculatedYTicks, maxVal } = useMemo(() => {
+    const { chartData, calculatedYTicks, maxVal } = (() => {
         if (!monthly || monthly.length === 0) {
             return {
                 chartData: mockChartMonths,
@@ -124,7 +113,7 @@ export default function CommunityActivity({ activityData }: CommunityActivityPro
             calculatedYTicks: ticks,
             maxVal: ceilingMax,
         };
-    }, [monthly]);
+    })();
 
     return (
         <div className="w-full bg-card rounded-2xl border border-border-custom p-5 shadow-xs">

@@ -14,6 +14,8 @@ export default function HeroSection(): React.ReactNode {
                     alt="City skyline background"
                     fill
                     priority
+                    fetchPriority="high"
+                    loading="eager"
                     sizes="100vw"
                     className="object-cover object-center"
                 />

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { Search, MapPin, Tag, ArrowRight, Loader2, } from "lucide-react";
 
 import {
@@ -8,39 +8,37 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useReportSearch } from "@/hooks/use-report-search";
 import { SEARCH_MAX_LENGTH } from "@/lib/search-config";
 
-export default function SearchDialog(): React.JSX.Element {
-    const [isOpen, setIsOpen] = useState<boolean>(false);
+interface SearchDialogProps {
+    isOpen: boolean;
+    onOpenChange: (open: boolean) => void;
+}
+
+export default function SearchDialog({
+    isOpen,
+    onOpenChange,
+}: SearchDialogProps): React.JSX.Element {
 
     const search = useReportSearch({
         resetQueryOnNavigate: true,
-        onNavigate: () => setIsOpen(false),
+        onNavigate: () => onOpenChange(false),
     });
 
     const hasQuery = search.query.trim().length > 0;
 
     const handleOpenChange = (open: boolean) => {
-        setIsOpen(open);
-
         if (!open) {
             search.clearQuery();
         }
+        onOpenChange(open);
     };
 
     return (
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-            <DialogTrigger
-                className="p-2 text-foreground/80 hover:text-primary hover:bg-section rounded-full transition cursor-pointer"
-                aria-label="Search"
-            >
-                <Search className="w-6 h-6 stroke-[2.2]" />
-            </DialogTrigger>
-
             <DialogContent className="sm:max-w-xl p-0 gap-0 overflow-hidden border-border-custom rounded-2xl bg-card z-1000 pb-4">
                 <form onSubmit={search.handleSubmit}>
                     <DialogHeader className="p-4 border-b border-border-custom ">
